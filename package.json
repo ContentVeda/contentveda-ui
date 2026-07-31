@@ -1,0 +1,93 @@
+{
+  "name": "@contentveda/ui",
+  "version": "1.0.0",
+  "description": "A universal, framework-agnostic UI component library built with Mitosis. Write once, compile to React, Svelte, and Web Components.",
+  "author": "Koushik Manna",
+  "license": "MIT",
+  "homepage": "https://nilkoushik.github.io/contentveda-ui",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nilkoushik/contentveda-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nilkoushik/contentveda-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "ui",
+    "components",
+    "mitosis",
+    "react",
+    "svelte",
+    "web-components",
+    "banner",
+    "slider",
+    "cms",
+    "headless"
+  ],
+  "files": [
+    "dist/",
+    "src/styles/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./dist/react/src/components/index.js",
+    "./theme.css": "./dist/styles/theme.css",
+    "./styles/*": "./dist/styles/*",
+    "./react/*": "./dist/react/src/components/*.js",
+    "./react/utils/*": "./dist/react/src/utils/*.js",
+    "./svelte/*": "./dist/svelte/src/components/*",
+    "./svelte/utils/*": "./dist/svelte/src/utils/*",
+    "./webcomponent/*": "./dist/webcomponent/dist/*",
+    "./webcomponent/utils/*": "./dist/webcomponent/dist/utils/*.js"
+  },
+  "main": "./dist/react/src/components/index.js",
+  "scripts": {
+    "build": "npx mitosis build && node fix-styles.js && node fix-props.js && node fix-svelte-utils.js && node fix-react.js && node fix-wc-props.js && node build-wc.js && node fix-wc-onmount.js && node fix-minify.js",
+    "docs": "node scripts/generate-docs.js",
+    "postbuild": "npm run docs",
+    "prepare": "husky && npm run build",
+    "prepublishOnly": "npm run build",
+    "postpublish": "node -e \"if (process.env.CI !== 'true' && process.env.GITHUB_ACTIONS !== 'true') require('./scripts/sync-beta-tag.js')\"",
+    "release": "semantic-release",
+    "test": "npm run test:bdd",
+    "test:bdd": "playwright install chromium && cucumber-js --config cucumber.cjs",
+    "report:allure": "node scripts/generate-allure-report.js"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@builder.io/mitosis": "^0.13.0",
+    "@builder.io/mitosis-cli": "^0.13.0",
+    "@cucumber/cucumber": "^13.2.0",
+    "@playwright/mcp": "^0.0.78",
+    "@playwright/test": "^1.62.0",
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "@types/node": "^26.1.1",
+    "allure-commandline": "^2.43.0",
+    "allure-cucumberjs": "^3.10.2",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
+    "esbuild": "^0.28.1",
+    "husky": "^9.1.7",
+    "react-dom": "^19.2.8",
+    "semantic-release": "^25.0.8",
+    "typescript": "^6.0.3"
+  }
+}
