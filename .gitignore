@@ -1,8 +1,14 @@
 # Dependencies
 node_modules/
 
-# Build output (published via npm, not committed to git)
-dist/
+# Build output (published via npm, not committed to git).
+# Anchored to the repo root on purpose: an unanchored `dist/` also matched
+# docs/v1/dist/, which is not build output but part of the published docs tree —
+# every component page loads ../dist/webcomponent/dist/index.js for its live
+# playground. Excluding it left the committed docs/ unusable for any consumer
+# that checks it out rather than rebuilding, which is exactly how
+# docs.contentveda.com sources the component docs.
+/dist/
 
 # Logs
 *.log
