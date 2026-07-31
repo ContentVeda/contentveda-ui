@@ -1,10 +1,10 @@
 # ContentVeda UI
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@contentveda/ui"><img src="https://img.shields.io/npm/v/@contentveda/ui?style=flat-square&color=7c3aed&label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@contentveda/ui"><img src="https://img.shields.io/npm/v/@contentveda/ui?style=flat-square&color=245066&label=npm" alt="npm version" /></a>
   <a href="https://github.com/nilkoushik/contentveda-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License" /></a>
   <a href="https://github.com/nilkoushik/contentveda-ui/actions/workflows/publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/nilkoushik/contentveda-ui/publish.yml?style=flat-square&label=publish" alt="Build status" /></a>
-  <a href="https://nilkoushik.github.io/contentveda-ui"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-ec4899?style=flat-square" alt="Docs" /></a>
+  <a href="https://nilkoushik.github.io/contentveda-ui"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-2c6480?style=flat-square" alt="Docs" /></a>
 </p>
 
 <p align="center">

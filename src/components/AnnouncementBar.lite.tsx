@@ -15,14 +15,13 @@ export default function AnnouncementBar(props: AnnouncementBarProps) {
     <div
       class={`cv-announcement-bar ${props.className || ''}`}
       style={{
-        // Defaults pair white text with violet-700, which measures 7.10:1 --
-        // clearing WCAG 2.1 AAA. The previous violet-500 (#8b5cf6) default was
-        // only 4.23:1, failing even AA. Falls back through the shared primary
-        // token so a consumer theming the library gets their colour, not this
-        // hardcoded one.
+        // Defaults pair white text with the ContentVeda brand teal, which
+        // measures 8.70:1 -- clearing WCAG 2.1 AAA. Falls back through the
+        // shared primary token so a consumer theming the library gets their
+        // colour, not this hardcoded one.
         backgroundColor:
-          props.backgroundColor || 'var(--cv-color-primary, #6d28d9)',
-        color: props.textColor || '#ffffff'
+          props.backgroundColor || 'var(--cv-color-primary-fill, #245066)',
+        color: props.textColor || 'var(--cv-color-on-primary, #ffffff)'
       }}
     >
       <Show when={props.mapLinks && props.mapLinks.length > 0}>

@@ -262,11 +262,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         state.restoreSelection();
         let styleStr = 'padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-block; text-decoration: none; transition: all 0.2s;';
         if (state.btnStyle === 'primary') {
-          styleStr += ' background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; border: none; box-shadow: 0 4px 14px rgba(139,92,246,0.3);';
+          styleStr += ' background: var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480)); color: white; border: none; box-shadow: 0 4px 14px var(--cv-shadow-accent-color, rgba(36,80,102,0.3));';
         } else if (state.btnStyle === 'secondary') {
-          styleStr += ' background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.1);';
+          styleStr += ' background: var(--cv-color-surface-raised, #1e293b); color: var(--cv-color-text-main, #fff); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1));';
         } else if (state.btnStyle === 'outline') {
-          styleStr += ' background: transparent; color: #8b5cf6; border: 2px solid #8b5cf6;';
+          styleStr += ' background: transparent; color: var(--cv-color-primary-fill, #245066); border: 2px solid var(--cv-color-primary-fill, #245066);';
         }
         const url = state.btnUrl || '#';
         const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${state.btnText}</a>&nbsp;`;
@@ -323,9 +323,9 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         state.restoreSelection();
         let table = '<table border="1" style="width:100%; border-collapse: collapse; min-width: 50px;">';
         if (state.tableHasHeader) {
-          table += '<thead style="background-color: rgba(255,255,255,0.05);"><tr>';
+          table += '<thead style="background-color: var(--cv-color-hover, rgba(255,255,255,0.05));"><tr>';
           for(let j=0; j<cols; j++) {
-            table += '<th style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: left; color: #a78bfa;">Header</th>';
+            table += '<th style="padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);">Header</th>';
           }
           table += '</tr></thead>';
         }
@@ -333,7 +333,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         for(let i=0; i<rows; i++) {
           table += '<tr>';
           for(let j=0; j<cols; j++) {
-            table += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;">Cell</td>';
+            table += '<td style="padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);">Cell</td>';
           }
           table += '</tr>';
         }
@@ -371,7 +371,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         const numCols = tr.children.length;
         for (let i = 0; i < numCols; i++) {
           const newTd = document.createElement('td');
-          newTd.style.cssText = "padding: 10px; border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;";
+          newTd.style.cssText = "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
           newTd.innerHTML = "Cell";
           newTr.appendChild(newTd);
         }
@@ -386,7 +386,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         const rows = table.querySelectorAll('tr');
         rows.forEach((row: any) => {
           const newCell = document.createElement(row.parentNode.nodeName === 'THEAD' ? 'th' : 'td');
-          newCell.style.cssText = row.parentNode.nodeName === 'THEAD' ? "padding: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: left; color: #a78bfa;" : "padding: 10px; border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;";
+          newCell.style.cssText = row.parentNode.nodeName === 'THEAD' ? "padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);" : "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
           newCell.innerHTML = row.parentNode.nodeName === 'THEAD' ? "Header" : "Cell";
           const sibling = row.children[colIndex];
           row.insertBefore(newCell, sibling ? sibling.nextSibling : null);
@@ -431,7 +431,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     confirmWidget() {
       state.showWidgetModal = false;
       state.restoreSelection();
-      let html = `<div class="cv-widget" data-widget="${state.selectedWidget}" style="padding: 24px; border: 2px dashed rgba(139,92,246,0.5); background: rgba(139,92,246,0.05); text-align: center; border-radius: 12px; margin: 16px 0; color: #a78bfa; font-weight: 600;">[ContentVeda Widget: ${state.selectedWidget.toUpperCase()}]</div><p><br></p>`;
+      let html = `<div class="cv-widget" data-widget="${state.selectedWidget}" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${state.selectedWidget.toUpperCase()}]</div><p><br></p>`;
       document.execCommand('insertHTML', false, html);
       state.syncContent();
     },
@@ -449,7 +449,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.showSocialModal = false;
       if (state.socialUrl) {
         state.restoreSelection();
-        let embedHtml = `<div class="social-embed-placeholder" data-platform="${state.socialPlatform}" data-url="${state.socialUrl}" style="padding: 24px; border: 2px dashed rgba(14, 165, 233, 0.5); background: rgba(14, 165, 233, 0.05); text-align: center; border-radius: 12px; margin: 16px 0; color: #38bdf8; font-weight: 600;">[Embedded ${state.socialPlatform.toUpperCase()} Post: ${state.socialUrl}]</div><p><br></p>`;
+        let embedHtml = `<div class="social-embed-placeholder" data-platform="${state.socialPlatform}" data-url="${state.socialUrl}" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${state.socialPlatform.toUpperCase()} Post: ${state.socialUrl}]</div><p><br></p>`;
         document.execCommand('insertHTML', false, embedHtml);
         state.syncContent();
       }
@@ -554,7 +554,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
         style.id = styleId;
-        style.innerHTML = ".wysiwyg-content blockquote { border-left: 4px solid #8b5cf6 !important; background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.02) 100%) !important; padding: 20px 24px !important; margin: 24px 0 !important; border-radius: 0 16px 16px 0 !important; font-style: italic !important; color: #e2e8f0 !important; font-size: 1.1em !important; line-height: 1.8 !important; position: relative; box-shadow: inset 2px 0 0px rgba(255,255,255,0.1); } .wysiwyg-content pre { background: #0f172a !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important; padding: 20px !important; color: #38bdf8 !important; font-family: 'Fira Code', monospace !important; overflow-x: auto !important; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5) !important; } .wysiwyg-content ul { list-style-type: disc !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content li { margin-bottom: 0.5em !important; display: list-item !important; } .wysiwyg-content a:not(.cv-btn) { color: #8b5cf6 !important; text-decoration: underline !important; text-underline-offset: 3px !important; }";
+        style.innerHTML = ".wysiwyg-content blockquote { border-left: 4px solid var(--cv-color-quote-accent, #7fc4de) !important; background: linear-gradient(90deg, var(--cv-color-accent-tint, rgba(127, 196, 222, 0.1)) 0%, transparent 100%) !important; padding: 20px 24px !important; margin: 24px 0 !important; border-radius: 0 16px 16px 0 !important; font-style: italic !important; color: var(--cv-color-text-main, #e2e8f0) !important; font-size: 1.1em !important; line-height: 1.8 !important; position: relative; box-shadow: inset 2px 0 0px var(--cv-color-border, rgba(255,255,255,0.1)); } .wysiwyg-content pre { background: var(--cv-color-code-bg, #0f172a) !important; border: 1px solid var(--cv-color-code-border, rgba(255,255,255,0.1)) !important; border-radius: 12px !important; padding: 20px !important; color: var(--cv-color-code-text, #38bdf8) !important; font-family: 'Fira Code', monospace !important; overflow-x: auto !important; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5) !important; } .wysiwyg-content ul { list-style-type: disc !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content li { margin-bottom: 0.5em !important; display: list-item !important; } .wysiwyg-content a:not(.cv-btn) { color: var(--cv-color-link, #7fc4de) !important; text-decoration: underline !important; text-underline-offset: 3px !important; }";
         document.head.appendChild(style);
       }
       
@@ -574,23 +574,23 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${state.isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full'} ${props.className || ''}`}
       style={{
         boxSizing: 'border-box',
-        background: '#0f172a',
-        border: state.isFullscreen ? 'none' : '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+        background: 'var(--cv-color-surface-sunken, #0f172a)',
+        border: state.isFullscreen ? 'none' : '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+        boxShadow: 'var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))'
       }}
     >
       {/* Fluid Toolbar container - Dark Premium Aesthetics */}
       <div class="editor-toolbar flex flex-wrap gap-x-4 gap-y-3 px-6 py-4 select-none sticky top-0 z-10 w-full backdrop-blur-md" 
            style={{ 
-             background: 'rgba(15, 23, 42, 0.85)', 
-             borderBottom: '1px solid rgba(255,255,255,0.08)', 
+             background: 'var(--cv-color-surface, rgba(15, 23, 42, 0.85))', 
+             borderBottom: '1px solid var(--cv-color-border, rgba(255,255,255,0.08))', 
              alignItems: 'center',
              padding: '16px 24px'
            }}>
         
         <Show when={state.showToolbarOption('fullscreen')}>
           <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200" 
-                  style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c4b5fd', border: 'none' }} 
+                  style={{ background: 'var(--cv-color-accent-tint, rgba(127, 196, 222, 0.15))', color: 'var(--cv-color-primary-hover, #a8d8ea)', border: 'none' }} 
                   onClick={() => state.toggleFullScreen()} title="Full Screen">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
             {state.isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
@@ -598,7 +598,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         </Show>
 
         <Show when={state.showToolbarOption('source')}>
-          <button type="button" class={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${state.mode === 'source' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`} onClick={() => state.toggleMode()} title="Source Code">
+          <button type="button" class={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${state.mode === 'source' ? 'cv-rte-tint cv-rte-accent' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`} onClick={() => state.toggleMode()} title="Source Code">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             Source Code
           </button>
@@ -650,11 +650,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         </Show>
 
         <Show when={state.showToolbarOption('headings')}>
-          <select class="bg-black/20 border border-white/10 text-slate-300 font-semibold text-sm rounded-lg px-3 py-1.5 outline-none focus:border-violet-500 transition-colors cursor-pointer" value={state.headingFormat} onMouseDown={(e) => { state.saveSelection(); }} onChange={(e) => { state.restoreSelection(); state.formatHeading(e.target.value); editorRef.focus(); }}>
-            <option value="P" class="bg-slate-800" style={{ fontSize: '14px', fontWeight: 'normal' }}>Paragraph</option>
-            <option value="H1" class="bg-slate-800" style={{ fontSize: '24px', fontWeight: 'bold' }}>Heading 1</option>
-            <option value="H2" class="bg-slate-800" style={{ fontSize: '20px', fontWeight: 'bold' }}>Heading 2</option>
-            <option value="H3" class="bg-slate-800" style={{ fontSize: '18px', fontWeight: 'bold' }}>Heading 3</option>
+          <select class="bg-black/20 border border-white/10 text-slate-300 font-semibold text-sm rounded-lg px-3 py-1.5 outline-none focus:cv-rte-accent-border transition-colors cursor-pointer" value={state.headingFormat} onMouseDown={(e) => { state.saveSelection(); }} onChange={(e) => { state.restoreSelection(); state.formatHeading(e.target.value); editorRef.focus(); }}>
+            <option value="P" class="cv-rte-surface" style={{ fontSize: '14px', fontWeight: 'normal' }}>Paragraph</option>
+            <option value="H1" class="cv-rte-surface" style={{ fontSize: '24px', fontWeight: 'bold' }}>Heading 1</option>
+            <option value="H2" class="cv-rte-surface" style={{ fontSize: '20px', fontWeight: 'bold' }}>Heading 2</option>
+            <option value="H3" class="cv-rte-surface" style={{ fontSize: '18px', fontWeight: 'bold' }}>Heading 3</option>
           </select>
         </Show>
 
@@ -726,8 +726,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             </Show>
             
             <Show when={state.activeFormats.inTable && state.showToolbarOption('table')}>
-              <div class="flex items-center bg-violet-500/20 rounded-lg p-0.5 border border-violet-500/30 ml-1 mr-1 shadow-inner">
-                <button type="button" class="w-7 h-7 flex items-center justify-center rounded hover:bg-violet-500/40 text-violet-300 transition-colors" onMouseDown={(e) => e.preventDefault()} onClick={() => state.modifyTable('addRow')} title="Add Row Below">
+              <div class="flex items-center cv-rte-tint rounded-lg p-0.5 border cv-rte-accent-border ml-1 mr-1 shadow-inner">
+                <button type="button" class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors" onMouseDown={(e) => e.preventDefault()} onClick={() => state.modifyTable('addRow')} title="Add Row Below">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                   <span class="text-[10px] font-bold ml-0.5">R</span>
                 </button>
@@ -735,8 +735,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
                   <span class="text-[10px] font-bold ml-0.5">R</span>
                 </button>
-                <div class="w-px h-4 bg-violet-500/30 mx-0.5"></div>
-                <button type="button" class="w-7 h-7 flex items-center justify-center rounded hover:bg-violet-500/40 text-violet-300 transition-colors" onMouseDown={(e) => e.preventDefault()} onClick={() => state.modifyTable('addCol')} title="Add Column Right">
+                <div class="w-px h-4 cv-rte-tint-strong mx-0.5"></div>
+                <button type="button" class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors" onMouseDown={(e) => e.preventDefault()} onClick={() => state.modifyTable('addCol')} title="Add Column Right">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                   <span class="text-[10px] font-bold ml-0.5">C</span>
                 </button>
@@ -788,7 +788,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
               </button>
             </Show>
             <Show when={state.showToolbarOption('addWidget')}>
-              <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 bg-pink-500/10 text-pink-400 border-none hover:bg-pink-500/20" onMouseDown={(e) => e.preventDefault()} onClick={() => state.openWidgetModal()}>
+              <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 cv-rte-tint cv-rte-accent border-none hover:cv-rte-tint" onMouseDown={(e) => e.preventDefault()} onClick={() => state.openWidgetModal()}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 Add Widget
               </button>
@@ -810,12 +810,12 @@ export default function RichTextEditor(props: RichTextEditorProps) {
 
         <Show when={state.showToolbarOption('classInput')}>
           {/* Dynamic Class Input */}
-          <div class="ml-auto flex items-center bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 shadow-inner focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all">
+          <div class="ml-auto flex items-center bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 shadow-inner focus-within:cv-rte-accent-border focus-within:ring-1 focus-within:ring-violet-500 transition-all">
             <span class="text-[10px] font-bold text-slate-500 tracking-wider mr-2">CLASS</span>
             <input 
               type="text" 
               list="editor-class-list"
-              placeholder="e.g. text-pink-500" 
+              placeholder="e.g. my-callout" 
               class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -841,7 +841,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       <div class="editor-content flex-1 overflow-y-auto relative min-h-[350px]" style={{
         display: state.mode === 'visual' ? 'block' : 'none',
         padding: '2rem 3rem',
-        color: '#f1f5f9'
+        color: 'var(--cv-color-text-main, #f1f5f9)'
       }}>
         <div 
           ref={editorRef}
@@ -859,122 +859,122 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           <div class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
             
             <Show when={state.showButtonModal}>
-              <div class="shadow-2xl" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', width: '380px' }}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '380px' }}>
                 <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--cv-color-link, #7fc4de)' }} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                   Insert Button
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Style</label>
-                    <select style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none' }} value={state.btnStyle} onChange={(e) => state.btnStyle = e.target.value}>
-                      <option value="primary" style={{ background: '#1e293b' }}>Primary (Gradient)</option>
-                      <option value="secondary" style={{ background: '#1e293b' }}>Secondary (Dark)</option>
-                      <option value="outline" style={{ background: '#1e293b' }}>Outline (Violet)</option>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Style</label>
+                    <select style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnStyle} onChange={(e) => state.btnStyle = e.target.value}>
+                      <option value="primary" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Primary (Gradient)</option>
+                      <option value="secondary" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Secondary (Dark)</option>
+                      <option value="outline" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Outline (Violet)</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Text</label>
-                    <input type="text" placeholder="Click Here" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none' }} value={state.btnText} onInput={(e) => state.btnText = e.target.value} />
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Text</label>
+                    <input type="text" placeholder="Click Here" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnText} onInput={(e) => state.btnText = e.target.value} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Link URL</label>
-                    <input type="url" placeholder="https://..." style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none' }} value={state.btnUrl} onInput={(e) => state.btnUrl = e.target.value} />
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Link URL</label>
+                    <input type="url" placeholder="https://..." style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnUrl} onInput={(e) => state.btnUrl = e.target.value} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: '#cbd5e1', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeButtonModal()}>Cancel</button>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'white', background: 'linear-gradient(135deg, #8b5cf6, #ec4899)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(139,92,246,0.2)' }} onClick={() => state.confirmButton()}>Insert</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeButtonModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px var(--cv-shadow-accent-color, rgba(36,80,102,0.2))' }} onClick={() => state.confirmButton()}>Insert</button>
                 </div>
               </div>
             </Show>
             
             <Show when={state.showTableModal}>
-              <div class="shadow-2xl" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', width: '340px' }}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '340px' }}>
                 <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--violet, #8b5cf6)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--cv-color-link, #7fc4de)' }} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                   Insert Table
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '500', color: '#cbd5e1' }}>Rows</label>
-                    <input type="number" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'white', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableRows} onInput={(e) => state.tableRows = e.target.value} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.2))', padding: '12px', borderRadius: '8px', border: '1px solid var(--cv-color-hover, rgba(255,255,255,0.05))' }}>
+                    <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--cv-color-text-secondary, #cbd5e1)' }}>Rows</label>
+                    <input type="number" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'var(--cv-color-text-main, #fff)', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableRows} onInput={(e) => state.tableRows = e.target.value} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '500', color: '#cbd5e1' }}>Columns</label>
-                    <input type="number" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'white', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableCols} onInput={(e) => state.tableCols = e.target.value} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.2))', padding: '12px', borderRadius: '8px', border: '1px solid var(--cv-color-hover, rgba(255,255,255,0.05))' }}>
+                    <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--cv-color-text-secondary, #cbd5e1)' }}>Columns</label>
+                    <input type="number" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'var(--cv-color-text-main, #fff)', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableCols} onInput={(e) => state.tableCols = e.target.value} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: '#cbd5e1', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeTableModal()}>Cancel</button>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'white', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmTable()}>Insert Table</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeTableModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmTable()}>Insert Table</button>
                 </div>
               </div>
             </Show>
 
             <Show when={state.showLinkModal}>
-              <div class="shadow-2xl" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', width: '380px' }}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '380px' }}>
                 <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sky, #0ea5e9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--cv-color-info, #0ea5e9)' }} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                   Insert Hyperlink
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destination URL</label>
-                  <input type="url" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' }} placeholder="https://example.com" value={state.linkUrl} onInput={(e) => state.linkUrl = e.target.value} />
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destination URL</label>
+                  <input type="url" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://example.com" value={state.linkUrl} onInput={(e) => state.linkUrl = e.target.value} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: '#cbd5e1', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeLinkModal()}>Cancel</button>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'white', background: 'linear-gradient(135deg, #0ea5e9, #3b82f6)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmLink()}>Insert Link</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeLinkModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-color-info-fill, #075985)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmLink()}>Insert Link</button>
                 </div>
               </div>
             </Show>
 
             <Show when={state.showWidgetModal}>
-              <div class="shadow-2xl" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', width: '380px' }}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '380px' }}>
                 <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pink, #ec4899)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--cv-color-secondary, #5eb3d6)' }} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                   Insert Component
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select ContentVeda Widget</label>
-                  <select style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' }} value={state.selectedWidget} onChange={(e) => state.selectedWidget = e.target.value}>
-                    <option value="banner" style={{ background: '#1e293b' }}>Banner Component</option>
-                    <option value="grid-banner" style={{ background: '#1e293b' }}>Grid Banner Component</option>
-                    <option value="media-grid" style={{ background: '#1e293b' }}>Media Grid Component</option>
-                    <option value="slider" style={{ background: '#1e293b' }}>Slider Carousel</option>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select ContentVeda Widget</label>
+                  <select style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} value={state.selectedWidget} onChange={(e) => state.selectedWidget = e.target.value}>
+                    <option value="banner" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Banner Component</option>
+                    <option value="grid-banner" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Grid Banner Component</option>
+                    <option value="media-grid" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Media Grid Component</option>
+                    <option value="slider" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Slider Carousel</option>
                   </select>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: '#cbd5e1', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeWidgetModal()}>Cancel</button>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'white', background: 'linear-gradient(135deg, #ec4899, #f43f5e)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmWidget()}>Insert Widget</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeWidgetModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmWidget()}>Insert Widget</button>
                 </div>
               </div>
             </Show>
 
             <Show when={state.showSocialModal}>
-              <div class="shadow-2xl" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', width: '380px' }}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '380px' }}>
                 <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sky, #0ea5e9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--cv-color-info, #0ea5e9)' }} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                   Embed Social Post
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</label>
-                    <select style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' }} value={state.socialPlatform} onChange={(e) => state.socialPlatform = e.target.value}>
-                      <option value="x" style={{ background: '#1e293b' }}>X (Twitter)</option>
-                      <option value="instagram" style={{ background: '#1e293b' }}>Instagram</option>
-                      <option value="facebook" style={{ background: '#1e293b' }}>Facebook</option>
-                      <option value="linkedin" style={{ background: '#1e293b' }}>LinkedIn</option>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</label>
+                    <select style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} value={state.socialPlatform} onChange={(e) => state.socialPlatform = e.target.value}>
+                      <option value="x" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>X (Twitter)</option>
+                      <option value="instagram" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Instagram</option>
+                      <option value="facebook" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Facebook</option>
+                      <option value="linkedin" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>LinkedIn</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Post URL</label>
-                    <input type="url" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' }} placeholder="https://..." value={state.socialUrl} onInput={(e) => state.socialUrl = e.target.value} />
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Post URL</label>
+                    <input type="url" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://..." value={state.socialUrl} onInput={(e) => state.socialUrl = e.target.value} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: '#cbd5e1', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeSocialModal()}>Cancel</button>
-                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'white', background: 'linear-gradient(135deg, #0ea5e9, #3b82f6)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmSocial()}>Embed Post</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeSocialModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-color-info-fill, #075985)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmSocial()}>Embed Post</button>
                 </div>
               </div>
             </Show>
@@ -983,11 +983,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         </Show>
       </div>
       
-      <div class="editor-source flex-1 overflow-y-auto bg-[#020617] min-h-[350px]" style={{
+      <div class="editor-source flex-1 overflow-y-auto bg-[var(--cv-color-background, #020617)] min-h-[350px]" style={{
         display: state.mode === 'source' ? 'block' : 'none'
       }}>
         <textarea
-          class="w-full h-full p-6 bg-transparent text-emerald-400 font-mono text-[14px] leading-loose outline-none resize-none"
+          class="w-full h-full p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none resize-none"
           value={state.internalContent}
           onInput={(e) => state.handleSourceInput(e)}
           style={{ whiteSpace: 'pre-wrap' }}
