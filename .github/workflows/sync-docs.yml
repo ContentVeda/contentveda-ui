@@ -56,13 +56,19 @@ jobs:
 
       - name: Verify generated docs
         run: |
-          test -f docs/v1/index.html || { echo "::error::docs/v1/index.html missing"; exit 1; }
-          pages=$(ls docs/v1/components/*.html 2>/dev/null | wc -l)
+          # The docs tree is named after the package's major version, so read it
+          # from package.json rather than hardcoding it here — otherwise this
+          # check silently passes against a stale tree the moment the major
+          # changes.
+          major="v$(node -p "require('./package.json').version.split('.')[0]")"
+          echo "Checking docs/$major"
+          test -f "docs/$major/index.html" || { echo "::error::docs/$major/index.html missing"; exit 1; }
+          pages=$(ls "docs/$major"/components/*.html 2>/dev/null | wc -l)
           test "$pages" -gt 0 || { echo "::error::no component pages generated"; exit 1; }
           # Every page loads ../dist/webcomponent/dist/index.js for its live
           # playground. Publishing without it means ten pages of dead demos.
-          test -f docs/v1/dist/webcomponent/dist/index.js \
-            || { echo "::error::playground bundles missing from docs/v1/dist"; exit 1; }
+          test -f "docs/$major/dist/webcomponent/dist/index.js" \
+            || { echo "::error::playground bundles missing from docs/$major/dist"; exit 1; }
           echo "$pages component pages, $(find docs -type f | wc -l) files total."
 
       - name: Checkout docs site

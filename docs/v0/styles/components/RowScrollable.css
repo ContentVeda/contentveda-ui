@@ -1,0 +1,134 @@
+/* Styles for RowScrollable */
+/* Styles for RowScrollable */
+/* RowScrollable Styles */
+.cv-scrollable-container {
+          font-family: var(--cv-font-family);
+        }
+        .cv-scrollable-title {
+          margin-top: 0;
+          margin-bottom: var(--cv-spacing-md);
+          color: var(--cv-color-text-main);
+          font-size: var(--cv-font-size-subtitle);
+        }
+        .cv-scrollable-row {
+          display: flex;
+          gap: var(--cv-spacing-md);
+          overflow-x: auto;
+          padding-bottom: var(--cv-spacing-sm);
+          scroll-snap-type: x mandatory;
+        }
+        /* Custom scrollbar */
+        .cv-scrollable-row::-webkit-scrollbar {
+          height: 6px;
+        }
+        .cv-scrollable-row::-webkit-scrollbar-track {
+          background: var(--cv-color-surface);
+          border-radius: 4px;
+        }
+        .cv-scrollable-row::-webkit-scrollbar-thumb {
+          background: var(--cv-color-border);
+          border-radius: 4px;
+        }
+        .cv-scrollable-card {
+          flex: 0 0 280px;
+          background: var(--cv-color-surface);
+          border: var(--cv-border-width) solid var(--cv-color-border);
+          border-radius: var(--cv-border-radius-md);
+          overflow: hidden;
+          scroll-snap-align: start;
+        }
+        .cv-scrollable-img-wrap {
+          height: 160px;
+        }
+        .cv-scrollable-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .cv-scrollable-body {
+          padding: var(--cv-spacing-sm);
+        }
+        .cv-scrollable-card-title {
+          font-weight: 600;
+          color: var(--cv-color-text-main);
+          margin-bottom: 0.25rem;
+        }
+        .cv-scrollable-card-sub {
+          font-size: 0.875rem;
+          color: var(--cv-color-text-muted);
+        }
+        
+        /* Scroll Navigation Arrows styling */
+        .cv-scrollable-wrapper {
+          position: relative;
+          width: 100%;
+        }
+        .cv-scrollable-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          background: var(--cv-control-dark, rgba(15, 23, 42, 0.75));
+          border: 1px solid var(--cv-control-dark-border, rgba(255, 255, 255, 0.15));
+          color: var(--cv-color-on-media, #ffffff);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 10;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          outline: none;
+          padding: 0;
+          box-shadow: var(--cv-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+        }
+        .cv-scrollable-arrow:hover {
+          background: var(--cv-color-primary-fill, #245066);
+          border-color: transparent;
+          color: var(--cv-color-on-primary, #ffffff);
+          transform: translateY(-50%) scale(1.1);
+          box-shadow: var(--cv-shadow-accent, 0 4px 12px rgba(36, 80, 102, 0.4));
+        }
+        .cv-scrollable-arrow.prev {
+          left: -20px;
+        }
+        .cv-scrollable-arrow.next {
+          right: -20px;
+        }
+        .cv-scrollable-arrow svg {
+          width: 22px;
+          height: 22px;
+        }
+        
+        @media (max-width: 768px) {
+          .cv-scrollable-arrow {
+            width: 36px;
+            height: 36px;
+          }
+          .cv-scrollable-arrow.prev {
+            left: -10px;
+          }
+          .cv-scrollable-arrow.next {
+            right: -10px;
+          }
+        }
+
+        /* Scrollbar Hiding & Card Shimmer Heights */
+        .cv-scrollable-row.cv-scrollable-hide-scrollbar {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .cv-scrollable-row.cv-scrollable-hide-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        .cv-scrollable-card.cv-image-shimmer {
+          min-height: 236px;
+        }
+
+
+
+
