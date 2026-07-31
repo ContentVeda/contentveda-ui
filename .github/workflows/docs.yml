@@ -62,3 +62,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # docs.contentveda.com serves these same component pages under /ui/, by
+      # sparse-checking-out this repo's committed docs/ directory. That copy only
+      # refreshes when something tells it to, so poke it here.
+      #
+      # Note this ships the committed docs/ only -- the Allure report generated
+      # above is gitignored, so it stays exclusive to this repo's Pages site.
+      - name: Trigger docs.contentveda.com rebuild
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::DOCS_DISPATCH_TOKEN not set — docs.contentveda.com will not pick up these changes until its next build."
+            exit 0
+          fi
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/nilkoushik/contentveda-docs/dispatches \
+            -d '{"event_type":"ui-docs-updated"}'
