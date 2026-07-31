@@ -45,7 +45,7 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
             if (videoId) {
               el.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"></iframe>`;
             } else {
-              el.innerHTML = `<a href="${url}" target="_blank" style="color: #8b5cf6; text-decoration: underline;">View Video on YouTube</a>`;
+              el.innerHTML = `<a href="${url}" target="_blank" style="color: var(--cv-color-link, #7fc4de); text-decoration: underline;">View Video on YouTube</a>`;
             }
           } else if (platform === 'facebook') {
             el.innerHTML = `<div class="fb-post" data-href="${url}" data-width="500"></div>`;
@@ -72,7 +72,7 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
               (window as any).twttr.widgets.load(el);
             }
           } else if (platform === 'instagram') {
-            el.innerHTML = `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="background: #000; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);"></blockquote>`;
+            el.innerHTML = `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);"></blockquote>`;
             if (!document.getElementById('instagram-embed')) {
               const script = document.createElement('script');
               script.id = 'instagram-embed';

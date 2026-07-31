@@ -60,7 +60,7 @@ const DEFAULTS = {
   },
   AnnouncementBar: {
     message: "⚡ FLASH SALE: Save 25% off all accessories today only! Code: CONTENTVEDA25",
-    backgroundColor: "#8b5cf6",
+    backgroundColor: "#245066",
     textColor: "#ffffff",
     mapLinks: [{ url: "/sale" }]
   },
@@ -145,14 +145,14 @@ const DEFAULTS = {
   },
   WysiwygRenderer: {
     htmlContent: `<div style="padding:10px;">
-  <h3 style="font-size:1.5rem; color:#8b5cf6; font-weight:600; margin-bottom:10px;">Wysiwyg Rich Text Renderer</h3>
+  <h3 style="font-size:1.5rem; color:#7fc4de; font-weight:600; margin-bottom:10px;">Wysiwyg Rich Text Renderer</h3>
   <p style="margin-bottom:12px;">This component renders HTML safely with scoped typography classes. It supports standard semantic markup:</p>
   <ul style="margin-left: 20px; list-style-type: disc; margin-bottom: 12px;">
     <li><strong>Bold</strong> and <em>italic</em> styled text</li>
     <li>Inline code blocks like <code>const score = 100;</code></li>
     <li>Custom hyperlinks like <a href="#" style="color:#3b82f6; text-decoration:underline;">ContentVeda Homepage</a></li>
   </ul>
-  <blockquote style="border-left: 4px solid #8b5cf6; padding-left: 12px; font-style: italic; color: #94a3b8; margin: 15px 0;">
+  <blockquote style="border-left: 4px solid #7fc4de; padding-left: 12px; font-style: italic; color: #94a3b8; margin: 15px 0;">
     "This is a blockquote rendered using the core CSS styles. Beautiful, semantic, and simple."
   </blockquote>
 </div>`
@@ -840,7 +840,7 @@ ${pluginScript}`;
                         <input
                           type="color"
                           className="h-8 w-8 bg-transparent border-0 cursor-pointer animate-none"
-                          value={activeProps.backgroundColor.startsWith('#') ? activeProps.backgroundColor : '#8b5cf6'}
+                          value={activeProps.backgroundColor.startsWith('#') ? activeProps.backgroundColor : '#245066'}
                           onChange={(e) => handlePropChange("backgroundColor", e.target.value)}
                         />
                         <input

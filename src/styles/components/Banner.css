@@ -21,7 +21,7 @@
           flex-direction: column;
           justify-content: center;
           padding: var(--cv-spacing-xl);
-          background: rgba(0, 0, 0, 0.4);
+          background: var(--cv-color-scrim, rgba(0, 0, 0, 0.4));
         }
         .cv-banner-content {
           max-width: 800px;
@@ -30,18 +30,18 @@
         .cv-banner-title {
           font-size: var(--cv-font-size-title);
           margin-bottom: var(--cv-spacing-sm);
-          color: #fff;
+          color: var(--cv-color-on-media, #fff);
           margin-top: 0;
         }
         .cv-banner-subtitle {
           font-size: var(--cv-font-size-subtitle);
           margin-bottom: var(--cv-spacing-lg);
-          color: #f1f5f9;
+          color: var(--cv-color-on-media-muted, #f1f5f9);
         }
         .cv-banner-cta {
           display: inline-block;
-          background-color: var(--cv-color-primary);
-          color: #fff;
+          background-color: var(--cv-color-primary-fill, #245066);
+          color: var(--cv-color-on-primary, #fff);
           padding: var(--cv-spacing-sm) var(--cv-spacing-lg);
           border-radius: var(--cv-border-radius-sm);
           text-decoration: none;
@@ -76,7 +76,7 @@
         }
         .cv-hotspot-pulse-ring {
           fill: transparent;
-          stroke: #f472b6;
+          stroke: var(--cv-color-accent-on-media, #7fc4de);
           stroke-width: 2;
           transform-box: fill-box;
           transform-origin: center;
@@ -115,7 +115,7 @@
            Uses outline (not box-shadow) so it still renders in Windows
            High Contrast / forced-colors mode. */
         .cv-hotspot:focus-visible {
-          outline: 3px solid var(--cv-color-primary, #6d28d9);
+          outline: 3px solid var(--cv-color-focus, #245066);
           outline-offset: 2px;
           border-radius: 2px;
         }
@@ -129,8 +129,8 @@
           bottom: calc(100% + 8px);
           left: 50%;
           transform: translateX(-50%) translateY(4px);
-          background: rgba(15, 17, 21, 0.92);
-          color: #fff;
+          background: var(--cv-color-scrim-strong, rgba(15, 17, 21, 0.92));
+          color: var(--cv-color-on-media, #fff);
           font-size: 12px;
           font-weight: 600;
           line-height: 1.3;

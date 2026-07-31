@@ -4,7 +4,7 @@
   width: 100%;
   height: 600px;
   overflow: hidden;
-  background: #000;
+  background: var(--cv-color-media-base, #000);
   border-radius: var(--cv-border-radius-md, 8px);
 }
 .cv-alt-cols-container {
@@ -47,11 +47,11 @@
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0,0,0,0.4);
+  background: var(--cv-color-scrim, rgba(0, 0, 0, 0.4));
   transition: background 0.3s;
 }
 .cv-alt-content-wrap:hover .cv-alt-overlay {
-  background: rgba(0,0,0,0.2);
+  background: var(--cv-color-scrim-soft, rgba(0, 0, 0, 0.2));
 }
 .cv-alt-content {
   position: relative;
@@ -76,7 +76,7 @@
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .cv-alt-cta {
-  background: var(--cv-color-primary, #6d28d9);
+  background: var(--cv-color-primary-fill, #245066);
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 4px;
@@ -86,13 +86,13 @@
 }
 .cv-alt-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+  box-shadow: var(--cv-shadow-accent, 0 4px 12px rgba(36, 80, 102, 0.4));
 }
 .cv-alt-arrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255,255,255,0.2);
+  background: var(--cv-control-on-media, rgba(255, 255, 255, 0.2));
   border: none;
   border-radius: 50%;
   width: 50px;
@@ -105,7 +105,7 @@
   justify-content: center;
   transition: background 0.3s;
 }
-.cv-alt-arrow:hover { background: rgba(255,255,255,0.4); }
+.cv-alt-arrow:hover { background: var(--cv-control-on-media-hover, rgba(255, 255, 255, 0.4)); }
 .cv-alt-arrow.prev { left: 20px; }
 .cv-alt-arrow.next { right: 20px; }
 

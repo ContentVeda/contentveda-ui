@@ -5,7 +5,7 @@
   width: 100%;
   height: 500px;
   overflow: hidden;
-  background: #000;
+  background: var(--cv-color-media-base, #000);
   border-radius: var(--cv-border-radius-md);
   box-shadow: var(--cv-shadow-md);
 }
@@ -55,7 +55,7 @@
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0,0,0,0.4);
+  background: var(--cv-color-scrim, rgba(0, 0, 0, 0.4));
 }
 
 .cv-sliding-content {
@@ -97,14 +97,14 @@
 
 .cv-sliding-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+  box-shadow: var(--cv-shadow-accent, 0 4px 12px rgba(36, 80, 102, 0.4));
 }
 
 .cv-sliding-arrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255,255,255,0.2);
+  background: var(--cv-control-on-media, rgba(255, 255, 255, 0.2));
   border: none;
   border-radius: 50%;
   width: 50px;
@@ -119,7 +119,7 @@
 }
 
 .cv-sliding-arrow:hover {
-  background: rgba(255,255,255,0.4);
+  background: var(--cv-control-on-media-hover, rgba(255, 255, 255, 0.4));
 }
 
 .cv-sliding-arrow.prev { left: 20px; }
