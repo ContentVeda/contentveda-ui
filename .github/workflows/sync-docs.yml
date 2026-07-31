@@ -71,6 +71,22 @@ jobs:
             || { echo "::error::playground bundles missing from docs/$major/dist"; exit 1; }
           echo "$pages component pages, $(find docs -type f | wc -l) files total."
 
+      # Without this, a missing secret surfaces from actions/checkout as
+      # "Input required and not supplied: token", which says nothing about
+      # which token or where to put it.
+      - name: Check the cross-repo token is configured
+        env:
+          DOCS_SYNC_TOKEN: ${{ secrets.DOCS_SYNC_TOKEN }}
+        run: |
+          if [ -z "$DOCS_SYNC_TOKEN" ]; then
+            echo "::error::DOCS_SYNC_TOKEN is not set on this repository. The"\
+                 "built-in GITHUB_TOKEN cannot write to another repo, so the"\
+                 "sync needs a personal access token with contents:write on"\
+                 "nilkoushik/contentveda-docs, added here as an Actions secret"\
+                 "named DOCS_SYNC_TOKEN."
+            exit 1
+          fi
+
       - name: Checkout docs site
         uses: actions/checkout@v4
         with:
