@@ -30,6 +30,12 @@ const DOCS_DIR      = path.join(ROOT, 'docs');
 const VERSION_DIR   = path.join(DOCS_DIR, MAJOR_VERSION);
 const COMPONENTS_DIR = path.join(VERSION_DIR, 'components');
 
+// This same generated tree is published twice: by this repo's own Pages deploy
+// at GITHUB_URL's pages domain, and under /ui/ on the docs site, which sparse-
+// checks-out docs/. Two URLs serving identical pages splits their search
+// ranking, so every page declares the docs-site copy as canonical.
+const CANONICAL_BASE = process.env.DOCS_CANONICAL_BASE ?? 'https://docs.contentveda.com/ui';
+
 // ── Recursive Copy Helper ──────────────────────────────────────────────────
 function copyDir(src, dest) {
   if (!fs.existsSync(src)) return;
@@ -381,6 +387,7 @@ function buildPage(component) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${name} — ContentVeda UI</title>
   <meta name="description" content="${component.cardDesc}" />
+  <link rel="canonical" href="${CANONICAL_BASE}/${MAJOR_VERSION}/components/${slug}.html" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="../css/docs.css" />
   <link rel="stylesheet" href="../styles/theme.css" />
@@ -739,6 +746,7 @@ function buildLandingPage() {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ContentVeda UI — Universal Component Library</title>
+  <link rel="canonical" href="${CANONICAL_BASE}/${MAJOR_VERSION}/" />
   <script>
     if (window.location.pathname.endsWith('/' + '${MAJOR_VERSION}')) {
       window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
@@ -920,7 +928,7 @@ function main() {
 <head>
   <meta charset="UTF-8">
   <title>Redirecting to latest docs...</title>
-  <link rel="canonical" href="${MAJOR_VERSION}/index.html">
+  <link rel="canonical" href="${CANONICAL_BASE}/${MAJOR_VERSION}/">
   <meta http-equiv="refresh" content="0; url=${MAJOR_VERSION}/index.html">
   <script>
     window.location.replace("${MAJOR_VERSION}/index.html");
