@@ -1,43 +1,141 @@
 /* ============================================================
    ContentVeda UI — Documentation Site Styles
-   Dark mode, premium feel, sidebar layout
+   Light and dark, sidebar layout, reader-controlled text size
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ── Design Tokens ─────────────────────────────────────── */
+/* ── Design Tokens ─────────────────────────────────────────
+   The ContentVeda palette from src/styles/theme.css, in both themes. :root is
+   light and :root[data-theme='dark'] is dark — the same attribute, the same
+   default (follow the OS, dark unless it asks for light) and the same
+   localStorage key the docs site uses. Both are served from
+   docs.contentveda.com, so that shared key means a visitor who picked a theme
+   over there still has it when they land on /ui/.
+
+   Three accent tokens, because one value cannot carry the brand across both
+   themes:
+     --accent       solid fills that carry white text (buttons, active tabs)
+     --accent-text  accent-coloured text and borders on the page surface
+     --accent-deep  the darker end of the brand, for gradients and hovers
+   In light mode --accent-text is the brand teal itself; in dark it has to be a
+   light tint of it, since #245066 on #0b1120 measures 2.16:1 and fails
+   outright. */
 :root {
-  --bg-base:        #0a0a0f;
-  --bg-surface:     #111118;
-  --bg-elevated:    #1a1a25;
-  --bg-hover:       #22223a;
-  --border:         rgba(255,255,255,0.07);
-  --border-accent:  rgba(124,58,237,0.5);
+  --bg-base:        #ffffff;
+  --bg-surface:     #f8fafc;
+  --bg-elevated:    #f1f5f9;
+  --bg-hover:       #e9eff5;
+  --border:         #e2e8f0;
+  --border-accent:  rgba(36,80,102,0.35);
 
-  --text-primary:   #f0f0ff;
-  --text-secondary: #9090b0;
-  --text-muted:     #5c5c80;
-  --text-code:      #a78bfa;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #64748b;
+  --text-code:      #245066;
 
-  --accent:         #7c3aed;
-  --accent-light:   #9f6cf7;
-  --accent-glow:    rgba(124,58,237,0.25);
-  --pink:           #ec4899;
-  --pink-glow:      rgba(236,72,153,0.2);
+  --accent:         #245066;
+  --accent-deep:    #1a3f52;
+  --accent-text:    #245066;
+  --accent-glow:    rgba(36,80,102,0.10);
+  --accent-alt:     #2c6480;
+  --link-hover:     #1a3f52;
+
+  /* Code surfaces stay dark in both themes. That is the usual docs convention
+     (GitHub, Stripe, and this project's own Content API pages all do it): it
+     reads as "code" at a glance, and it means one syntax palette is legible
+     everywhere instead of two that have to be kept in step. */
+  --code-bg:          #0b1120;
+  --code-border:      rgba(255,255,255,0.08);
+  --code-text:        #e2e8f0;
+  --code-chrome:      rgba(255,255,255,0.08);
+  --code-chrome-text: #94a3b8;
+
+  /* Status hues. Light-mode values are dark enough to read as text on their
+     own 8-10% tint; the dark block below swaps in the light equivalents. */
+  --ok:       #15803d;
+  --info:     #1d4ed8;
+  --warn:     #b45309;
+  --danger:   #dc2626;
+  --ty:       #047857;  /* prop types, in the props table rather than a code block */
+  --required: #be123c;
+  --react:    #0e7490;
+  --svelte:   #c2410c;
+  --wc:       #15803d;
 
   --sidebar-w:      260px;
   --topbar-h:       60px;
   --radius-sm:      6px;
   --radius-md:      12px;
   --radius-lg:      18px;
-  --shadow-md:      0 4px 24px rgba(0,0,0,0.4);
+  --shadow-md:      0 4px 24px rgba(15,23,42,0.08);
+  --shadow-lift:    0 12px 40px rgba(15,23,42,0.14);
+  --shadow-drawer:  0 0 60px rgba(15,23,42,0.25);
+  --shadow-icon:    0 4px 12px rgba(15,23,42,0.18);
   --shadow-glow:    0 0 40px var(--accent-glow);
+  --scroll-thumb:       #cbd5e1;
+  --scroll-thumb-hover: #94a3b8;
 
   --font-sans:      'Inter', system-ui, sans-serif;
   --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 
   --transition:     0.2s ease;
 }
+
+:root[data-theme='dark'] {
+  --bg-base:        #0b1120;
+  --bg-surface:     #111a2e;
+  --bg-elevated:    #16213a;
+  --bg-hover:       #1e2b45;
+  --border:         rgba(255,255,255,0.07);
+  --border-accent:  rgba(127,196,222,0.45);
+
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-code:      #7fc4de;
+
+  /* --accent lightens here: #245066 as a button fill on a near-black page
+     reads as a hole rather than a control. Only as light as AAA allows though
+     — it carries white text (Sign in, the active tab), and #2c6480, the
+     obvious next step up, drops that to 6.48:1. */
+  --accent:         #2a5c76;
+  --accent-deep:    #245066;
+  --accent-text:    #7fc4de;
+  --accent-glow:    rgba(127,196,222,0.18);
+  --accent-alt:     #4d8ba6;
+  --link-hover:     #ffffff;
+
+  --ok:       #4ade80;
+  --info:     #60a5fa;
+  --warn:     #fbbf24;
+  --danger:   #f87171;
+  --ty:       #34d399;
+  --required: #fda4af;
+  --react:    #61dafb;
+  --svelte:   #ff7750;
+  --wc:       #4ade80;
+
+  --shadow-md:      0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lift:    0 12px 40px rgba(0,0,0,0.4);
+  --shadow-drawer:  0 0 60px rgba(0,0,0,0.7);
+  --shadow-icon:    0 4px 12px rgba(0,0,0,0.5);
+  --scroll-thumb:       #22304a;
+  --scroll-thumb-hover: #2f4160;
+}
+
+/*
+ * Text size. Set as a percentage of whatever the browser's own base size is,
+ * never as a px value — a reader who has raised their default should keep that
+ * increase and have this scale on top of it, not have it overwritten. Almost
+ * every length in this file is in rem, so the whole page scales with it; the
+ * few px values that do not (sidebar width, header height, the logo lockup)
+ * are the ones that should stay put.
+ */
+:root                  { font-size: 100%; }
+:root[data-font='sm']  { font-size: 87.5%; }
+:root[data-font='lg']  { font-size: 112.5%; }
+:root[data-font='xl']  { font-size: 125%; }
 
 /* ── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,22 +149,189 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--accent-light); text-decoration: none; }
-a:hover { color: #fff; }
+a { color: var(--accent-text); text-decoration: none; }
+a:hover { color: var(--link-hover); }
 img, video { max-width: 100%; }
+
+/* ── Site Header ────────────────────────────────────────────
+   The docs site's DocsNav, reproduced: same height, same lockup, same links,
+   same Sign in button, so /ui/ does not read as a different site to someone
+   who arrived from docs.contentveda.com. Colours come from the tokens above,
+   which is why it is dark here and light there. */
+.cv-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.25rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 200;
+}
+
+.cv-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.34em;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Sized in px on the element as well as here, so the mark holds its space
+   before the stylesheet or the webfont land and the bar cannot reflow.
+
+   The three fills are custom properties because the artwork cannot serve both
+   themes as-is: the C is near-black, and the V's darkest facet measures about
+   1.9:1 against the dark page. */
+.cv-brand-mark {
+  display: block;
+  flex-shrink: 0;
+  width: 49px;
+  height: 30px;
+  --m-ink: #010101;
+  --m-v: #164f69;
+  --m-vd: #0f374e;
+}
+
+:root[data-theme='dark'] .cv-brand-mark {
+  --m-ink: #e8eef2;
+  --m-v: #7fc4de;
+  --m-vd: #4d8ba6;
+}
+
+/* Live text in Inter, not the lettering outlined in the logo artwork — that
+   face is not Inter, and Inter is the brand guideline. */
+.cv-brand-word {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+  line-height: 1;
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.cv-brand-word b { font-weight: 700; }
+
+/* Sits beside the wordmark, so it is deliberately lighter and smaller —
+   matching its weight would read as part of the logo. */
+.cv-brand-sub {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.95rem;
+  padding-left: 0.35rem;
+}
+
+.cv-links {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.cv-links a {
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.cv-links a:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cv-links a.active {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.cv-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cv-signin {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cv-signin:hover { background: var(--accent-alt); color: #fff; }
+
+/* Theme toggle — the docs site's button, down to the 34px square and the
+   sun/moon glyph showing the theme you would switch *to*. */
+.cv-theme-toggle {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-primary);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.cv-theme-toggle:hover { background: var(--bg-hover); border-color: var(--border-accent); }
+
+/* Text size. Two steps rather than a slider or a menu: the range is only four
+   sizes wide, so anything richer costs more clicks than it saves. */
+.cv-fontsize {
+  display: inline-flex;
+  align-items: stretch;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cv-fontsize button {
+  width: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.cv-fontsize button + button { border-left: 1px solid var(--border); }
+.cv-fontsize button:hover:not(:disabled) { background: var(--bg-hover); }
+
+/* Disabled at the ends of the range, so the control says where you are without
+   needing a separate readout. */
+.cv-fontsize button:disabled {
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: default;
+}
 
 /* ── Layout Shell ───────────────────────────────────────── */
 .docs-shell {
   display: flex;
   min-height: 100vh;
+  padding-top: var(--topbar-h); /* offset the fixed header */
 }
 
 /* ── Sidebar ────────────────────────────────────────────── */
 .docs-sidebar {
   position: fixed;
-  top: 0; left: 0;
+  top: var(--topbar-h); left: 0;
   width: var(--sidebar-w);
-  height: 100vh;
+  height: calc(100vh - var(--topbar-h));
   background: var(--bg-surface);
   border-right: 1px solid var(--border);
   display: flex;
@@ -76,33 +341,8 @@ img, video { max-width: 100%; }
   transition: transform var(--transition);
 }
 
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  text-decoration: none;
-}
-
-.sidebar-logo {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--accent), var(--pink));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 800; color: #fff;
-  flex-shrink: 0;
-}
-
-.sidebar-brand-name {
-  font-size: 1rem; font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-}
-
-.sidebar-brand-name span {
-  color: var(--accent-light);
-}
+/* The brand lockup lives in .cv-nav now, not at the top of the sidebar — one
+   lockup per page, in the same place the docs site puts it. */
 
 .sidebar-version {
   font-size: 0.65rem;
@@ -147,7 +387,7 @@ img, video { max-width: 100%; }
 }
 
 .sidebar-link.active {
-  color: var(--accent-light);
+  color: var(--accent-text);
   background: var(--accent-glow);
   border-left-color: var(--accent);
   font-weight: 500;
@@ -185,37 +425,9 @@ img, video { max-width: 100%; }
   min-width: 0;
 }
 
-.docs-topbar {
-  position: sticky;
-  top: 0;
-  height: var(--topbar-h);
-  background: rgba(10,10,15,0.85);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 2rem;
-  z-index: 50;
-  gap: 1rem;
-}
-
-.topbar-breadcrumb {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.topbar-breadcrumb .sep { color: var(--text-muted); opacity: 0.4; }
-.topbar-breadcrumb .current { color: var(--text-primary); font-weight: 500; }
-
-.topbar-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
+/* The per-page topbar (breadcrumb + action) is gone: .cv-nav carries the
+   action, and the sidebar's active item says where you are, which is what the
+   breadcrumb was for. */
 
 .btn-github {
   display: flex;
@@ -257,7 +469,7 @@ img, video { max-width: 100%; }
   gap: 6px;
   background: var(--accent-glow);
   border: 1px solid var(--border-accent);
-  color: var(--accent-light);
+  color: var(--accent-text);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 10px;
@@ -273,7 +485,7 @@ img, video { max-width: 100%; }
   letter-spacing: -0.04em;
   line-height: 1.1;
   margin-bottom: 0.75rem;
-  background: linear-gradient(135deg, var(--text-primary) 50%, var(--accent-light));
+  background: linear-gradient(135deg, var(--text-primary) 50%, var(--accent-text));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -303,7 +515,7 @@ img, video { max-width: 100%; }
   content: '';
   width: 3px;
   height: 16px;
-  background: linear-gradient(to bottom, var(--accent), var(--pink));
+  background: linear-gradient(to bottom, var(--accent-text), var(--accent));
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -400,15 +612,15 @@ img, video { max-width: 100%; }
 }
 
 .code-block pre {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
   border-radius: var(--radius-md);
   padding: 1.25rem 1.5rem;
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.7;
-  color: var(--text-primary);
+  color: var(--code-text);
 }
 
 .code-block code {
@@ -416,21 +628,24 @@ img, video { max-width: 100%; }
 }
 
 /* Syntax colouring (minimal, css-only) */
-.kw  { color: #c084fc; }  /* keywords */
+.kw  { color: #7fc4de; }  /* keywords */
 .str { color: #86efac; }  /* strings */
-.cm  { color: #5c5c80; font-style: italic; }  /* comments */
+.cm  { color: #64748b; font-style: italic; }  /* comments */
 .fn  { color: #93c5fd; }  /* function names */
 .num { color: #fbbf24; }  /* numbers */
 .tag { color: #f472b6; }  /* HTML/JSX tags */
-.at  { color: #a78bfa; }  /* attributes */
+.at  { color: #a5b4fc; }  /* attributes */
 .ty  { color: #34d399; }  /* types */
 
+/* Sits on the code surface, so it takes the code tokens rather than the page
+   ones — otherwise it turns into a pale chip on a near-black block in light
+   mode. */
 .copy-btn {
   position: absolute;
   top: 10px; right: 10px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  background: var(--code-chrome);
+  border: 1px solid var(--code-border);
+  color: var(--code-chrome-text);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   padding: 4px 10px;
@@ -439,7 +654,9 @@ img, video { max-width: 100%; }
   transition: all var(--transition);
 }
 
-.copy-btn:hover { color: var(--text-primary); border-color: var(--border-accent); }
+.copy-btn:hover { color: var(--code-text); border-color: rgba(255,255,255,0.2); }
+/* Fixed green, not var(--ok): this button sits on the always-dark code
+   surface, so it does not follow the page theme. */
 .copy-btn.copied { color: #4ade80; border-color: #4ade80; }
 
 /* ── Props Table ────────────────────────────────────────── */
@@ -492,7 +709,7 @@ img, video { max-width: 100%; }
 .prop-type {
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  color: #34d399;
+  color: var(--ty);
 }
 
 .prop-default {
@@ -503,8 +720,8 @@ img, video { max-width: 100%; }
 
 .prop-required {
   display: inline-block;
-  background: rgba(236,72,153,0.15);
-  color: #f9a8d4;
+  background: rgba(251,113,133,0.15);
+  color: var(--required);
   font-size: 0.65rem;
   font-weight: 600;
   padding: 1px 6px;
@@ -515,7 +732,7 @@ img, video { max-width: 100%; }
 
 /* ── Install Banner ─────────────────────────────────────── */
 .install-banner {
-  background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.08));
+  background: linear-gradient(135deg, var(--accent-glow), transparent);
   border: 1px solid var(--border-accent);
   border-radius: var(--radius-md);
   padding: 1.25rem 1.5rem;
@@ -528,7 +745,7 @@ img, video { max-width: 100%; }
 .install-banner code {
   font-family: var(--font-mono);
   font-size: 0.9rem;
-  color: var(--accent-light);
+  color: var(--accent-text);
   flex: 1;
 }
 
@@ -541,9 +758,9 @@ img, video { max-width: 100%; }
   font-size: 0.875rem;
 }
 
-.alert-tip  { background: rgba(52,211,153,0.08); border-color: #34d399; color: #a7f3d0; }
-.alert-info { background: rgba(96,165,250,0.08); border-color: #60a5fa; color: #bfdbfe; }
-.alert-warn { background: rgba(251,191,36,0.08); border-color: #fbbf24; color: #fde68a; }
+.alert-tip  { background: rgba(52,211,153,0.10); border-color: var(--ok);    color: var(--ok); }
+.alert-info { background: rgba(96,165,250,0.10); border-color: var(--info);  color: var(--info); }
+.alert-warn { background: rgba(251,191,36,0.10); border-color: var(--warn);  color: var(--warn); }
 
 /* ── Landing Hero ───────────────────────────────────────── */
 .landing-hero {
@@ -559,7 +776,7 @@ img, video { max-width: 100%; }
   gap: 8px;
   background: var(--accent-glow);
   border: 1px solid var(--border-accent);
-  color: var(--accent-light);
+  color: var(--accent-text);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 5px 14px;
@@ -578,7 +795,7 @@ img, video { max-width: 100%; }
 }
 
 .hero-gradient {
-  background: linear-gradient(135deg, var(--accent-light), var(--pink));
+  background: linear-gradient(135deg, var(--accent-text), var(--accent-alt));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -604,7 +821,7 @@ img, video { max-width: 100%; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--accent), #6d28d9);
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   color: #fff;
   padding: 12px 28px;
   border-radius: var(--radius-md);
@@ -668,7 +885,7 @@ img, video { max-width: 100%; }
 .dot-svelte { background: #ff3e00; }
 .dot-wc     { background: #4ade80; }
 .dot-ts     { background: #3b82f6; }
-.dot-css    { background: #a78bfa; }
+.dot-css    { background: #7fc4de; }
 
 /* ── Component Grid ─────────────────────────────────────── */
 .component-grid {
@@ -694,7 +911,7 @@ img, video { max-width: 100%; }
 .component-card:hover {
   border-color: var(--border-accent);
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.4), var(--shadow-glow);
+  box-shadow: var(--shadow-lift), var(--shadow-glow);
   color: inherit;
 }
 
@@ -717,7 +934,7 @@ img, video { max-width: 100%; }
 .card-preview-icon {
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+  filter: drop-shadow(var(--shadow-icon));
 }
 
 .card-body {
@@ -759,9 +976,9 @@ img, video { max-width: 100%; }
   border-radius: 4px;
 }
 
-.tag-react  { background: rgba(97,218,251,0.1); color: #61dafb; }
-.tag-svelte { background: rgba(255,62,0,0.1);   color: #ff7750; }
-.tag-wc     { background: rgba(74,222,128,0.1); color: #4ade80; }
+.tag-react  { background: rgba(97,218,251,0.12); color: var(--react); }
+.tag-svelte { background: rgba(255,62,0,0.12);   color: var(--svelte); }
+.tag-wc     { background: rgba(74,222,128,0.12); color: var(--wc); }
 
 /* ── Stats Bar ──────────────────────────────────────────── */
 .stats-bar {
@@ -781,7 +998,7 @@ img, video { max-width: 100%; }
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.04em;
-  background: linear-gradient(135deg, var(--accent-light), var(--pink));
+  background: linear-gradient(135deg, var(--accent-text), var(--accent-alt));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -807,8 +1024,8 @@ img, video { max-width: 100%; }
 /* ── Scrollbar ──────────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-base); }
-::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #3a3a55; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -818,7 +1035,7 @@ img, video { max-width: 100%; }
 
   .docs-sidebar.open {
     transform: translateX(0);
-    box-shadow: 0 0 60px rgba(0,0,0,0.7);
+    box-shadow: var(--shadow-drawer);
   }
 
   .docs-main {
@@ -834,6 +1051,19 @@ img, video { max-width: 100%; }
   .stats-bar { gap: 1.5rem; flex-wrap: wrap; }
 
   .landing-hero { padding: 3rem 1rem 2rem; }
+}
+
+/* Same breakpoint the docs site drops its nav links at. The brand, the drawer
+   toggle and Sign in stay; "Star on GitHub" / "View Source" go, since the same
+   links are in the sidebar. */
+@media (max-width: 640px) {
+  .cv-nav { gap: 0.75rem; }
+  .cv-links { display: none; }
+  /* .cv-links carried the margin-left:auto that right-aligns everything after
+     the brand, so the actions have to take it over when the links go. */
+  .cv-actions { margin-left: auto; }
+  .cv-actions .btn-github { display: none; }
+  .cv-brand-sub { display: none; }
 }
 
 /* ── Interactive Playground Layout ─────────────────────── */
@@ -922,8 +1152,8 @@ img, video { max-width: 100%; }
 .control-type-badge {
   font-family: var(--font-mono);
   font-size: 0.6rem;
-  color: var(--accent-light);
-  background: rgba(124, 58, 237, 0.12);
+  color: var(--accent-text);
+  background: var(--accent-glow);
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 6px;
@@ -944,7 +1174,7 @@ img, video { max-width: 100%; }
 
 .control-input:focus, .control-select:focus {
   border-color: var(--border-accent);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 0 0 2px rgba(127, 196, 222, 0.15);
 }
 
 .json-textarea {
@@ -958,13 +1188,13 @@ img, video { max-width: 100%; }
 .json-error-msg {
   display: none;
   font-size: 0.7rem;
-  color: #f87171;
+  color: var(--danger);
   margin-top: 4px;
   font-weight: 500;
 }
 
 .json-textarea.invalid {
-  border-color: #f87171 !important;
+  border-color: var(--danger) !important;
   box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.15) !important;
 }
 
@@ -1042,7 +1272,7 @@ img, video { max-width: 100%; }
 .control-slider-val {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: var(--accent-light);
+  color: var(--accent-text);
   font-weight: 700;
   min-width: 20px;
   text-align: right;

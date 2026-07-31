@@ -25,6 +25,11 @@ const GITHUB_URL    = `https://github.com/${GITHUB_USER}/${REPO}`;
 const PACKAGE_JSON  = require('../package.json');
 const VERSION       = PACKAGE_JSON.version;
 const MAJOR_VERSION = `v${VERSION.split('.')[0]}`; // e.g. "v1"
+// Shown in the sidebar version picker. Before the first release package.json
+// carries semantic-release's 0.0.0-development placeholder, and printing that
+// as "v0.x.x (Latest)" would advertise a version that does not exist.
+const IS_UNRELEASED = /^0\.0\.0/.test(VERSION);
+const VERSION_LABEL = IS_UNRELEASED ? 'Unreleased (main)' : `v${MAJOR_VERSION.slice(1)}.x.x (Latest)`;
 
 const DOCS_DIR      = path.join(ROOT, 'docs');
 const VERSION_DIR   = path.join(DOCS_DIR, MAJOR_VERSION);
@@ -35,6 +40,16 @@ const COMPONENTS_DIR = path.join(VERSION_DIR, 'components');
 // checks-out docs/. Two URLs serving identical pages splits their search
 // ranking, so every page declares the docs-site copy as canonical.
 const CANONICAL_BASE = process.env.DOCS_CANONICAL_BASE ?? 'https://docs.contentveda.com/ui';
+
+// ── Favicon ────────────────────────────────────────────────────────────────
+// The ContentVeda mark, shared with the docs site. The SVG is listed first so
+// modern browsers take it; the .ico and 32px PNG are there for the ones that
+// still will not, and the 180px PNG for iOS home screens. `prefix` is the hop
+// back to the version root ('' from index.html, '../' from components/).
+const FAVICON_TAGS = (prefix) => `<link rel="icon" href="${prefix}assets/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="${prefix}assets/brand/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="alternate icon" href="${prefix}assets/brand/favicon.ico" sizes="32x32" />
+  <link rel="apple-touch-icon" href="${prefix}assets/brand/apple-touch-icon.png" sizes="180x180" />`;
 
 // ── Recursive Copy Helper ──────────────────────────────────────────────────
 function copyDir(src, dest) {
@@ -56,7 +71,7 @@ function copyDir(src, dest) {
 const DEFAULT_WC_ELEMENTS = {
   'banner': `<cv-banner id="interactive-preview" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
   
-  'announcement-bar': `<cv-announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#8b5cf6" text-color="#ffffff" map-links='[{"url":"#"}]'></cv-announcement-bar>`,
+  'announcement-bar': `<cv-announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#245066" text-color="#ffffff" map-links='[{"url":"#"}]'></cv-announcement-bar>`,
   
   'grid-banner': `<cv-grid-banner id="interactive-preview" columns="3" items='[{"id":"1","title":"Women\\\'s Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Men\\\'s Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></cv-grid-banner>`,
   
@@ -75,6 +90,79 @@ const DEFAULT_WC_ELEMENTS = {
   'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
 };
 
+// ── Site header (shared across every page) ─────────────────────────────────
+// A hand-written copy of the docs site's DocsNav: same 60px sticky bar, same
+// lockup (mark + live-text wordmark, never the outlined lettering from the
+// artwork), same link set, same Sign in button. Landing on /ui/ from the docs
+// site should not feel like landing on a different site.
+//
+// Links are absolute rather than root-relative because this tree is also
+// published on GitHub Pages, where /cms/api/ would resolve to nothing.
+//
+// One addition the docs site does not have: a text-size control. These pages
+// carry long prop tables and code samples, which is exactly the reading a
+// reader may want larger.
+const SITE_BASE = CANONICAL_BASE.replace(/\/ui\/?$/, '');
+const APP_URL   = 'https://app.contentveda.com';
+
+// Theme and text size have to be on the element before the first paint, or the
+// page renders light and snaps to dark (and at the default size and jumps).
+// That rules out docs.js, which runs after paint, so this goes inline in the
+// head of every page. Same key and same fallback as the docs site's app.html.
+const PREFERENCES_SCRIPT = `<script>
+    try {
+      var t = localStorage.getItem('contentveda-theme');
+      var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      var f = localStorage.getItem('contentveda-font-scale');
+      if (f && f !== 'md') document.documentElement.setAttribute('data-font', f);
+    } catch (e) {}
+  </script>`;
+
+// The mark, inlined from the artwork rather than linked as <img>. Two things
+// come out of that: it costs no request and cannot flash, and — the reason it
+// matters here — the fills become custom properties, so one copy serves both
+// themes. That is necessary, not decorative: the C is near-black and the V's
+// darkest facet measures about 1.9:1 on the dark background, so a single set
+// of fills cannot work on both. Same approach, same values, as the docs site's
+// Logo component.
+const BRAND_MARK = fs
+  .readFileSync(path.join(DOCS_DIR, 'assets', 'brand', 'logo-mark.svg'), 'utf8')
+  .replace(/fill="#(?:010101|010201|020202)"/gi, 'fill="var(--m-ink)"')
+  .replace(/fill="#164F69"/gi, 'fill="var(--m-v)"')
+  .replace(/fill="#0[EF]374E"/gi, 'fill="var(--m-vd)"')
+  // The wordmark beside it is live text, so the mark is decoration to a screen
+  // reader — drop the artwork's own role/label rather than announce the name twice.
+  .replace(/\s+role="img"|\s+aria-label="[^"]*"/g, '')
+  .replace(/<svg /, '<svg class="cv-brand-mark" width="49" height="30" aria-hidden="true" focusable="false" ')
+  .trim();
+
+function buildHeader(prefix, actionHtml) {
+  return `
+    <header class="cv-nav">
+      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <a class="cv-brand" href="${prefix}index.html">
+        ${BRAND_MARK}
+        <span class="cv-brand-word">Content<b>Veda</b></span>
+        <span class="cv-brand-sub">UI</span>
+      </a>
+      <nav class="cv-links">
+        <a href="${SITE_BASE}/cms/api/">Content API</a>
+        <a href="${SITE_BASE}/cms/graphql/">GraphQL</a>
+        <a href="${prefix}index.html" class="active">Components</a>
+      </nav>
+      <div class="cv-actions">
+        <div class="cv-fontsize" role="group" aria-label="Text size">
+          <button type="button" id="font-dec" aria-label="Decrease text size" title="Decrease text size">A−</button>
+          <button type="button" id="font-inc" aria-label="Increase text size" title="Increase text size">A+</button>
+        </div>
+        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+        ${actionHtml}
+        <a class="cv-signin" href="${APP_URL}">Sign in</a>
+      </div>
+    </header>`;
+}
+
 // ── Sidebar HTML (shared across every page) ────────────────────────────────
 function buildSidebar(activeSlug, isLandingPage) {
   const prefix = isLandingPage ? '' : '../';
@@ -87,14 +175,9 @@ function buildSidebar(activeSlug, isLandingPage) {
 
   return `
     <aside class="docs-sidebar">
-      <a href="${prefix}index.html" class="sidebar-brand">
-        <div class="sidebar-logo">⏱</div>
-        <span class="sidebar-brand-name">ContentVeda<span>UI</span></span>
-        <span class="sidebar-version">v${VERSION}</span>
-      </a>
-      <div class="sidebar-version-picker" style="padding: 0.5rem 1.25rem; border-bottom: 1px solid var(--border);">
+      <div class="sidebar-version-picker" style="padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border);">
         <select class="control-select version-select" style="width: 100%; font-size: 0.8rem; background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-secondary); padding: 6px 10px; border-radius: var(--radius-sm); outline: none; cursor: pointer;" onchange="window.location.href = this.value">
-          <option value="${prefix}index.html" selected>v1.x.x (Latest)</option>
+          <option value="${prefix}index.html" selected>${VERSION_LABEL}</option>
         </select>
       </div>
       <nav class="sidebar-nav">
@@ -274,7 +357,10 @@ function buildControlsForm(component) {
         </div>
       `;
     } else if (type === 'string' && propName.toLowerCase().includes('color')) {
-      const hex = defaultValue && defaultValue.startsWith('"#') ? defaultValue.replace(/"/g, '') : '#7c3aed';
+      // Colour props whose documented default is a token rather than a literal
+      // (e.g. "var(--cv-color-primary, #245066)") have nothing a native colour
+      // input can show, so the picker opens on the brand primary.
+      const hex = defaultValue && defaultValue.startsWith('"#') ? defaultValue.replace(/"/g, '') : '#245066';
       inputHtml = `
         <div class="control-color-wrap">
           <input type="color" name="${attrName}" value="${hex}" class="control-color-picker">
@@ -388,6 +474,8 @@ function buildPage(component) {
   <title>${name} — ContentVeda UI</title>
   <meta name="description" content="${component.cardDesc}" />
   <link rel="canonical" href="${CANONICAL_BASE}/${MAJOR_VERSION}/components/${slug}.html" />
+  ${FAVICON_TAGS('../')}
+  ${PREFERENCES_SCRIPT}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="../css/docs.css" />
   <link rel="stylesheet" href="../styles/theme.css" />
@@ -395,22 +483,12 @@ function buildPage(component) {
   ${previewCss ? `<style>${previewCss}</style>` : ''}
 </head>
 <body>
+${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalName.replace(/\s/g,'')}.lite.tsx"
+           target="_blank" rel="noopener" class="btn-github">View Source</a>`)}
 <div class="docs-shell">
   ${sidebar}
 
   <main class="docs-main">
-    <div class="docs-topbar">
-      <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
-      <div class="topbar-breadcrumb">
-        <a href="../index.html">ContentVeda UI</a><span class="sep">/</span>
-        <span class="current">${name}</span>
-      </div>
-      <div class="topbar-actions">
-        <a href="${GITHUB_URL}/blob/main/src/components/${pascalName.replace(/\s/g,'')}.lite.tsx"
-           target="_blank" rel="noopener" class="btn-github">View Source</a>
-      </div>
-    </div>
-
     <div class="docs-content">
       <!-- Page Header -->
       <div class="page-header">
@@ -753,6 +831,8 @@ function buildLandingPage() {
     }
   </script>
   <meta name="description" content="A universal, framework-agnostic UI component library. Write once in Mitosis and compile to React, Svelte, and Web Components." />
+  ${FAVICON_TAGS('')}
+  ${PREFERENCES_SCRIPT}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="css/docs.css" />
   <style>
@@ -769,9 +849,9 @@ function buildLandingPage() {
       filter: blur(80px);
       opacity: 0.12;
     }
-    .g1 { width: 600px; height: 600px; background: #7c3aed; top: -200px; left: -100px; }
-    .g2 { width: 500px; height: 500px; background: #ec4899; top: 100px; right: -100px; }
-    .g3 { width: 400px; height: 400px; background: #3b82f6; bottom: 0; left: 40%; }
+    .g1 { width: 600px; height: 600px; background: #7fc4de; top: -200px; left: -100px; }
+    .g2 { width: 500px; height: 500px; background: #4d8ba6; top: 100px; right: -100px; }
+    .g3 { width: 400px; height: 400px; background: #2c6480; bottom: 0; left: 40%; }
     .docs-main { position: relative; z-index: 1; }
   </style>
 </head>
@@ -782,22 +862,12 @@ function buildLandingPage() {
     <span class="g3"></span>
   </div>
 
+  ${buildHeader('', `<a href="${GITHUB_URL}" target="_blank" rel="noopener" class="btn-github">Star on GitHub</a>`)}
+
   <div class="docs-shell">
     ${sidebar}
 
     <main class="docs-main">
-      <div class="docs-topbar">
-        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
-        <div class="topbar-breadcrumb">
-          <span class="current">Home</span>
-        </div>
-        <div class="topbar-actions">
-          <a href="${GITHUB_URL}" target="_blank" rel="noopener" class="btn-github">
-            Star on GitHub
-          </a>
-        </div>
-      </div>
-
       <!-- Hero -->
       <section class="landing-hero">
         <div class="hero-eyebrow">
@@ -917,7 +987,7 @@ function main() {
     console.log(`  ✓  docs/${MAJOR_VERSION}/components/${component.slug}.html`);
   }
 
-  // 3. Generate version landing page docs/v1/index.html
+  // 3. Generate version landing page docs/<major>/index.html
   const landingHtml = buildLandingPage();
   fs.writeFileSync(path.join(VERSION_DIR, 'index.html'), landingHtml, 'utf8');
   console.log(`  ✓  docs/${MAJOR_VERSION}/index.html landing page generated`);
@@ -934,10 +1004,10 @@ function main() {
     window.location.replace("${MAJOR_VERSION}/index.html");
   </script>
 </head>
-<body style="background:#0a0a0f; color:#f0f0ff; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+<body style="background:#0b1120; color:#e2e8f0; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
   <div style="text-align:center;">
     <p style="margin-bottom:1rem; font-size:1.2rem;">Redirecting to ContentVeda UI documentation (${MAJOR_VERSION})...</p>
-    <p><a href="${MAJOR_VERSION}/index.html" style="color:#a78bfa; text-decoration:underline;">Click here if you are not redirected automatically</a></p>
+    <p><a href="${MAJOR_VERSION}/index.html" style="color:#7fc4de; text-decoration:underline;">Click here if you are not redirected automatically</a></p>
   </div>
 </body>
 </html>`;
