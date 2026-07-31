@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@contentveda/ui"><img src="https://img.shields.io/npm/v/@contentveda/ui?style=flat-square&color=245066&label=npm" alt="npm version" /></a>
   <a href="https://github.com/nilkoushik/contentveda-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License" /></a>
-  <a href="https://github.com/nilkoushik/contentveda-ui/actions/workflows/publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/nilkoushik/contentveda-ui/publish.yml?style=flat-square&label=publish" alt="Build status" /></a>
+  <a href="https://github.com/nilkoushik/contentveda-ui/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/nilkoushik/contentveda-ui/release.yml?style=flat-square&label=release" alt="Build status" /></a>
   <a href="https://nilkoushik.github.io/contentveda-ui"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-2c6480?style=flat-square" alt="Docs" /></a>
 </p>
 
@@ -116,8 +116,8 @@ export default function Page() {
 #### 🌐 Web Components (Vanilla HTML / CMS Renderer)
 
 ```html
-<link rel="stylesheet" href="node_modules/@contentveda/ui/theme.css" />
-<script type="module" src="node_modules/@contentveda/ui/webcomponents/Banner.js"></script>
+<link rel="stylesheet" href="node_modules/@contentveda/ui/dist/styles/theme.css" />
+<script type="module" src="node_modules/@contentveda/ui/dist/webcomponent/dist/Banner.js"></script>
 
 <cv-banner
   title="Summer Sale"

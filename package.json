@@ -4,7 +4,7 @@
   "description": "A universal, framework-agnostic UI component library built with Mitosis. Write once, compile to React, Svelte, and Web Components.",
   "author": "Koushik Manna",
   "license": "MIT",
-  "homepage": "https://nilkoushik.github.io/contentveda-ui",
+  "homepage": "https://docs.contentveda.com/ui/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nilkoushik/contentveda-ui.git"

@@ -315,7 +315,11 @@ function generateLiveDemoCode() {
   // rendered structurally correct but completely unstyled. Pull the PascalCase
   // component name straight out of its import path so we can link its
   // matching stylesheet too, for whichever framework tab is active.
-  const componentNameMatch = rawCode.match(/@contentveda\/ui\/(?:react|webcomponents?)\/([A-Za-z0-9]+)/);
+  // Matches both forms the samples use: the bare specifier the React/Svelte
+  // tabs import (@contentveda/ui/react/Banner) and the real file path the Web
+  // Component tab points a <script src> at, which has to name the location
+  // inside the published tarball because a raw path bypasses package exports.
+  const componentNameMatch = rawCode.match(/@contentveda\/ui\/(?:react|webcomponents?|dist\/webcomponent\/dist)\/([A-Za-z0-9]+)/);
   const componentName = componentNameMatch ? componentNameMatch[1] : null;
   const componentCssLink = componentName
     ? `<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/components/${componentName}.css">\n`

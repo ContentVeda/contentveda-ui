@@ -1,0 +1,76 @@
+name: Notify contentveda-docs
+
+# Tells contentveda-docs that something affecting the component docs changed.
+#
+# This replaces an earlier workflow that built the docs and pushed the result
+# into contentveda-docs' main branch. The direction was inverted for three
+# reasons:
+#
+#   1. This repo no longer needs write access to another repo, nor any
+#      knowledge of where that site keeps its files (static/ui). The write
+#      happens in the repo being written to, with that repo's own token.
+#   2. The sync lands on a branch there and goes through review, instead of
+#      appearing directly on main.
+#   3. This repo is public, so contentveda-docs can check it out with its
+#      built-in GITHUB_TOKEN and build it from source. It compiles the library,
+#      generates the pages, runs the BDD suite and builds the Allure report
+#      itself, and replaces its copy only if all of that passes — so a broken
+#      commit here cannot reach the live site.
+#
+# Which is why this workflow does no building. Nothing it could verify would
+# not be verified again, on the same commit, by the job that actually
+# publishes. It sends the SHA and gets out of the way; the release and Pages
+# workflows still build and test this repo on their own account.
+
+on:
+  push:
+    branches: [main]
+    # Only the inputs that can change the generated output. Skips the run for
+    # README edits, workflow tweaks and the like.
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'scripts/generate-docs.js'
+      - 'scripts/docs-manifest.json'
+      - 'scripts/docs-props.json'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify-docs
+  cancel-in-progress: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify contentveda-docs
+        env:
+          # A token is still needed to raise an event in another repo; the
+          # built-in GITHUB_TOKEN is scoped to this one. Keep it to the minimum
+          # POST /dispatches accepts: contents:write on contentveda-docs and
+          # nothing else. If it is missing the job ends with a notice rather
+          # than a failure — that repo also polls on a schedule, so an absent
+          # token delays the sync, it does not break it.
+          GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::DOCS_DISPATCH_TOKEN is not set, so no notification"\
+                 "was sent. contentveda-docs will pick this commit up on its"\
+                 "next scheduled poll. To make the sync immediate, add a token"\
+                 "with contents:write on nilkoushik/contentveda-docs as an"\
+                 "Actions secret named DOCS_DISPATCH_TOKEN."
+            exit 0
+          fi
+
+          gh api /repos/nilkoushik/contentveda-docs/dispatches \
+            --method POST \
+            -f event_type=ui-docs-updated \
+            -F "client_payload[sha]=$GITHUB_SHA" \
+            -F "client_payload[run_url]=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+          echo "Notified contentveda-docs for ${GITHUB_SHA:0:7}."
