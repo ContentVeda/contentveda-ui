@@ -1,0 +1,134 @@
+/* Styles for AlternatingSlider */
+.cv-alt-slider {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--cv-border-radius-md, 8px);
+}
+.cv-alt-cols-container {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+.cv-alt-col {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+.cv-alt-track {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cv-alt-cell {
+  position: absolute;
+  width: 100%; height: 100%;
+  left: 0;
+}
+.cv-alt-content-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.cv-alt-bg, .cv-alt-bg-video {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+  object-fit: cover;
+}
+.cv-alt-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4);
+  transition: background 0.3s;
+}
+.cv-alt-content-wrap:hover .cv-alt-overlay {
+  background: rgba(0,0,0,0.2);
+}
+.cv-alt-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 2rem;
+  color: white;
+}
+.cv-alt-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.cv-alt-subtitle {
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.cv-alt-cta {
+  background: var(--cv-color-primary, #6d28d9);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: all 0.3s;
+  display: inline-block;
+}
+.cv-alt-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+.cv-alt-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  z-index: 10;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+.cv-alt-arrow:hover { background: rgba(255,255,255,0.4); }
+.cv-alt-arrow.prev { left: 20px; }
+.cv-alt-arrow.next { right: 20px; }
+
+.cv-alt-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+.cv-alt-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 0;
+}
+.cv-alt-dot.active {
+  background: white;
+  transform: scale(1.2);
+}
