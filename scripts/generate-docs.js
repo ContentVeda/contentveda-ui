@@ -1014,6 +1014,31 @@ function main() {
   fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), redirectHtml, 'utf8');
   console.log(`  ✓  docs/index.html redirect set up targeting ${MAJOR_VERSION}`);
 
+  // 5. Drop the pre-release docs tree once a real version exists.
+  //
+  // The tree is named after the major version, so while package.json carries
+  // semantic-release's 0.0.0-development placeholder the docs build to
+  // docs/v0. The moment the first release stamps a real version they build to
+  // docs/v1 instead — and docs/v0 would be left behind. That matters because
+  // the sync workflow replaces the docs site's static/ui wholesale with a copy
+  // of docs/: a stale v0 would stay published forever, declaring itself
+  // canonical at /ui/v0/ and competing with the real pages in search.
+  //
+  // Only the placeholder tree is removed, and only after confirming it is the
+  // placeholder's — released majors are kept on purpose, since the version
+  // picker is meant to keep serving older docs once v2 ships.
+  if (!IS_UNRELEASED) {
+    const placeholderDir = path.join(DOCS_DIR, 'v0');
+    const placeholderIndex = path.join(placeholderDir, 'index.html');
+    if (
+      fs.existsSync(placeholderIndex) &&
+      fs.readFileSync(placeholderIndex, 'utf8').includes('Unreleased (main)')
+    ) {
+      fs.rmSync(placeholderDir, { recursive: true, force: true });
+      console.log('  ✓  removed docs/v0 — the pre-release tree, superseded by ' + MAJOR_VERSION);
+    }
+  }
+
   console.log(`\n✅  Generated ${MANIFEST.length} component pages.\n`);
 }
 
