@@ -1,9 +1,9 @@
 name: Notify contentveda-docs
 
-# Tells contentveda-docs that the component docs changed, and lets it pull.
+# Tells contentveda-docs that something affecting the component docs changed.
 #
-# This replaces an earlier workflow that pushed the generated tree straight
-# into contentveda-docs' main branch. The push direction was inverted for three
+# This replaces an earlier workflow that built the docs and pushed the result
+# into contentveda-docs' main branch. The direction was inverted for three
 # reasons:
 #
 #   1. This repo no longer needs write access to another repo, nor any
@@ -11,15 +11,16 @@ name: Notify contentveda-docs
 #      happens in the repo being written to, with that repo's own token.
 #   2. The sync lands on a branch there and goes through review, instead of
 #      appearing directly on main.
-#   3. This repo is public, so contentveda-docs can read it with its built-in
-#      GITHUB_TOKEN. The only credential left in this workflow is the one that
-#      sends the notification — and if it is absent, the sync still happens on
-#      the schedule that workflow keeps as a fallback. Nothing silently rots.
+#   3. This repo is public, so contentveda-docs can check it out with its
+#      built-in GITHUB_TOKEN and build it from source. It compiles the library,
+#      generates the pages, runs the BDD suite and builds the Allure report
+#      itself, and replaces its copy only if all of that passes — so a broken
+#      commit here cannot reach the live site.
 #
-# What the docs site pulls is the *committed* docs/ tree, not a fresh build, so
-# this workflow's real job is to guarantee those two are the same thing. If a
-# change to src/ landed without the regenerated docs alongside it, the verify
-# step below fails and no notification is sent.
+# Which is why this workflow does no building. Nothing it could verify would
+# not be verified again, on the same commit, by the job that actually
+# publishes. It sends the SHA and gets out of the way; the release and Pages
+# workflows still build and test this repo on their own account.
 
 on:
   push:
@@ -43,73 +44,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify-and-notify:
+  notify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Rebuild the docs
-        run: npm run build
-
-      - name: Verify generated docs
-        run: |
-          # The docs tree is named after the package's major version, so read it
-          # from package.json rather than hardcoding it — otherwise this check
-          # silently passes against a stale tree the moment the major changes.
-          major="v$(node -p "require('./package.json').version.split('.')[0]")"
-          echo "Checking docs/$major"
-          test -f "docs/$major/index.html" || { echo "::error::docs/$major/index.html missing"; exit 1; }
-          pages=$(ls "docs/$major"/components/*.html 2>/dev/null | wc -l)
-          test "$pages" -gt 0 || { echo "::error::no component pages generated"; exit 1; }
-          # Every page loads ../dist/webcomponent/dist/index.js for its live
-          # playground. Publishing without it means ten pages of dead demos.
-          test -f "docs/$major/dist/webcomponent/dist/index.js" \
-            || { echo "::error::playground bundles missing from docs/$major/dist"; exit 1; }
-          echo "$pages component pages, $(find docs -type f | wc -l) files total."
-
-      # The docs site copies the committed tree rather than building this
-      # package itself, so a commit that changes src/ without regenerating docs/
-      # would publish stale pages. Under the old push model CI regenerated on
-      # the way out and nobody noticed the drift; here it has to be an error.
-      - name: Fail if the committed docs are stale
-        run: |
-          if ! git diff --quiet -- docs/; then
-            echo "::error::docs/ is out of date with src/. The docs site copies"\
-                 "the committed tree, so it has to be regenerated in the same"\
-                 "commit: run 'npm run build' and commit the changes under docs/."
-            echo "--- drifted files ---"
-            git diff --stat -- docs/
-            exit 1
-          fi
-          echo "Committed docs match a fresh build."
-
       - name: Notify contentveda-docs
         env:
           # A token is still needed to raise an event in another repo; the
           # built-in GITHUB_TOKEN is scoped to this one. Keep it to the minimum
-          # that POST /dispatches accepts: contents:write on contentveda-docs
-          # and nothing else. If it is missing the job ends here with a notice
-          # rather than a failure — the docs repo also polls on a schedule, so
-          # an absent token delays the sync, it does not break it.
+          # POST /dispatches accepts: contents:write on contentveda-docs and
+          # nothing else. If it is missing the job ends with a notice rather
+          # than a failure — that repo also polls on a schedule, so an absent
+          # token delays the sync, it does not break it.
           GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "::notice::DOCS_DISPATCH_TOKEN is not set, so no notification"\
-                 "was sent. contentveda-docs will pick this up on its next"\
-                 "scheduled poll. To make the sync immediate, add a token with"\
-                 "contents:write on nilkoushik/contentveda-docs as an Actions"\
-                 "secret named DOCS_DISPATCH_TOKEN."
+                 "was sent. contentveda-docs will pick this commit up on its"\
+                 "next scheduled poll. To make the sync immediate, add a token"\
+                 "with contents:write on nilkoushik/contentveda-docs as an"\
+                 "Actions secret named DOCS_DISPATCH_TOKEN."
             exit 0
           fi
 
