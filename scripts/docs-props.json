@@ -20,7 +20,7 @@
   "AnnouncementBar": [
     { "name": "message",         "required": true,  "type": "string",              "description": "The announcement text content" },
     { "name": "mapLinks",        "required": false, "type": "{ url: string }[]",  "description": "When provided, wraps message in an anchor using first entry's URL" },
-    { "name": "backgroundColor", "required": false, "type": "string",              "description": "CSS colour for the bar background (default: <code>#8b5cf6</code>)" },
+    { "name": "backgroundColor", "required": false, "type": "string",              "description": "CSS colour for the bar background (default: <code>var(--cv-color-primary, #245066)</code>)" },
     { "name": "textColor",       "required": false, "type": "string",              "description": "CSS colour for the message text (default: <code>#ffffff</code>)" },
     { "name": "className",       "required": false, "type": "string",              "description": "Additional CSS class names on the root element" }
   ],

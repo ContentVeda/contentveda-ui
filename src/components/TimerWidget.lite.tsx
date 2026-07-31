@@ -132,7 +132,7 @@ export default function TimerWidget(props: TimerWidgetProps) {
         />
       </Show>
       <Show when={state.hasBackgroundImage}>
-        <div class="cv-timer-overlay" style={{ background: props.overlay || 'rgba(0, 0, 0, 0.45)' }} />
+        <div class="cv-timer-overlay" style={{ background: props.overlay || 'var(--cv-color-scrim, rgba(0, 0, 0, 0.45))' }} />
       </Show>
       <Show when={state.backgroundEffectClass !== 'none'}>
         <canvas
