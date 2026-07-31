@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;media-grid&gt; Playground</span>
+              <span class="preview-url">&lt;cv-media-grid&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <media-grid id="interactive-preview" primary-media='{"id":"p1","media":{"type":"image","url":"../assets/img/placeholder-05.svg"},"altText":"Primary Accent Banner"}' secondary-media='[{"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]'></media-grid>
+              <cv-media-grid id="interactive-preview" primary-media='{"id":"p1","media":{"type":"image","url":"../assets/img/placeholder-05.svg"},"altText":"Primary Accent Banner"}' secondary-media='[{"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]'></cv-media-grid>
             </div>
           </div>
         </div>
@@ -205,10 +205,10 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/MediaGrid.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">media-grid</span>
+&lt;<span class="tag">cv-media-grid</span>
   primary-media=<span class="str">'{"id":"p1","media":{"type":"image","url":"/primary.jpg"}}'</span>
   secondary-media=<span class="str">'[{"id":"s1","media":{"type":"image","url":"/sec1.jpg"}}]'</span>
-&gt;&lt;/<span class="tag">media-grid</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-media-grid</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "MediaGrid";
-    const wcTagName = "media-grid";
+    const wcTagName = "cv-media-grid";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

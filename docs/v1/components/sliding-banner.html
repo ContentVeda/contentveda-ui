@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;sliding-banner&gt; Playground</span>
+              <span class="preview-url">&lt;cv-sliding-banner&gt; Playground</span>
             </div>
             <div class="preview-body-flush" id="preview-container">
-              <sliding-banner id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-13.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-14.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-01.svg"}}]' config='{"autoStart":true,"rotateAgain":true,"showDots":true,"showArrows":true,"animationEffect":"fade","backgroundEffect":"waves"}'></sliding-banner>
+              <cv-sliding-banner id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-13.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-14.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-01.svg"}}]' config='{"autoStart":true,"rotateAgain":true,"showDots":true,"showArrows":true,"animationEffect":"fade","backgroundEffect":"waves"}'></cv-sliding-banner>
             </div>
           </div>
         </div>
@@ -344,10 +344,10 @@
 &lt;!-- backgroundEffectPlugin ({ start, stop } functions) can<span class="str">'t be passed as an
      HTML attribute string — set it as a JS property instead:
      document.querySelector('</span>sliding-banner<span class="str">').config = { ...existingConfig, backgroundEffectPlugin: { start: myStart, stop: myStop } }; --&gt;
-&lt;<span class="tag">sliding-banner</span>
+&lt;<span class="tag">cv-sliding-banner</span>
   items='</span>[{<span class="str">"id"</span>:<span class="str">"1"</span>,<span class="str">"title"</span>:<span class="str">"Sale"</span>}]<span class="str">'
   config='</span>{<span class="str">"autoStart"</span>:<span class="kw">true</span>,<span class="str">"showDots"</span>:<span class="kw">true</span>,<span class="str">"animationEffect"</span>:<span class="str">"fade"</span>,<span class="str">"backgroundEffect"</span>:<span class="str">"waves"</span>}'
-&gt;&lt;/<span class="tag">sliding-banner</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-sliding-banner</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -628,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "SlidingBanner";
-    const wcTagName = "sliding-banner";
+    const wcTagName = "cv-sliding-banner";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

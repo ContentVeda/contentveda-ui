@@ -4,7 +4,7 @@ Feature: AlternatingSlider
   So that its layout renders correctly at any column count
 
   Scenario Outline: Renders the configured number of columns
-    Given I mount the "alternating-slider" component as "AlternatingSlider" with:
+    Given I mount the "cv-alternating-slider" component as "AlternatingSlider" with:
       | items  | [{"id":"1","title":"Ocean Breeze"},{"id":"2","title":"Forest Trail"},{"id":"3","title":"Desert Sun"},{"id":"4","title":"Mountain Peak"}] |
       | config | {"columns":<columns>,"autoStart":false} |
     Then it should render without any page errors
@@ -17,7 +17,7 @@ Feature: AlternatingSlider
       | 4       |
 
   Scenario: Renders title content
-    Given I mount the "alternating-slider" component as "AlternatingSlider" with:
+    Given I mount the "cv-alternating-slider" component as "AlternatingSlider" with:
       | items  | [{"id":"1","title":"Ocean Breeze","subtitle":"Fresh styles"}] |
       | config | {"columns":2,"autoStart":false}                                 |
     Then it should render without any page errors

@@ -4,7 +4,7 @@ Feature: RichTextEditor
   So that content authors can format text, insert media, and see it reflected immediately
 
   Scenario: Renders initial content and the configured toolbar
-    Given I mount the "rich-text-editor" component as "RichTextEditor" with:
+    Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Hello editor</p>                                      |
       | config          | {"toolbar":["bold","italic","image","video"]}            |
     Then it should render without any page errors
@@ -16,7 +16,7 @@ Feature: RichTextEditor
     And the component should have no serious accessibility violations
 
   Scenario: Inserting an image via the prompt fallback lands in the content
-    Given I mount the "rich-text-editor" component as "RichTextEditor" with:
+    Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p>                       |
       | config          | {"toolbar":["image"]}                          |
     And I will answer any prompt dialog with "https://example.com/photo.jpg"
@@ -26,7 +26,7 @@ Feature: RichTextEditor
     And it should contain 1 elements matching "img[src='https://example.com/photo.jpg']"
 
   Scenario: Inserting a video via the prompt fallback lands in the content
-    Given I mount the "rich-text-editor" component as "RichTextEditor" with:
+    Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p>                       |
       | config          | {"toolbar":["video"]}                          |
     And I will answer any prompt dialog with "https://example.com/clip.mp4"

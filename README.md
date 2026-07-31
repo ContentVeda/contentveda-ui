@@ -119,11 +119,11 @@ export default function Page() {
 <link rel="stylesheet" href="node_modules/@contentveda/ui/theme.css" />
 <script type="module" src="node_modules/@contentveda/ui/webcomponents/Banner.js"></script>
 
-<banner-element
+<cv-banner
   title="Summer Sale"
   subtitle="Up to 50% off"
   cta-text="Shop Now"
-></banner-element>
+></cv-banner>
 ```
 
 ---

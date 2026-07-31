@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;announcement-bar&gt; Playground</span>
+              <span class="preview-url">&lt;cv-announcement-bar&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#8b5cf6" text-color="#ffffff" map-links='[{"url":"#"}]'></announcement-bar>
+              <cv-announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#8b5cf6" text-color="#ffffff" map-links='[{"url":"#"}]'></cv-announcement-bar>
             </div>
           </div>
         </div>
@@ -207,11 +207,11 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/AnnouncementBar.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">announcement-bar</span>
+&lt;<span class="tag">cv-announcement-bar</span>
   message=<span class="str">"Free shipping on orders over $75"</span>
   background-color=<span class="str">"#7c3aed"</span>
   text-color=<span class="str">"#ffffff"</span>
-&gt;&lt;/<span class="tag">announcement-bar</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-announcement-bar</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "AnnouncementBar";
-    const wcTagName = "announcement-bar";
+    const wcTagName = "cv-announcement-bar";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

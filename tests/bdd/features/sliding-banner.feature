@@ -4,7 +4,7 @@ Feature: SlidingBanner
   So that hero sliders work reliably across every configuration
 
   Scenario: Renders slides with dots and arrows
-    Given I mount the "sliding-banner" component as "SlidingBanner" with:
+    Given I mount the "cv-sliding-banner" component as "SlidingBanner" with:
       | items  | [{"id":"1","title":"Slide 1"},{"id":"2","title":"Slide 2"},{"id":"3","title":"Slide 3"}] |
       | config | {"showDots":true,"showNextPrev":true} |
     Then it should render without any page errors
@@ -14,7 +14,7 @@ Feature: SlidingBanner
     And the component should have no serious accessibility violations
 
   Scenario Outline: Renders every transition effect without error
-    Given I mount the "sliding-banner" component as "SlidingBanner" with:
+    Given I mount the "cv-sliding-banner" component as "SlidingBanner" with:
       | items  | [{"id":"1","title":"Slide 1"},{"id":"2","title":"Slide 2"}] |
       | config | {"animationEffect":"<effect>","autoStart":false} |
     Then it should render without any page errors
@@ -36,7 +36,7 @@ Feature: SlidingBanner
       | curtain            |
 
   Scenario Outline: Renders every background effect and animates
-    Given I mount the "sliding-banner" component as "SlidingBanner" with:
+    Given I mount the "cv-sliding-banner" component as "SlidingBanner" with:
       | items  | [{"id":"1","title":"Slide 1"},{"id":"2","title":"Slide 2"}] |
       | config | {"backgroundEffect":"<effect>","autoStart":false} |
     Then it should render without any page errors
@@ -57,7 +57,7 @@ Feature: SlidingBanner
       | sea          |
 
   Scenario: Autoplay advances to the next slide
-    Given I mount the "sliding-banner" component as "SlidingBanner" with:
+    Given I mount the "cv-sliding-banner" component as "SlidingBanner" with:
       | items  | [{"id":"1","title":"First Slide"},{"id":"2","title":"Second Slide"}] |
       | config | {"autoStart":true,"delayMs":1000,"rotateAgain":true} |
     Then it should render without any page errors
