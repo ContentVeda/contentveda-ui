@@ -1,0 +1,510 @@
+/* Styles for SlidingBanner */
+/* Styles for SlidingBanner */
+.cv-sliding-banner {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--cv-border-radius-md);
+  box-shadow: var(--cv-shadow-md);
+}
+
+.cv-sliding-banner-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cv-sliding-banner-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Contain the per-slide z-index (e.g. .active gets z-index:2 for non-slide
+     effects) inside its own stacking context so it never outranks the
+     background-effect canvas, which sits outside the track at z-index:1. */
+  isolation: isolate;
+}
+
+/* Applied for one frame during a wraparound (last -> first / first -> last)
+   on the default `slide` effect, which has no infinite-loop clone. Without
+   this, wrapping would animate across the entire track distance instead of
+   cutting straight to the wrapped slide. */
+.cv-sliding-banner-track.no-transition {
+  transition: none !important;
+}
+
+.cv-sliding-slide {
+  flex: 0 0 100%;
+  position: relative;
+  height: 100%;
+}
+
+.cv-sliding-bg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+.cv-sliding-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4);
+}
+
+.cv-sliding-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: white;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.cv-sliding-title {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.cv-sliding-subtitle {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.cv-sliding-cta {
+  background: var(--cv-color-primary);
+  color: white;
+  padding: 1rem 2rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.cv-sliding-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.cv-sliding-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  z-index: 10;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.cv-sliding-arrow:hover {
+  background: rgba(255,255,255,0.4);
+}
+
+.cv-sliding-arrow.prev { left: 20px; }
+.cv-sliding-arrow.next { right: 20px; }
+
+.cv-sliding-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.cv-sliding-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cv-sliding-dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+/* ==========================================================================
+   Transition effects
+   All effects below animate `.cv-sliding-slide` directly (the track's
+   own translateX loop is disabled) using three states:
+     - resting:  never been shown, waiting to become active
+     - .active:  the currently visible slide
+     - .previous: the slide that was just replaced — given its own exit
+                  transform so it animates *away* rather than snapping back
+                  to the same "resting" pose every other hidden slide uses.
+
+   Depth cues: fast/rotational effects (flip, cube, door, fall, push, wipe)
+   layer in a short motion-blur pulse (sharp -> soft -> sharp) plus a
+   directional shadow that peaks mid-transform, so the motion reads as
+   something with mass and lighting rather than a flat CSS crossfade.
+   ========================================================================== */
+
+@keyframes cv-slide-blur-enter {
+  0%   { filter: blur(10px) brightness(0.85); }
+  55%  { filter: blur(4px) brightness(0.92); }
+  100% { filter: blur(0) brightness(1); }
+}
+
+@keyframes cv-slide-blur-exit {
+  0%   { filter: blur(0) brightness(1); }
+  45%  { filter: blur(4px) brightness(0.9); }
+  100% { filter: blur(10px) brightness(0.8); }
+}
+
+.effect-fade .cv-sliding-banner-track,
+.effect-zoom .cv-sliding-banner-track,
+.effect-flip .cv-sliding-banner-track,
+.effect-push-horizontal .cv-sliding-banner-track,
+.effect-push-vertical .cv-sliding-banner-track,
+.effect-wipe .cv-sliding-banner-track,
+.effect-cube .cv-sliding-banner-track,
+.effect-door .cv-sliding-banner-track,
+.effect-fall .cv-sliding-banner-track,
+.effect-crush .cv-sliding-banner-track,
+.effect-peel-off .cv-sliding-banner-track,
+.effect-curtain .cv-sliding-banner-track {
+  transform: none !important;
+}
+
+.effect-fade .cv-sliding-slide,
+.effect-zoom .cv-sliding-slide,
+.effect-flip .cv-sliding-slide,
+.effect-push-horizontal .cv-sliding-slide,
+.effect-push-vertical .cv-sliding-slide,
+.effect-wipe .cv-sliding-slide,
+.effect-cube .cv-sliding-slide,
+.effect-door .cv-sliding-slide,
+.effect-fall .cv-sliding-slide,
+.effect-crush .cv-sliding-slide,
+.effect-peel-off .cv-sliding-slide,
+.effect-curtain .cv-sliding-slide {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0; pointer-events: none;
+}
+
+/* Only the slide becoming visible (.active) and the one it replaced
+   (.previous) ever need to animate. A merely-resting slide's direction-aware
+   position (see the push/cube/door/fall dir-prev blocks below) still needs
+   to flip instantly when Next/Prev direction changes, but MUST NOT
+   transition when it does — otherwise, since that flip moves it from one
+   off-screen edge to the other, it would visibly sweep all the way across
+   the visible banner even though it's never the slide being shown. */
+.effect-fade .cv-sliding-slide.active, .effect-fade .cv-sliding-slide.previous,
+.effect-zoom .cv-sliding-slide.active, .effect-zoom .cv-sliding-slide.previous,
+.effect-flip .cv-sliding-slide.active, .effect-flip .cv-sliding-slide.previous,
+.effect-push-horizontal .cv-sliding-slide.active, .effect-push-horizontal .cv-sliding-slide.previous,
+.effect-push-vertical .cv-sliding-slide.active, .effect-push-vertical .cv-sliding-slide.previous,
+.effect-wipe .cv-sliding-slide.active, .effect-wipe .cv-sliding-slide.previous,
+.effect-cube .cv-sliding-slide.active, .effect-cube .cv-sliding-slide.previous,
+.effect-door .cv-sliding-slide.active, .effect-door .cv-sliding-slide.previous,
+.effect-fall .cv-sliding-slide.active, .effect-fall .cv-sliding-slide.previous,
+.effect-crush .cv-sliding-slide.active, .effect-crush .cv-sliding-slide.previous,
+.effect-peel-off .cv-sliding-slide.active, .effect-peel-off .cv-sliding-slide.previous,
+.effect-curtain .cv-sliding-slide.active, .effect-curtain .cv-sliding-slide.previous {
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), clip-path 0.8s ease, filter 0.5s ease, box-shadow 0.6s ease;
+}
+
+.effect-fade .cv-sliding-slide.active,
+.effect-zoom .cv-sliding-slide.active,
+.effect-flip .cv-sliding-slide.active,
+.effect-push-horizontal .cv-sliding-slide.active,
+.effect-push-vertical .cv-sliding-slide.active,
+.effect-wipe .cv-sliding-slide.active,
+.effect-cube .cv-sliding-slide.active,
+.effect-door .cv-sliding-slide.active,
+.effect-fall .cv-sliding-slide.active,
+.effect-crush .cv-sliding-slide.active,
+.effect-peel-off .cv-sliding-slide.active,
+.effect-curtain .cv-sliding-slide.active {
+  opacity: 1; pointer-events: auto; z-index: 2;
+}
+
+/* zoom — incoming slide scales UP from undersized to normal while fading
+   in (a "zoom in" approach), outgoing slide continues growing past normal
+   size while fading out, so it reads as passing by/toward the viewer
+   instead of shrinking away. */
+.effect-zoom .cv-sliding-slide { transform: scale(0.85); z-index: 1; }
+.effect-zoom .cv-sliding-slide.active { transform: scale(1); z-index: 2; }
+.effect-zoom .cv-sliding-slide.previous { transform: scale(1.18); z-index: 1; }
+.quality-detailed.effect-zoom .cv-sliding-slide.active { animation: cv-slide-blur-enter 0.6s ease-out; }
+.quality-detailed.effect-zoom .cv-sliding-slide.previous { animation: cv-slide-blur-exit 0.6s ease-in; }
+
+/* flip — incoming slide rotates in face-on from behind; outgoing slide
+   keeps rotating away on the same axis instead of resetting. "detailed"
+   adds perspective depth and a raking shadow like the other 3D effects. */
+.effect-flip .cv-sliding-banner-track { perspective: 1500px; }
+.effect-flip .cv-sliding-slide { transform: rotateY(-180deg); transform-origin: center; backface-visibility: hidden; z-index: 1; }
+.effect-flip .cv-sliding-slide.active { transform: rotateY(0deg); transform-origin: center; backface-visibility: hidden; z-index: 2; }
+.effect-flip .cv-sliding-slide.previous { transform: rotateY(180deg); transform-origin: center; backface-visibility: hidden; z-index: 1; }
+/* reverse rotation direction when navigating backward */
+.effect-flip .cv-sliding-banner-track.dir-prev .cv-sliding-slide { transform: rotateY(180deg); }
+.effect-flip .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { transform: rotateY(0deg); }
+.effect-flip .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { transform: rotateY(-180deg); }
+.quality-detailed.effect-flip .cv-sliding-banner-track { perspective: 2000px; }
+.quality-detailed.effect-flip .cv-sliding-slide { transform-style: preserve-3d; }
+.quality-detailed.effect-flip .cv-sliding-slide.active { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); }
+
+/* ==========================================================================
+   Push Effects (Direction-Aware based on click/arrow direction)
+   push-horizontal and push-vertical each cover both directions themselves
+   (no separate push-left/push-right/push-up/push-down effects) — which way
+   a slide pushes is decided purely by whether the click was Next or Prev.
+   ========================================================================== */
+
+/* push-horizontal — Next pushes LEFT (incoming from right), Prev pushes RIGHT (incoming from left) */
+.effect-push-horizontal .cv-sliding-slide { transform: translateX(100%); opacity: 1 !important; z-index: 1; }
+.effect-push-horizontal .cv-sliding-slide.active { transform: translateX(0); opacity: 1 !important; z-index: 2; }
+.effect-push-horizontal .cv-sliding-slide.previous { transform: translateX(-100%); opacity: 1 !important; z-index: 1; }
+
+.effect-push-horizontal .cv-sliding-banner-track.dir-prev .cv-sliding-slide { transform: translateX(-100%); }
+.effect-push-horizontal .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { transform: translateX(0); }
+.effect-push-horizontal .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { transform: translateX(100%); }
+
+.quality-detailed.effect-push-horizontal .cv-sliding-slide.active { box-shadow: -16px 0 32px rgba(0, 0, 0, 0.3); }
+.quality-detailed.effect-push-horizontal .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { box-shadow: 16px 0 32px rgba(0, 0, 0, 0.3); }
+
+/* push-vertical — Next pushes UP (incoming from bottom), Prev pushes DOWN (incoming from top) */
+.effect-push-vertical .cv-sliding-slide { transform: translateY(100%); opacity: 1 !important; z-index: 1; }
+.effect-push-vertical .cv-sliding-slide.active { transform: translateY(0); opacity: 1 !important; z-index: 2; }
+.effect-push-vertical .cv-sliding-slide.previous { transform: translateY(-100%); opacity: 1 !important; z-index: 1; }
+
+.effect-push-vertical .cv-sliding-banner-track.dir-prev .cv-sliding-slide { transform: translateY(-100%); }
+.effect-push-vertical .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { transform: translateY(0); }
+.effect-push-vertical .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { transform: translateY(100%); }
+
+.quality-detailed.effect-push-vertical .cv-sliding-slide.active { box-shadow: 0 -16px 32px rgba(0, 0, 0, 0.3); }
+.quality-detailed.effect-push-vertical .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3); }
+
+/* wipe — the incoming slide sits fully visible and static underneath from
+   the very start (no self-reveal animation of its own); the outgoing slide
+   stays on top and wipes itself away via a shrinking clip-path, uncovering
+   the already-present incoming slide beneath it. Which edge it recedes
+   toward is direction-aware: Next recedes to the right (reveal sweeps
+   leftward), Prev recedes to the left (reveal sweeps rightward). "detailed"
+   adds a light blur plus a shadow trailing the receding wipe edge, so the
+   departing panel reads as physically sliding off rather than a mask
+   animating. */
+.effect-wipe .cv-sliding-slide { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; z-index: 0; }
+.effect-wipe .cv-sliding-slide.active { z-index: 1; }
+.effect-wipe .cv-sliding-slide.previous { clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%); z-index: 2; transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+
+.effect-wipe .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+
+.quality-detailed.effect-wipe .cv-sliding-slide.previous { box-shadow: -12px 0 24px rgba(0, 0, 0, 0.35); animation: cv-slide-blur-exit 0.7s ease-in; }
+.quality-detailed.effect-wipe .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { box-shadow: 12px 0 24px rgba(0, 0, 0, 0.35); }
+
+/* cube — each slide is a face of the same physical cube: the incoming and
+   outgoing faces are rotated 90deg around their shared vertical edge and
+   pushed back along Z by exactly half the banner's rendered width (see
+   --slider-half-width, computed in JS from actual offsetWidth). That depth
+   is what makes the two faces meet edge-to-edge as a true right-angle
+   corner instead of a flat card rotating in empty space — a mismatched or
+   hardcoded depth is what makes a "cube" look like it isn't one. "detailed"
+   adds deeper perspective plus a raking shadow along the rotating edge so
+   the box reads as solid; "light" keeps a flatter but still-real rotation. */
+.effect-cube .cv-sliding-banner-track { perspective: 1500px; }
+.effect-cube .cv-sliding-slide {
+  transform: rotateY(-90deg) translateZ(var(--slider-half-width, 200px));
+  transform-origin: left; opacity: 1; z-index: 1; transform-style: preserve-3d;
+}
+/* The shared cross-effect transition rule (.active, .previous — 3 class
+   selectors) is MORE specific than a plain ".effect-cube .cv-sliding-slide"
+   override (2 class selectors), so it wins regardless of source order. Its
+   0.6s heavily front-loaded ease-out finishes ~95% of a 90deg turn in the
+   first ~150ms — fine for a flat crossfade, but it makes a 3D rotation read
+   as an instant cut instead of a visible flip. Override at matching
+   specificity (.active/.previous again) with a slower, symmetric curve so
+   the turn is actually perceivable throughout the transition. */
+.effect-cube .cv-sliding-slide.active,
+.effect-cube .cv-sliding-slide.previous {
+  transition: transform 1s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.effect-cube .cv-sliding-slide.active { transform: rotateY(0deg) translateZ(0); transform-origin: left; z-index: 2; }
+.effect-cube .cv-sliding-slide.previous { transform: rotateY(90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: right; z-index: 1; }
+/* reverse which edge the cube hinges on when navigating backward */
+.effect-cube .cv-sliding-banner-track.dir-prev .cv-sliding-slide { transform: rotateY(90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: right; }
+.effect-cube .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { transform: rotateY(0deg) translateZ(0); transform-origin: right; }
+.effect-cube .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { transform: rotateY(-90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: left; }
+.quality-detailed.effect-cube .cv-sliding-banner-track { perspective: 2000px; }
+.quality-detailed.effect-cube .cv-sliding-slide.active { animation: cv-slide-blur-enter 0.8s ease-out; box-shadow: -30px 0 60px rgba(0, 0, 0, 0.4); }
+.quality-detailed.effect-cube .cv-sliding-slide.previous { animation: cv-slide-blur-exit 0.8s ease-in; }
+
+/* cube's connecting side wall: a real 6-sided cube would show one of its
+   other faces during the turn instead of the front face just fading to a
+   black void mid-rotation. This is a rigid child of each face (kept in the
+   same 3D space via transform-style:preserve-3d above) permanently offset
+   90deg from its parent at the SAME hinge edge/depth — so as the parent
+   rotates away from flush, this child rotates smoothly INTO flush,
+   handing off the "what's facing the viewer" role exactly as the parent
+   goes edge-on, instead of both going dark at once. */
+.cv-cube-side {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to right, rgba(15, 15, 25, 0.92), rgba(70, 70, 95, 0.55));
+  opacity: 0;
+  backface-visibility: hidden;
+  transition: opacity 0.15s linear;
+}
+.effect-cube .cv-sliding-slide .cv-cube-side { transform: rotateY(90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: left; }
+.effect-cube .cv-sliding-slide.previous .cv-cube-side { transform: rotateY(-90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: right; }
+.effect-cube .cv-sliding-slide.active .cv-cube-side,
+.effect-cube .cv-sliding-slide.previous .cv-cube-side { opacity: 1; }
+
+.effect-cube .cv-sliding-banner-track.dir-prev .cv-sliding-slide .cv-cube-side { transform: rotateY(-90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: right; }
+.effect-cube .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous .cv-cube-side { transform: rotateY(90deg) translateZ(var(--slider-half-width, 200px)); transform-origin: left; }
+
+/* door — two "doors" swing open from the center-right; the outgoing slide
+   swings away in the opposite rotation so both halves feel symmetric.
+   "detailed" adds a shadow that darkens as each door approaches edge-on. */
+.effect-door .cv-sliding-banner-track { perspective: 1500px; }
+.effect-door .cv-sliding-slide { transform: rotateY(-90deg); transform-origin: right; opacity: 0; }
+.effect-door .cv-sliding-slide.active { transform: rotateY(0deg); transform-origin: right; opacity: 1; }
+.effect-door .cv-sliding-slide.previous { transform: rotateY(90deg); transform-origin: right; opacity: 0; z-index: 1; }
+/* hinge on the left edge instead when navigating backward */
+.effect-door .cv-sliding-banner-track.dir-prev .cv-sliding-slide { transform: rotateY(90deg); transform-origin: left; opacity: 0; }
+.effect-door .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { transform: rotateY(0deg); transform-origin: left; opacity: 1; }
+.effect-door .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { transform: rotateY(-90deg); transform-origin: left; opacity: 0; }
+.quality-detailed.effect-door .cv-sliding-banner-track { perspective: 2000px; }
+.quality-detailed.effect-door .cv-sliding-slide { transform-style: preserve-3d; }
+.quality-detailed.effect-door .cv-sliding-slide.active { animation: cv-slide-blur-enter 0.8s ease-out; box-shadow: -30px 0 60px rgba(0, 0, 0, 0.4); }
+.quality-detailed.effect-door .cv-sliding-slide.previous { animation: cv-slide-blur-exit 0.8s ease-in; }
+
+/* fall — incoming slide tips down into place; outgoing slide continues
+   falling away backward instead of resetting to the same starting tilt.
+   "detailed" adds a ground shadow that grounds the tipping motion. */
+.effect-fall .cv-sliding-banner-track { perspective: 1200px; }
+.effect-fall .cv-sliding-slide { transform: rotateX(90deg); transform-origin: bottom; opacity: 0; }
+.effect-fall .cv-sliding-slide.active { transform: rotateX(0deg); opacity: 1; }
+.effect-fall .cv-sliding-slide.previous { transform: rotateX(-90deg); transform-origin: top; opacity: 0; z-index: 1; }
+/* tip in from the top instead when navigating backward */
+.effect-fall .cv-sliding-banner-track.dir-prev .cv-sliding-slide { transform: rotateX(-90deg); transform-origin: top; opacity: 0; }
+.effect-fall .cv-sliding-banner-track.dir-prev .cv-sliding-slide.active { transform: rotateX(0deg); transform-origin: top; opacity: 1; }
+.effect-fall .cv-sliding-banner-track.dir-prev .cv-sliding-slide.previous { transform: rotateX(90deg); transform-origin: bottom; opacity: 0; }
+.quality-detailed.effect-fall .cv-sliding-banner-track { perspective: 1800px; }
+.quality-detailed.effect-fall .cv-sliding-slide { transform-style: preserve-3d; }
+.quality-detailed.effect-fall .cv-sliding-slide.active { animation: cv-slide-blur-enter 0.75s ease-out; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); }
+.quality-detailed.effect-fall .cv-sliding-slide.previous { animation: cv-slide-blur-exit 0.75s ease-in; }
+
+/* crush — outgoing slide is squashed flat and blurred like an impact, while
+   the incoming slide expands back up to full size. "light" mode uses a
+   much subtler blur so it's cheap to composite; "detailed" leans into it. */
+.effect-crush .cv-sliding-slide {
+  transform: scaleY(0.3) scaleX(1.15);
+  filter: blur(1px);
+  z-index: 0;
+  transition-duration: 0.6s;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.effect-crush .cv-sliding-slide.active {
+  transform: scaleY(1) scaleX(1);
+  filter: blur(0);
+  z-index: 2;
+}
+.effect-crush .cv-sliding-slide.previous {
+  opacity: 0;
+  transform: scaleY(0.05) scaleX(1.3);
+  filter: blur(2px);
+  z-index: 1;
+}
+.quality-detailed.effect-crush .cv-sliding-slide { filter: blur(2px); }
+.quality-detailed.effect-crush .cv-sliding-slide.previous { filter: blur(4px); }
+
+/* peel-off — the outgoing slide sits on top like a sticker and peels away
+   from its top-right corner, casting a shadow, to reveal the incoming slide
+   sitting fully visible underneath. "light" mode uses a flatter, smaller
+   shadow; "detailed" casts a deeper one for more separation. */
+.effect-peel-off .cv-sliding-slide {
+  opacity: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  z-index: 0;
+  transition-property: opacity, clip-path, transform, box-shadow;
+  transition-duration: 0.85s;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+.effect-peel-off .cv-sliding-slide.active {
+  opacity: 1;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  z-index: 1;
+}
+.effect-peel-off .cv-sliding-slide.previous {
+  opacity: 1;
+  clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+  transform: rotate(-8deg) translate(-10%, 3%);
+  transform-origin: top right;
+  box-shadow: -10px 10px 20px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+.quality-detailed.effect-peel-off .cv-sliding-slide.previous { box-shadow: -24px 24px 48px rgba(0, 0, 0, 0.45); }
+
+/* curtain — a real two-panel curtain, not a mask animating over a flat
+   image. The incoming slide sits fully visible and static underneath, like
+   wipe/push. The outgoing slide's own flat background/overlay/content fade
+   out almost instantly (its content lives in the panels now); two separate
+   .cv-curtain-panel divs (each showing its own half of the same
+   image, via background-size:200%) sit on top and physically part down
+   the middle — sliding out to their edge and folding back slightly in 3D
+   (rotateY), like real fabric swinging open, rather than a flat clip
+   revealing what's already sitting still underneath. "detailed" adds a
+   deeper shadow along the trailing fold. */
+.effect-curtain .cv-sliding-slide { opacity: 1; z-index: 0; }
+.effect-curtain .cv-sliding-slide.active { z-index: 1; }
+.effect-curtain .cv-sliding-slide.previous { z-index: 2; }
+.effect-curtain .cv-sliding-slide.previous .cv-sliding-bg,
+.effect-curtain .cv-sliding-slide.previous .cv-sliding-overlay,
+.effect-curtain .cv-sliding-slide.previous .cv-sliding-content {
+  opacity: 0;
+  transition: opacity 0.1s linear;
+}
+
+.effect-curtain .cv-sliding-banner-track { perspective: 1600px; }
+.cv-curtain-panel {
+  position: absolute; top: 0; width: 50%; height: 100%;
+  background-size: 200% 100%;
+  opacity: 0; pointer-events: none;
+  transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.cv-curtain-panel-left { left: 0; background-position: left center; transform-origin: left center; transform: translateX(0) rotateY(0deg); }
+.cv-curtain-panel-right { right: 0; background-position: right center; transform-origin: right center; transform: translateX(0) rotateY(0deg); }
+
+.effect-curtain .cv-sliding-slide.previous .cv-curtain-panel { opacity: 1; }
+.effect-curtain .cv-sliding-slide.previous .cv-curtain-panel-left {
+  transform: translateX(-100%) rotateY(-25deg);
+  box-shadow: 16px 0 32px rgba(0, 0, 0, 0.4);
+}
+.effect-curtain .cv-sliding-slide.previous .cv-curtain-panel-right {
+  transform: translateX(100%) rotateY(25deg);
+  box-shadow: -16px 0 32px rgba(0, 0, 0, 0.4);
+}
+.quality-detailed.effect-curtain .cv-sliding-banner-track { perspective: 2000px; }
+.quality-detailed.effect-curtain .cv-sliding-slide.previous .cv-curtain-panel-left { box-shadow: 30px 0 60px rgba(0, 0, 0, 0.5); }
+.quality-detailed.effect-curtain .cv-sliding-slide.previous .cv-curtain-panel-right { box-shadow: -30px 0 60px rgba(0, 0, 0, 0.5); }
+
+
+

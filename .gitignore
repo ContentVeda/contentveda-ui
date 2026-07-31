@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build output (published via npm, not committed to git)
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Test coverage
+coverage/
+
+# Temp / scratch
+*.tmp
+*.bak
+/scratch/
+/tests/bdd/.tmp/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Allure: both the raw results and the generated report are build artifacts
+# regenerated fresh by CI on every deploy (docs.yml), not committed -- unlike
+# the small hand-templated component doc pages, the report itself is several
+# MB of generated JS/history data that would otherwise bloat every commit.
+/tests/bdd/.allure-results/
+/docs/*/allure-report/

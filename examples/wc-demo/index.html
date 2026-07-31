@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ContentVeda UI Web Components Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        margin: 0;
+        background: #020617;
+        color: #f1f5f9;
+        font-family: system-ui, sans-serif;
+      }
+      .demo-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      h1 {
+        text-align: center;
+        color: #a78bfa;
+        margin-bottom: 3rem;
+      }
+      section {
+        margin-bottom: 4rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      h2 {
+        color: #38bdf8;
+        margin-bottom: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>ContentVeda UI Web Components</h1>
+      
+      <section>
+        <h2>Announcement Bar</h2>
+        <announcement-bar message="Special Offer! Use code WC20" background-color="#8b5cf6" text-color="#ffffff" map-links='[{"url":"#"}]'></announcement-bar>
+      </section>
+
+      <section>
+        <h2>Timer Widget</h2>
+        <timer-widget title="Ends in:" target-date="2027-12-31T23:59:59Z" expired-text="This offer has ended."></timer-widget>
+      </section>
+
+      <section>
+        <h2>Timer Widget (background image, height set explicitly)</h2>
+        <!-- width defaults to "auto"; height is set to a fixed value here the way a CMS
+             would after computing it from the image's natural aspect ratio, so the
+             space is reserved up front and the page doesn't reflow once the image loads. -->
+        <timer-widget
+          title="Flash Sale Ends In"
+          target-date="2027-12-31T23:59:59Z"
+          variant="neon"
+          background-image-url="/img/placeholder-05.svg"
+          overlay="rgba(0, 0, 0, 0.5)"
+          width="auto"
+          height="320px"
+          expired-text="This offer has ended."
+        ></timer-widget>
+      </section>
+
+      <section>
+        <h2>Banner</h2>
+        <cv-banner
+          title="Welcome Banner"
+          subtitle="This is a simple banner component"
+          cta-text="Shop Now"
+          text-alignment="center"
+          media='{"type":"image","url":"/img/placeholder-01.svg"}'
+          hotspots='[{"id":"h1","altText":"Featured item","label":"Featured","shape":"rect","coords":{"x":8,"y":18,"width":16,"height":28},"action":{"type":"link","url":"#shop"},"pulse":true,"showTooltip":true},{"id":"h2","altText":"Sunglasses","label":"Sunglasses","shape":"oval","coords":{"x":34,"y":12,"width":10,"height":8},"action":{"type":"link","url":"#shop"},"pulse":true,"showTooltip":true},{"id":"h3","altText":"Sneakers","label":"Sneakers","shape":"polygon","coords":{"x":55,"y":60,"width":20,"height":15},"points":[{"x":55,"y":68},{"x":62,"y":60},{"x":75,"y":62},{"x":70,"y":75}],"action":{"type":"link","url":"#shop"},"pulse":true,"showTooltip":true}]'
+          config='{"align":"center","padding":"lg","hotspotMinTargetSize":24}'
+        ></cv-banner>
+      </section>
+
+      <section>
+        <h2>Banner — Background Effects</h2>
+        <p>Animated canvas layer rendered behind the media/overlay, from the shared background-effects plugin engine (<code>src/utils/backgroundEffects.ts</code>) — also used by SlidingBanner.</p>
+
+        <h3>Particles</h3>
+        <cv-banner title="Particles" media='{"type":"image","url":"/img/placeholder-06.svg"}' config='{"height":"260px","backgroundEffect":"particles"}'></cv-banner>
+
+        <h3>Waves</h3>
+        <cv-banner title="Waves" media='{"type":"image","url":"/img/placeholder-07.svg"}' config='{"height":"260px","backgroundEffect":"waves"}'></cv-banner>
+
+        <h3>Rain</h3>
+        <cv-banner title="Rain" media='{"type":"image","url":"/img/placeholder-08.svg"}' config='{"height":"260px","backgroundEffect":"rain"}'></cv-banner>
+
+        <h3>Thunderstorm</h3>
+        <cv-banner title="Thunderstorm" media='{"type":"image","url":"/img/placeholder-09.svg"}' config='{"height":"260px","backgroundEffect":"thunderstorm"}'></cv-banner>
+
+        <h3>Sunrise</h3>
+        <cv-banner title="Sunrise" media='{"type":"image","url":"/img/placeholder-10.svg"}' config='{"height":"260px","backgroundEffect":"sunrise"}'></cv-banner>
+
+        <h3>Sunset</h3>
+        <cv-banner title="Sunset" media='{"type":"image","url":"/img/placeholder-11.svg"}' config='{"height":"260px","backgroundEffect":"sunset"}'></cv-banner>
+
+        <h3>Winter Fog (wind + frost shards)</h3>
+        <cv-banner title="Winter Fog" media='{"type":"image","url":"/img/placeholder-12.svg"}' config='{"height":"260px","backgroundEffect":"fog"}'></cv-banner>
+
+        <h3>Autumn Leaves</h3>
+        <cv-banner title="Autumn" media='{"type":"image","url":"/img/placeholder-13.svg"}' config='{"height":"260px","backgroundEffect":"autumn"}'></cv-banner>
+
+        <h3>Indian Festival (Diwali)</h3>
+        <cv-banner title="Festival" media='{"type":"image","url":"/img/placeholder-14.svg"}' config='{"height":"260px","backgroundEffect":"festival"}'></cv-banner>
+
+        <h3>Santa Sleigh</h3>
+        <cv-banner title="Santa" media='{"type":"image","url":"/img/placeholder-01.svg"}' config='{"height":"260px","backgroundEffect":"santa"}'></cv-banner>
+
+        <h3>Sea Waves (aerial seashore)</h3>
+        <cv-banner title="Sea" media='{"type":"image","url":"/img/placeholder-02.svg"}' config='{"height":"260px","backgroundEffect":"sea"}'></cv-banner>
+      </section>
+
+      <section>
+        <h2>Grid Banner</h2>
+        <grid-banner 
+          columns="4"
+          items='[{"id":"1","title":"Grid 1","media":{"type":"image","url":"/img/placeholder-06.svg"}},{"id":"2","title":"Grid 2","media":{"type":"image","url":"/img/placeholder-06.svg"}},{"id":"3","title":"Grid 3","media":{"type":"image","url":"/img/placeholder-06.svg"}},{"id":"4","title":"Grid 4","media":{"type":"image","url":"/img/placeholder-06.svg"}}]'
+        ></grid-banner>
+      </section>
+      
+      <section>
+        <h2>Media Grid</h2>
+        <media-grid 
+          primary-media='{"id":"p1","media":{"type":"image","url":"/img/placeholder-07.svg"}}'
+          secondary-media='[{"id":"s1","media":{"type":"image","url":"/img/placeholder-08.svg"}},{"id":"s2","media":{"type":"image","url":"/img/placeholder-08.svg"}}]'
+        ></media-grid>
+      </section>
+      
+      <section>
+        <h2>Row Scrollable</h2>
+        <row-scrollable 
+          title="Scrollable Row" 
+          items='[{"id":"1","title":"Item 1","media":{"type":"image","url":"/img/placeholder-09.svg"}},{"id":"2","title":"Item 2","media":{"type":"image","url":"/img/placeholder-09.svg"}},{"id":"3","title":"Item 3","media":{"type":"image","url":"/img/placeholder-09.svg"}}]'
+        ></row-scrollable>
+      </section>
+      
+      <section>
+        <h2>Sliding Banner</h2>
+        <sliding-banner 
+          config='{"autoStart":true,"showDots":true,"animationEffect":"fade"}'
+          items='[{"id":"1","title":"Slide 1","subtitle":"First slide description","media":{"type":"image","url":"/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2","subtitle":"Second slide description","media":{"type":"image","url":"/img/placeholder-10.svg"}}]'
+        ></sliding-banner>
+      </section>
+      
+      <section>
+        <h2>Alternating Slider</h2>
+        <alternating-slider 
+          config='{"columns": 2, "autoStart": true, "delayMs": 4000, "showDots": true, "showArrows": true}'
+          items='[{"id":"1","title":"Category 1","subtitle":"Explore","media":{"type":"image","url":"/img/placeholder-01.svg"}},{"id":"2","title":"Category 2","subtitle":"Discover","media":{"type":"image","url":"/img/placeholder-02.svg"}},{"id":"3","title":"Category 3","subtitle":"Shop","media":{"type":"image","url":"/img/placeholder-03.svg"}},{"id":"4","title":"Category 4","subtitle":"Trends","media":{"type":"image","url":"/img/placeholder-04.svg"}}]'
+        ></alternating-slider>
+      </section>
+      
+      <section>
+        <h2>Rich Text Editor (Default)</h2>
+        <div style="border: 1px solid #334155; border-radius: 8px; overflow: hidden;">
+          <rich-text-editor initial-content="<p>Hello World from Web Components (Default)!</p>"></rich-text-editor>
+        </div>
+      </section>
+
+      <section>
+        <h2>Rich Text Editor (Customized Toolbar: Bold, Italic, Underline, Link)</h2>
+        <div style="border: 1px solid #334155; border-radius: 8px; overflow: hidden;">
+          <rich-text-editor 
+            config='{"toolbar": ["bold", "italic", "underline", "link"]}' 
+            initial-content="<p>This editor only has <strong>bold</strong>, <em>italic</em>, <u>underline</u>, and link options!</p>"
+          ></rich-text-editor>
+        </div>
+      </section>
+
+      <section>
+        <h3 style="margin-top: 1rem;">WYSIWYG Renderer (Output)</h3>
+        <div style="padding: 1rem; background: #0f172a; border-radius: 8px;">
+          <wysiwyg-renderer content="<p>Hello World from Web Components!</p>"></wysiwyg-renderer>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

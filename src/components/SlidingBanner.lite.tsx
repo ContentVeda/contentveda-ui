@@ -1,0 +1,367 @@
+import { useStore, onMount, onUnMount, useRef, Show, onUpdate } from '@builder.io/mitosis';
+import { observeLazyMount } from '../utils/lazyObserver';
+import { defaultBackgroundEffectPlugin } from '../utils/backgroundEffects';
+import type { BackgroundEffectContext, BackgroundEffectName, BackgroundEffectPlugin } from '../utils/backgroundEffects';
+
+export interface BannerMedia {
+  type?: 'image' | 'video' | string;
+  url?: string;
+  settings?: any;
+}
+
+export interface MapLink {
+  label?: string;
+  url?: string;
+}
+
+export interface WidgetItem {
+  id?: string;
+  title?: string;
+  subtitle?: string;
+  ctaText?: string;
+  textAlignment?: 'left' | 'center' | 'right';
+  media?: BannerMedia;
+  mapLinks?: MapLink[];
+}
+
+export interface SliderConfig {
+  autoStart: boolean;
+  rotateAgain: boolean;
+  delayMs: number;
+  showNextPrev: boolean;
+  showArrows?: boolean;
+  showDots: boolean;
+  animationEffect?: 'slide' | 'fade' | 'zoom' | 'flip' | 'push-horizontal' | 'push-vertical' | 'wipe' | 'cube' | 'door' | 'fall' | 'crush' | 'peel-off' | 'curtain';
+  animationQuality?: 'light' | 'detailed';
+  backgroundEffect?: BackgroundEffectName;
+  backgroundEffectPlugin?: BackgroundEffectPlugin;
+  hideArrowsIfNoScroll?: boolean;
+  height?: string;
+  minHeight?: string;
+  bgPosition?: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+export interface SlidingBannerProps {
+  items: WidgetItem[];
+  config?: SliderConfig;
+  className?: string;
+  isLoading?: boolean;
+  lazyLoad?: boolean;
+  lazyThreshold?: number;
+  lazyRootMargin?: string;
+}
+
+export default function SlidingBanner(props: SlidingBannerProps) {
+  
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const animContext = useRef({
+    intervalId: null as any,
+    dimResizeHandler: null as any
+  });
+  const bgEffectContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null });
+  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
+  // Autoplay's setInterval is only ever created once (on mount / on becoming
+  // visible / on mouse-leave) and left running for its full delay — it is
+  // never torn down and recreated on every slide change. Compiled targets
+  // (React/Svelte) turn `state.currentIndex` into per-render local state, so
+  // a naive `setInterval(() => state.next(), ...)` set up once would call a
+  // `next` permanently frozen on the render it was created in. Instead the
+  // interval always calls through this ref, which is repointed at the
+  // latest `next` after every render — so the tick is always fresh without
+  // ever needing to reset the timer (and without the render churn that
+  // restarting on every click would add).
+  const latestNext = useRef<{ fn: () => void }>({ fn: () => {} });
+
+  const state = useStore({
+    currentIndex: 0,
+    previousIndex: 0,
+    direction: 'next' as 'next' | 'prev',
+    isVisible: false,
+    // True for exactly one render when a next()/prev() call wraps around the
+    // end of the list. The default `slide` effect just does
+    // translateX(-index*100%) with no infinite-loop clone, so a wraparound
+    // jump (last -> first, or first -> last) would otherwise animate across
+    // the *entire* track distance in what looks like the wrong direction.
+    // While this is true the track's CSS transition is suppressed so the
+    // wrap is an instant cut instead of a multi-slide flythrough.
+    wrapping: false,
+
+    get shouldMount() {
+      return props.lazyLoad === false || state.isVisible;
+    },
+    get showSkeleton() {
+      return !!props.isLoading || !state.shouldMount;
+    },
+    get animationClass() {
+      return props.config?.animationEffect || 'slide';
+    },
+    get backgroundClass() {
+      return props.config?.backgroundEffect || 'none';
+    },
+    get plugin() {
+      return props.config?.backgroundEffectPlugin || defaultBackgroundEffectPlugin;
+    },
+    get qualityClass() {
+      return props.config?.animationQuality || 'detailed';
+    },
+    next() {
+      if (!props.items?.length) return;
+      state.direction = 'next';
+      state.previousIndex = state.currentIndex;
+      if (state.currentIndex >= props.items.length - 1) {
+        if (props.config?.rotateAgain !== false) {
+          state.wrapping = true;
+          state.currentIndex = 0;
+        }
+      } else {
+        state.currentIndex = state.currentIndex + 1;
+      }
+    },
+    prev() {
+      if (!props.items?.length) return;
+      state.direction = 'prev';
+      state.previousIndex = state.currentIndex;
+      if (state.currentIndex <= 0) {
+        if (props.config?.rotateAgain !== false) {
+          state.wrapping = true;
+          state.currentIndex = props.items.length - 1;
+        }
+      } else {
+        state.currentIndex = state.currentIndex - 1;
+      }
+    },
+    goTo(index: number) {
+      if (state.currentIndex !== index) {
+        state.direction = index > state.currentIndex ? 'next' : 'prev';
+        state.previousIndex = state.currentIndex;
+        state.currentIndex = index;
+      }
+    },
+    startAutoPlay() {
+      if (animContext.intervalId) return;
+      if (props.config?.autoStart !== false && props.items?.length > 1) {
+        animContext.intervalId = setInterval(() => {
+          latestNext.fn();
+        }, props.config?.delayMs || 5000);
+      }
+    },
+    stopAutoPlay() {
+      if (animContext.intervalId) {
+        clearInterval(animContext.intervalId);
+        animContext.intervalId = null;
+      }
+    },
+    setupDimensions() {
+      if (rootRef) {
+        rootRef.style.setProperty('--slider-half-width', `${rootRef.offsetWidth / 2}px`);
+      }
+    }
+  });
+
+  function mountHeavyContent() {
+    state.startAutoPlay();
+    state.setupDimensions();
+    animContext.dimResizeHandler = () => state.setupDimensions();
+    window.addEventListener('resize', animContext.dimResizeHandler);
+    if (canvasRef) {
+      state.plugin.start(canvasRef, state.backgroundClass as BackgroundEffectName, bgEffectContext);
+    }
+  }
+
+  onMount(() => {
+    if (props.lazyLoad === false) {
+      state.isVisible = true;
+      mountHeavyContent();
+      return;
+    }
+    if (rootRef) {
+      observerBox.disconnect = observeLazyMount(
+        rootRef,
+        () => { state.isVisible = true; mountHeavyContent(); },
+        props.lazyThreshold ?? 0.1,
+        props.lazyRootMargin ?? '200px'
+      );
+    }
+  });
+
+  // Keep the autoplay ref pointed at a `next` that always reads this
+  // render's fresh `state.currentIndex`/props. Runs after every render.
+  onUpdate(() => {
+    latestNext.fn = state.next;
+  });
+
+  // After a wraparound's instant, transition-less jump has painted, hand
+  // control back to the normal CSS transition for the next click. A single
+  // requestAnimationFrame is enough since the transform change above already
+  // committed synchronously with this render.
+  onUpdate(() => {
+    if (state.wrapping) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { state.wrapping = false; });
+      });
+    }
+  }, [state.wrapping]);
+
+  // Only restart once the widget has actually mounted its heavy content, and
+  // only when the effect name itself changed (state.backgroundClass is a
+  // stable derived string) — not on every unrelated re-render such as a
+  // slide index change, which would otherwise tear down and restart the
+  // canvas loop on every click and make the effect look like it's
+  // stuttering/never settling.
+  onUpdate(() => {
+    if (state.isVisible && canvasRef) {
+      state.plugin.start(canvasRef, state.backgroundClass as BackgroundEffectName, bgEffectContext);
+    }
+  }, [state.backgroundClass, canvasRef]);
+
+  onUnMount(() => {
+    state.stopAutoPlay();
+    state.plugin.stop(bgEffectContext);
+    if (animContext.dimResizeHandler) {
+      window.removeEventListener('resize', animContext.dimResizeHandler);
+    }
+    if (observerBox.disconnect) observerBox.disconnect();
+  });
+  return (
+    <div
+      ref={rootRef}
+      class={`cv-sliding-banner ${state.showSkeleton ? 'cv-image-shimmer' : ''} ${props.className || ''} effect-${state.animationClass} bg-effect-${state.backgroundClass} quality-${state.qualityClass}`}
+      onMouseEnter={() => state.stopAutoPlay()}
+      onMouseLeave={() => state.startAutoPlay()}
+      role="region"
+      style={{
+        height: props.config?.height || '',
+        minHeight: props.config?.height === 'auto' ? 'auto' : (props.config?.minHeight || '')
+      }}
+    >
+      {state.backgroundClass !== 'none' && (
+        <canvas
+          ref={canvasRef}
+          class="cv-sliding-banner-canvas"
+        ></canvas>
+      )}
+      
+      <Show when={props.config?.height === 'auto' && props.items?.[0]?.media?.url}>
+        <img 
+          src={props.items[0].media.url} 
+          alt="" 
+          style={{ width: '100%', height: 'auto', display: 'block', visibility: 'hidden', pointerEvents: 'none' }} 
+        />
+      </Show>
+
+      <div
+        class={`cv-sliding-banner-track dir-${state.direction} ${state.wrapping ? 'no-transition' : ''}`}
+        style={{ 
+          transform: `translateX(-${state.currentIndex * 100}%)`,
+          position: props.config?.height === 'auto' ? 'absolute' : 'relative',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%'
+        }}
+      >
+        {props.items?.map((item, index) => (
+          <div 
+            class={`cv-sliding-slide ${index === state.currentIndex ? 'active' : ''} ${index === state.previousIndex && index !== state.currentIndex ? 'previous' : ''}`} 
+            key={item.id || index}
+          >
+            <Show when={state.shouldMount && item.media?.type === 'video'}>
+              <video 
+                src={item.media?.url} 
+                autoPlay 
+                loop 
+                muted 
+                playsInline 
+                class={`cv-sliding-bg-video ${state.showSkeleton ? 'cv-image-shimmer' : ''}`}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </Show>
+            <Show when={state.shouldMount && item.media?.type !== 'video'}>
+              <div 
+                class={`cv-sliding-bg ${state.showSkeleton ? 'cv-image-shimmer' : ''}`}
+                style={{ 
+                  backgroundImage: item.media?.url ? `url(${item.media.url})` : 'none',
+                  backgroundPosition: props.config?.bgPosition || 'center'
+                }}
+              ></div>
+            </Show>
+            <Show when={state.animationClass === 'curtain' && item.media?.type !== 'video'}>
+              <div
+                class="cv-curtain-panel cv-curtain-panel-left"
+                style={{
+                  backgroundImage: item.media?.url ? `url(${item.media.url})` : 'none',
+                  backgroundPosition: props.config?.bgPosition || 'center'
+                }}
+              ></div>
+              <div
+                class="cv-curtain-panel cv-curtain-panel-right"
+                style={{
+                  backgroundImage: item.media?.url ? `url(${item.media.url})` : 'none',
+                  backgroundPosition: props.config?.bgPosition || 'center'
+                }}
+              ></div>
+            </Show>
+            <Show when={state.animationClass === 'cube'}>
+              <div class="cv-cube-side"></div>
+            </Show>
+            <div class="cv-sliding-overlay"></div>
+            <div
+              class="cv-sliding-content"
+              style={{
+                textAlign: item.textAlignment || props.config?.align || 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: (item.textAlignment || props.config?.align || 'center') === 'center' ? 'center' : (item.textAlignment || props.config?.align || 'center') === 'right' ? 'flex-end' : 'flex-start'
+              }}
+            >
+              <Show when={state.showSkeleton}>
+                <div class="cv-skeleton-title cv-image-shimmer" style={{ width: '50%', height: '32px', marginBottom: '16px' }} />
+                <div class="cv-skeleton-text cv-image-shimmer" style={{ width: '70%', height: '16px', marginBottom: '10px' }} />
+                <div class="cv-skeleton-text cv-image-shimmer" style={{ width: '40%', height: '16px', marginBottom: '24px' }} />
+                <div class="cv-skeleton-button cv-image-shimmer" style={{ width: '130px', height: '40px' }} />
+              </Show>
+              <Show when={!state.showSkeleton}>
+                <h2 class="cv-sliding-title">{item.title}</h2>
+                {item.subtitle && <p class="cv-sliding-subtitle">{item.subtitle}</p>}
+                {item.ctaText && (
+                  <a href={item.mapLinks?.[0]?.url || '#'} class="cv-sliding-cta">
+                    {item.ctaText}
+                  </a>
+                )}
+              </Show>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {((props.config?.showArrows || props.config?.showNextPrev) && 
+        (!props.config?.hideArrowsIfNoScroll || (props.items && props.items.length > 1))) && (
+        <>
+          <button type="button" class="cv-sliding-arrow prev" aria-label="Previous" onClick={() => state.prev()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button type="button" class="cv-sliding-arrow next" aria-label="Next" onClick={() => state.next()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </>
+      )}
+
+      {props.config?.showDots && (
+        <div class="cv-sliding-dots">
+          {props.items?.map((_, index) => (
+            <button
+              type="button"
+              key={index}
+              class={`cv-sliding-dot ${index === state.currentIndex ? 'active' : ''}`}
+              aria-label={`Go to slide ${index + 1}`}
+              onClick={() => state.goTo(index)}
+            ></button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
