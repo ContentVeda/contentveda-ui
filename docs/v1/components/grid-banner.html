@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;grid-banner&gt; Playground</span>
+              <span class="preview-url">&lt;cv-grid-banner&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <grid-banner id="interactive-preview" columns="3" items='[{"id":"1","title":"Women\'s Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Men\'s Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></grid-banner>
+              <cv-grid-banner id="interactive-preview" columns="3" items='[{"id":"1","title":"Women\'s Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Men\'s Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></cv-grid-banner>
             </div>
           </div>
         </div>
@@ -203,10 +203,10 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/GridBanner.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">grid-banner</span>
+&lt;<span class="tag">cv-grid-banner</span>
   columns=<span class="str">"3"</span>
   items=<span class="str">'[{"id":"1","title":"Women&amp;apos;s","media":{"type":"image","url":"/women.jpg"}}]'</span>
-&gt;&lt;/<span class="tag">grid-banner</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-grid-banner</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "GridBanner";
-    const wcTagName = "grid-banner";
+    const wcTagName = "cv-grid-banner";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

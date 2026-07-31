@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;rich-text-editor&gt; Playground</span>
+              <span class="preview-url">&lt;cv-rich-text-editor&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></rich-text-editor>
+              <cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>
             </div>
           </div>
         </div>
@@ -197,10 +197,10 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/RichTextEditor.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">rich-text-editor</span> 
+&lt;<span class="tag">cv-rich-text-editor</span> 
   content=<span class="str">"&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"</span>
   config=<span class="str">'{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'</span>
-&gt;&lt;/<span class="tag">rich-text-editor</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-rich-text-editor</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "RichTextEditor";
-    const wcTagName = "rich-text-editor";
+    const wcTagName = "cv-rich-text-editor";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

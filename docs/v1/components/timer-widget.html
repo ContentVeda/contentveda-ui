@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;timer-widget&gt; Playground</span>
+              <span class="preview-url">&lt;cv-timer-widget&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <timer-widget id="interactive-preview" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></timer-widget>
+              <cv-timer-widget id="interactive-preview" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></cv-timer-widget>
             </div>
           </div>
         </div>
@@ -313,7 +313,7 @@
 &lt;!-- backgroundEffectPlugin ({ start, stop } functions) can<span class="str">'t be passed as an
      HTML attribute string — set it as a JS property instead:
      document.querySelector('</span>timer-widget').backgroundEffectPlugin = { start: myStart, stop: myStop }; --&gt;
-&lt;<span class="tag">timer-widget</span>
+&lt;<span class="tag">cv-timer-widget</span>
   title=<span class="str">"Sale ends in:"</span>
   target-date=<span class="str">"2026-12-31T23:59:59Z"</span>
   variant=<span class="str">"neon"</span>
@@ -321,7 +321,7 @@
   overlay=<span class="str">"linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,.2))"</span>
   background-effect=<span class="str">"particles"</span>
   expired-text=<span class="str">"This sale has ended — check back soon!"</span>
-&gt;&lt;/<span class="tag">timer-widget</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-timer-widget</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "TimerWidget";
-    const wcTagName = "timer-widget";
+    const wcTagName = "cv-timer-widget";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

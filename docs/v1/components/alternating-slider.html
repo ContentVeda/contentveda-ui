@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;alternating-slider&gt; Playground</span>
+              <span class="preview-url">&lt;cv-alternating-slider&gt; Playground</span>
             </div>
             <div class="preview-body-flush" id="preview-container">
-              <alternating-slider id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></alternating-slider>
+              <cv-alternating-slider id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>
             </div>
           </div>
         </div>
@@ -269,10 +269,10 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/AlternatingSlider.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">alternating-slider</span>
+&lt;<span class="tag">cv-alternating-slider</span>
   config=<span class="str">'{"columns":2,"autoStart":<span class="kw">true</span>,"showDots":<span class="kw">true</span>}'</span>
   items=<span class="str">'[...]'</span>
-&gt;&lt;/<span class="tag">alternating-slider</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-alternating-slider</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -523,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "AlternatingSlider";
-    const wcTagName = "alternating-slider";
+    const wcTagName = "cv-alternating-slider";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

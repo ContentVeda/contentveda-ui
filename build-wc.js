@@ -83,8 +83,13 @@ for (const file of allFiles) {
     return /\.[a-zA-Z0-9]+$/.test(specifier) ? match : `${specifier}.js${quote}`;
   });
 
-  // Fix invalid custom element names that don't have a hyphen (e.g. "banner")
-  finalCode = finalCode.replace(/customElements\.define\("([^"-]+)",/g, 'customElements.define("cv-$1",');
+  // Namespace every custom element under the `cv-` prefix. This also fixes the
+  // names Mitosis emits without a hyphen (e.g. "banner"), which `define()`
+  // rejects outright as invalid custom element names.
+  finalCode = finalCode.replace(
+    /customElements\.define\("(?!cv-)([^"]+)",/g,
+    'customElements.define("cv-$1",'
+  );
   
   // Fix strict mode TypeError: Cannot set property which has only a getter by adding a companion setter.
   // Mitosis generates both `get _fooRef()` and `this._fooRef = el` in updateBindings.

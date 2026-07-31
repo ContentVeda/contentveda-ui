@@ -4,7 +4,7 @@ Feature: AnnouncementBar
   So that site-wide announcements display correctly
 
   Scenario: Renders a plain message with custom colors
-    Given I mount the "announcement-bar" component as "AnnouncementBar" with:
+    Given I mount the "cv-announcement-bar" component as "AnnouncementBar" with:
       | message          | Free shipping on orders over $75 |
       | background-color | #1e40af                          |
       | text-color       | #ffffff                          |
@@ -14,7 +14,7 @@ Feature: AnnouncementBar
     And the component should have no serious accessibility violations
 
   Scenario: Renders as a link when mapLinks is provided
-    Given I mount the "announcement-bar" component as "AnnouncementBar" with:
+    Given I mount the "cv-announcement-bar" component as "AnnouncementBar" with:
       | message   | Flash Sale! Shop now |
       | map-links | [{"url":"/sale"}]     |
     Then it should render without any page errors

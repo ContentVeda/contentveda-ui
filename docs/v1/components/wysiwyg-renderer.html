@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;wysiwyg-renderer&gt; Playground</span>
+              <span class="preview-url">&lt;cv-wysiwyg-renderer&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <wysiwyg-renderer id="interactive-preview" html-content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></wysiwyg-renderer>
+              <cv-wysiwyg-renderer id="interactive-preview" html-content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>
             </div>
           </div>
         </div>
@@ -170,9 +170,9 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/WysiwygRenderer.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">wysiwyg-renderer</span>
+&lt;<span class="tag">cv-wysiwyg-renderer</span>
   content=<span class="str">"&lt;<span class="tag">h2</span>&gt;Hello&lt;/<span class="tag">h2</span>&gt;&lt;<span class="tag">p</span>&gt;World&lt;/<span class="tag">p</span>&gt;"</span>
-&gt;&lt;/<span class="tag">wysiwyg-renderer</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-wysiwyg-renderer</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "WYSIWYGRenderer";
-    const wcTagName = "wysiwyg-renderer";
+    const wcTagName = "cv-wysiwyg-renderer";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

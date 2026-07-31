@@ -86,10 +86,10 @@
               <span class="preview-dot red"></span>
               <span class="preview-dot amber"></span>
               <span class="preview-dot green"></span>
-              <span class="preview-url">&lt;row-scrollable&gt; Playground</span>
+              <span class="preview-url">&lt;cv-row-scrollable&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <row-scrollable id="interactive-preview" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></row-scrollable>
+              <cv-row-scrollable id="interactive-preview" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>
             </div>
           </div>
         </div>
@@ -236,10 +236,10 @@
       <pre><code>&lt;<span class="tag">script</span> type=<span class="str">"module"</span>
   src=<span class="str">"node_modules/@contentveda/ui/webcomponents/RowScrollable.js"</span>&gt;&lt;/<span class="tag">script</span>&gt;
 
-&lt;<span class="tag">row-scrollable</span>
+&lt;<span class="tag">cv-row-scrollable</span>
   title=<span class="str">"Featured Products"</span>
   items=<span class="str">'[{"id":"1","title":"Linen Dress"}]'</span>
-&gt;&lt;/<span class="tag">row-scrollable</span>&gt;</code></pre>
+&gt;&lt;/<span class="tag">cv-row-scrollable</span>&gt;</code></pre>
     </div>
         </div>
       </div>
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const pascalName = "RowScrollable";
-    const wcTagName = "row-scrollable";
+    const wcTagName = "cv-row-scrollable";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';

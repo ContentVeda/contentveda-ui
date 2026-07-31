@@ -4,7 +4,7 @@ Feature: TimerWidget
   So that promotional countdowns display correctly in production
 
   Scenario Outline: Renders each color variant with a countdown
-    Given I mount the "timer-widget" component as "TimerWidget" with:
+    Given I mount the "cv-timer-widget" component as "TimerWidget" with:
       | title       | Sale Ends In     |
       | target-date | 2099-12-31T23:59:59Z |
       | variant     | <variant>        |
@@ -19,7 +19,7 @@ Feature: TimerWidget
       | gray    |
 
   Scenario: Renders the expired message once the target date has passed
-    Given I mount the "timer-widget" component as "TimerWidget" with:
+    Given I mount the "cv-timer-widget" component as "TimerWidget" with:
       | title        | Sale Ends In           |
       | target-date  | 2000-01-01T00:00:00Z   |
       | expired-text | This sale has ended    |
@@ -29,7 +29,7 @@ Feature: TimerWidget
     And the component should have no serious accessibility violations
 
   Scenario: Renders a background image with overlay scrim
-    Given I mount the "timer-widget" component as "TimerWidget" with:
+    Given I mount the "cv-timer-widget" component as "TimerWidget" with:
       | title               | Sale Ends In                     |
       | target-date         | 2099-12-31T23:59:59Z              |
       | background-image-url | /docs/assets/images/summer_sale.png |
@@ -39,7 +39,7 @@ Feature: TimerWidget
     And the component should contain a visible ".cv-timer-overlay" element
 
   Scenario Outline: Renders every background effect and animates
-    Given I mount the "timer-widget" component as "TimerWidget" with:
+    Given I mount the "cv-timer-widget" component as "TimerWidget" with:
       | title            | Sale Ends In          |
       | target-date      | 2099-12-31T23:59:59Z  |
       | background-effect | <effect>             |
