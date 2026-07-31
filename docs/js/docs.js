@@ -3,6 +3,86 @@
    Tab switching, copy-to-clipboard, sidebar, live demos
    ============================================================ */
 
+/* ── Theme ─────────────────────────────────────────────────
+   Deliberately the same storage key, the same data-theme attribute and the
+   same "follow the OS until told otherwise" rule as the docs site's
+   themeStore. Both are served from docs.contentveda.com, so sharing the key
+   means a reader who picked a theme there arrives here with it already set.
+
+   The attribute is applied before first paint by an inline script in the page
+   head, not here — by the time this file runs the page has already painted,
+   and a theme applied at that point is a visible flash. */
+const THEME_KEY = 'contentveda-theme';
+
+function initTheme() {
+  const btn = document.getElementById('theme-toggle');
+  const root = document.documentElement;
+
+  function label() {
+    const dark = root.getAttribute('data-theme') === 'dark';
+    if (!btn) return;
+    btn.textContent = dark ? '☀' : '☾';
+    btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    btn.setAttribute('aria-pressed', String(dark));
+  }
+
+  label();
+
+  btn?.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+    label();
+  });
+
+  // Keep following the OS for as long as the reader has not chosen for
+  // themselves — matching the docs site, where an explicit choice is exactly
+  // what writing the key means.
+  try {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e) => {
+      if (localStorage.getItem(THEME_KEY)) return;
+      root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      label();
+    };
+    mq.addEventListener ? mq.addEventListener('change', onChange) : mq.addListener(onChange);
+  } catch (e) {}
+}
+
+/* ── Text Size ─────────────────────────────────────────────
+   Four steps, stored as a name rather than a number so the CSS owns the actual
+   percentages. 'md' is the default and is written as an empty attribute, which
+   keeps the markup clean for the case almost everyone is in. */
+const FONT_KEY = 'contentveda-font-scale';
+const FONT_STEPS = ['sm', 'md', 'lg', 'xl'];
+
+function initFontSize() {
+  const root = document.documentElement;
+  const dec = document.getElementById('font-dec');
+  const inc = document.getElementById('font-inc');
+  if (!dec || !inc) return;
+
+  function currentIndex() {
+    const v = root.getAttribute('data-font') || 'md';
+    const i = FONT_STEPS.indexOf(v);
+    return i === -1 ? 1 : i;
+  }
+
+  function apply(i) {
+    const step = FONT_STEPS[i];
+    if (step === 'md') root.removeAttribute('data-font');
+    else root.setAttribute('data-font', step);
+    try { localStorage.setItem(FONT_KEY, step); } catch (e) {}
+    dec.disabled = i === 0;
+    inc.disabled = i === FONT_STEPS.length - 1;
+  }
+
+  apply(currentIndex());
+
+  dec.addEventListener('click', () => apply(Math.max(0, currentIndex() - 1)));
+  inc.addEventListener('click', () => apply(Math.min(FONT_STEPS.length - 1, currentIndex() + 1)));
+}
+
 /* ── Sidebar Mobile Toggle ─────────────────────────────── */
 function initSidebar() {
   const toggle = document.getElementById('sidebar-toggle');
@@ -413,6 +493,8 @@ function initCodesandbox() {
 
 /* ── Init Everything ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  initFontSize();
   initSidebar();
   initActiveLink();
   initTabs();
