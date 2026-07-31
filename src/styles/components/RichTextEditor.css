@@ -1,12 +1,12 @@
 /* Styles for RichTextEditor */
 /* Styles for RichTextEditor */
 /* RichTextEditor Styles */
-.wysiwyg-content blockquote { border-left: 4px solid #8b5cf6 !important; background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.02) 100%) !important; padding: 20px 24px !important; margin: 24px 0 !important; border-radius: 0 16px 16px 0 !important; font-style: italic !important; color: #e2e8f0 !important; font-size: 1.1em !important; line-height: 1.8 !important; position: relative; box-shadow: inset 2px 0 0px rgba(255,255,255,0.1); } 
-        .wysiwyg-content pre { background: #0f172a !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important; padding: 20px !important; color: #38bdf8 !important; font-family: 'Fira Code', monospace !important; overflow-x: auto !important; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5) !important; } 
+.wysiwyg-content blockquote { border-left: 4px solid var(--cv-color-quote-accent, #7fc4de) !important; background: linear-gradient(90deg, var(--cv-color-accent-tint, rgba(127, 196, 222, 0.1)) 0%, transparent 100%) !important; padding: 20px 24px !important; margin: 24px 0 !important; border-radius: 0 16px 16px 0 !important; font-style: italic !important; color: var(--cv-color-text-main, #e2e8f0) !important; font-size: 1.1em !important; line-height: 1.8 !important; position: relative; box-shadow: inset 2px 0 0px rgba(255,255,255,0.1); } 
+        .wysiwyg-content pre { background: var(--cv-color-code-bg, #0f172a) !important; border: 1px solid var(--cv-color-code-border, rgba(255,255,255,0.1)) !important; border-radius: 12px !important; padding: 20px !important; color: var(--cv-color-code-text, #38bdf8) !important; font-family: 'Fira Code', monospace !important; overflow-x: auto !important; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5) !important; } 
         .wysiwyg-content ul { list-style-type: disc !important; padding-left: 2rem !important; margin-bottom: 1em !important; } 
         .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 2rem !important; margin-bottom: 1em !important; } 
         .wysiwyg-content li { margin-bottom: 0.5em !important; display: list-item !important; } 
-        .wysiwyg-content a:not(.cv-btn) { color: #8b5cf6 !important; text-decoration: underline !important; text-underline-offset: 3px !important; }
+        .wysiwyg-content a:not(.cv-btn) { color: var(--cv-color-link, #7fc4de) !important; text-decoration: underline !important; text-underline-offset: 3px !important; }
 
         /* Layout Polyfills for Web Components / Svelte Environments without Tailwind */
         .cv-rich-text-editor, .cv-rich-text-editor * { box-sizing: border-box; }
@@ -28,12 +28,32 @@
         .cv-rich-text-editor .w-9 { width: 2.25rem; }
         .cv-rich-text-editor .h-9 { height: 2.25rem; }
         .cv-rich-text-editor button { border: none; background: transparent; cursor: pointer; color: inherit; font-family: inherit; padding: 0; margin: 0; }
-        .cv-rich-text-editor .hover\:bg-white\/10:hover { background-color: rgba(255,255,255,0.1); }
-        .cv-rich-text-editor .hover\:text-white:hover { color: white; }
-        .cv-rich-text-editor .bg-white\/20 { background-color: rgba(255,255,255,0.2); }
-        .cv-rich-text-editor .text-white { color: white; }
-        .cv-rich-text-editor .text-slate-300 { color: #cbd5e1; }
-        .cv-rich-text-editor .text-slate-400 { color: #94a3b8; }
+        /* Toolbar states. The class names come from the component's Tailwind
+           authoring, but inside .cv-rich-text-editor they mean hover tint,
+           active tint and toolbar foreground — so they resolve to tokens, not
+           to literal white. Without that the toolbar stays a dark-mode island
+           on a light page. */
+        .cv-rich-text-editor .hover\:bg-white\/10:hover { background-color: var(--cv-color-hover, rgba(255,255,255,0.1)); }
+        .cv-rich-text-editor .hover\:text-white:hover { color: var(--cv-color-text-main, #fff); }
+        .cv-rich-text-editor .bg-white\/20 { background-color: var(--cv-color-active, rgba(255,255,255,0.2)); }
+        .cv-rich-text-editor .text-white { color: var(--cv-color-text-main, #fff); }
+        .cv-rich-text-editor .text-slate-200 { color: var(--cv-color-text-main, #e2e8f0); }
+        .cv-rich-text-editor .text-slate-300 { color: var(--cv-color-text-secondary, #cbd5e1); }
+        .cv-rich-text-editor .text-slate-400 { color: var(--cv-color-text-muted, #94a3b8); }
+        .cv-rich-text-editor .text-slate-500 { color: var(--cv-color-text-muted, #64748b); }
+        .cv-rich-text-editor .bg-white\/10 { background-color: var(--cv-color-hover, rgba(255,255,255,0.1)); }
+
+        /* Semantic replacements for the Tailwind colour utilities the markup
+           used to carry (bg-violet-500/20, text-pink-400, …). Those only ever
+           rendered in a Tailwind host, and when they did they painted the old
+           pre-rebrand palette. These are polyfilled here from tokens instead,
+           so the editor looks the same in every host and follows the theme. */
+        .cv-rich-text-editor .cv-rte-accent { color: var(--cv-color-primary); }
+        .cv-rich-text-editor .cv-rte-accent-border { border-color: var(--cv-color-primary); }
+        .cv-rich-text-editor .cv-rte-tint { background-color: var(--cv-color-accent-tint); }
+        .cv-rich-text-editor .cv-rte-tint-strong { background-color: var(--cv-color-active); }
+        .cv-rich-text-editor .cv-rte-surface { background-color: var(--cv-color-surface-raised); color: var(--cv-color-text-main); }
+        .cv-rich-text-editor .cv-rte-ok { color: var(--cv-color-info); }
         .cv-rich-text-editor.rounded-xl { border-radius: 0.75rem; }
         .cv-rich-text-editor .rounded-lg { border-radius: 0.5rem; }
         .cv-rich-text-editor .transition-colors { transition-property: color, background-color, border-color; transition-duration: 150ms; }

@@ -30,7 +30,7 @@
 
   <section>
     <h2>Announcement Bar</h2>
-    <AnnouncementBar message="Special Offer! Use code SVELTE20" mapLinks={[{url: "#"}]} backgroundColor="#8b5cf6" textColor="#ffffff" />
+    <AnnouncementBar message="Special Offer! Use code SVELTE20" mapLinks={[{url: "#"}]} backgroundColor="#245066" textColor="#ffffff" />
   </section>
 
   <section>
@@ -205,7 +205,7 @@
   }
   h1 {
     text-align: center;
-    color: #a78bfa;
+    color: #7fc4de;
     margin-bottom: 3rem;
   }
   section {

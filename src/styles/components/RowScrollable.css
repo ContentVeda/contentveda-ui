@@ -70,9 +70,9 @@
           width: 42px;
           height: 42px;
           border-radius: 50%;
-          background: rgba(15, 23, 42, 0.75);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          color: #ffffff;
+          background: var(--cv-control-dark, rgba(15, 23, 42, 0.75));
+          border: 1px solid var(--cv-control-dark-border, rgba(255, 255, 255, 0.15));
+          color: var(--cv-color-on-media, #ffffff);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -83,14 +83,14 @@
           -webkit-backdrop-filter: blur(8px);
           outline: none;
           padding: 0;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: var(--cv-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
         }
         .cv-scrollable-arrow:hover {
-          background: var(--cv-color-primary, #6d28d9);
+          background: var(--cv-color-primary-fill, #245066);
           border-color: transparent;
-          color: #ffffff;
+          color: var(--cv-color-on-primary, #ffffff);
           transform: translateY(-50%) scale(1.1);
-          box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+          box-shadow: var(--cv-shadow-accent, 0 4px 12px rgba(36, 80, 102, 0.4));
         }
         .cv-scrollable-arrow.prev {
           left: -20px;

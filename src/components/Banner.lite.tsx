@@ -320,7 +320,7 @@ export default function Banner(props: BannerProps) {
           left: 0,
           width: '100%',
           height: '100%',
-          background: state.gradientOverlay || 'rgba(0, 0, 0, 0.4)',
+          background: state.gradientOverlay || 'var(--cv-color-scrim, rgba(0, 0, 0, 0.4))',
           padding: state.paddingValue || 'var(--cv-spacing-xl)'
         }}
       >

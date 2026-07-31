@@ -1,20 +1,118 @@
 /* src/styles/theme.css */
+
+/*
+ * The ContentVeda palette, sampled from the logo. This file is the source of
+ * truth: the docs site (docs.contentveda.com) duplicates these values in its
+ * own app.css until this package is on npm and it can import them directly, so
+ * any change here has to be mirrored there.
+ */
 :root {
   /* Colors */
-  /* violet-700. Chosen over violet-600 (#7c3aed) because white text on it
-     measures 7.10:1, clearing the WCAG 2.1 AAA 7:1 threshold that this
-     library targets; #7c3aed only reached 5.70:1 (AA, not AAA). It also
-     clears AAA as *text* on the white background token. */
-  --cv-color-primary: #6d28d9;
-  --cv-color-secondary: #ec4899;
+  /* Sampled from the logo's wordmark and V. White text on it measures 8.70:1,
+     clearing the WCAG 2.1 AAA 7:1 threshold this library targets — the
+     violet-700 (#6d28d9) it replaced measured 7.10:1, so the brand colour is a
+     slight contrast improvement rather than a regression. */
+  --cv-color-primary: #245066;
+  --cv-color-primary-hover: #1a3f52;
+  /* The lighter facet of the logo's V. Accent use only — 6.48:1 is AA, not
+     AAA, so do not put small body text on it. */
+  --cv-color-secondary: #2c6480;
+  /* The logo's C. */
+  --cv-color-ink: #000000;
   --cv-color-background: #ffffff;
   --cv-color-surface: #f8fafc;
   --cv-color-text-main: #0f172a;
   --cv-color-text-muted: #64748b;
   --cv-color-border: #e2e8f0;
 
-  /* Typography */
-  --cv-font-family: 'Inter', system-ui, sans-serif;
+  /* ── Surfaces ────────────────────────────────────────────────────────────
+     Components stack up to three levels deep (a card on a panel on the page),
+     so `surface` alone is not enough to keep them distinguishable. `raised`
+     sits above the page, `sunken` below it — an editor body, a code well. */
+  --cv-color-surface-raised: #ffffff;
+  --cv-color-surface-sunken: #f1f5f9;
+  --cv-color-border-strong: #cbd5e1;
+  /* Interactive tints, layered over whatever is underneath rather than being
+     opaque, so one pair works on every surface. */
+  --cv-color-hover: rgba(15, 23, 42, 0.05);
+  --cv-color-active: rgba(15, 23, 42, 0.09);
+  /* Between text-main and text-muted: secondary copy that still has to be
+     comfortably readable. */
+  --cv-color-text-secondary: #475569;
+
+  /* ── Brand fills ─────────────────────────────────────────────────────────
+     --cv-color-primary flips to a light tint in dark mode so it stays legible
+     as *text*, which makes it the wrong value to fill a button with there:
+     white on that tint measures 1.9:1. So filled controls take this token
+     instead, and it stays dark in both themes — the page behind it is what
+     changes, not the button. Both values carry white at better than 7:1, the
+     AAA threshold this library targets and the BDD suite asserts.
+
+     Gradients get their own token rather than being composed at the call site:
+     a gradient built from primary-fill and secondary would end, in dark mode,
+     on a light tint where white text measures about 2.3:1. */
+  --cv-color-primary-fill: #245066;              /* white on it: 8.70:1 */
+  --cv-gradient-primary: linear-gradient(135deg, #245066, #2c6480);
+
+  /* Text sitting on a brand fill or on imagery. White in both themes: what it
+     has to contrast with is the fill or the photo, not the page. */
+  --cv-color-on-primary: #ffffff;
+  --cv-color-on-media: #ffffff;
+  --cv-color-on-media-muted: #f1f5f9;
+
+  /* ── Over media ──────────────────────────────────────────────────────────
+     Scrims and controls that sit on top of images and video. These do not
+     follow the page theme, because what they have to stay legible against is
+     the photograph, not the page. They are tokens all the same so a consumer
+     can tune them to their own imagery. */
+  /* The letterbox behind a slide's image, and a brand accent light enough to
+     read over a photograph (the logo teal is not). */
+  --cv-color-media-base: #000000;
+  --cv-color-accent-on-media: #7fc4de;
+  --cv-color-scrim: rgba(0, 0, 0, 0.4);
+  /* Lifted on hover, so the image behind comes forward. */
+  --cv-color-scrim-soft: rgba(0, 0, 0, 0.2);
+  --cv-color-scrim-strong: rgba(15, 17, 21, 0.92);
+  --cv-color-backdrop: rgba(15, 23, 42, 0.85);
+  --cv-control-on-media: rgba(255, 255, 255, 0.2);
+  --cv-control-on-media-hover: rgba(255, 255, 255, 0.4);
+  --cv-control-dark: rgba(15, 23, 42, 0.75);
+  --cv-control-dark-border: rgba(255, 255, 255, 0.15);
+
+  /* ── Editorial content ───────────────────────────────────────────────────
+     Applied to author-written HTML rendered by WysiwygRenderer and produced by
+     RichTextEditor. Code keeps a dark well in both themes — the usual docs
+     convention, and it means one syntax colour stays legible either way. */
+  --cv-color-link: #245066;
+  --cv-color-quote-accent: #245066;
+  --cv-color-code-bg: #0f172a;
+  --cv-color-code-text: #38bdf8;
+  --cv-color-code-border: rgba(255, 255, 255, 0.1);
+
+  /* Accent and status washes, for chips and active states. Alpha over the
+     surface rather than an opaque colour, so one value works on any of them. */
+  --cv-color-accent-tint: rgba(36, 80, 102, 0.1);
+  --cv-color-info-tint: rgba(3, 105, 161, 0.08);
+
+  /* ── Status ──────────────────────────────────────────────────────────────*/
+  --cv-color-info: #0369a1;
+  /* Same split as the brand: --cv-color-info is for text, this is for fills
+     that carry white. #075985 carries white at 7.56:1 in both themes. */
+  --cv-color-info-fill: #075985;
+  --cv-color-danger: #dc2626;
+  --cv-color-focus: var(--cv-color-primary);
+
+  /* Typography.
+     Fonts are referenced, never imported — a component library that pulls font
+     files would fight whatever the host app already loads. Every stack falls
+     back to a system face, so consumers who self-host Inter/Geist get the brand
+     type and everyone else still gets something sane. */
+  --cv-font-family: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, sans-serif;
+  /* Uppercase labels and tagline accents only. */
+  --cv-font-label: 'Geist Sans', 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --cv-font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, 'Cascadia Code', Consolas,
+    monospace;
   --cv-font-size-base: 16px;
   --cv-font-size-title: 2rem;
   --cv-font-size-subtitle: 1.25rem;
@@ -35,14 +133,71 @@
   /* Shadows */
   --cv-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --cv-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --cv-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --cv-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.3);
+  /* Brand-tinted lift, for accent-filled controls. */
+  --cv-shadow-accent: 0 4px 12px rgba(36, 80, 102, 0.4);
+
+  /* ── Component variants ──────────────────────────────────────────────────
+     TimerWidget's `variant` prop selects a named look rather than a theme, so
+     these do not flip with light/dark: a "dark" timer is dark by definition,
+     and neon is cyan by definition. They are tokens so a consumer can retune
+     them, not because they follow the page.
+
+     Note what is deliberately *not* a token anywhere in this library: white
+     alpha tints layered on glass panels, and black text-shadows over photos.
+     Both are relative to whatever sits behind them rather than to the theme,
+     so a themed value would be the wrong tool — they stay literal. */
+  --cv-timer-dark-bg: #0f172a;
+  --cv-timer-gray-bg: #64748b;
+  --cv-timer-neon-bg: #0a0a12;
+  --cv-timer-neon-accent: #0ff0f0;
+  --cv-timer-neon-border: rgba(6, 240, 240, 0.4);
+  --cv-timer-neon-edge: rgba(6, 240, 240, 0.6);
+  /* Glass blocks over a photo background — translucent on purpose. */
+  --cv-timer-glass-bg: rgba(15, 17, 21, 0.55);
+  --cv-timer-neon-glow: rgba(6, 240, 240, 0.5);
+  --cv-timer-neon-accent-alt: rgba(255, 0, 200, 0.85);
 }
 
 [data-theme="dark"] {
-  --cv-color-background: #0f172a;
-  --cv-color-surface: #1e293b;
-  --cv-color-text-main: #f8fafc;
+  --cv-color-background: #0b1120;
+  --cv-color-surface: #111a2e;
+  --cv-color-text-main: #e2e8f0;
   --cv-color-text-muted: #94a3b8;
-  --cv-color-border: #334155;
+  --cv-color-border: #1e293b;
+  /* The logo teal is far too dark against #0b1120 — it measures 2.16:1, which
+     fails outright. This lighter tint of the same hue measures 9.73:1. */
+  --cv-color-primary: #7fc4de;
+  --cv-color-primary-hover: #a8d8ea;
+  --cv-color-secondary: #5eb3d6;
+  --cv-color-ink: #e2e8f0;
+
+  --cv-color-surface-raised: #1e293b;
+  --cv-color-surface-sunken: #0f172a;
+  --cv-color-border-strong: rgba(255, 255, 255, 0.18);
+  --cv-color-hover: rgba(255, 255, 255, 0.05);
+  --cv-color-active: rgba(255, 255, 255, 0.1);
+  --cv-color-text-secondary: #cbd5e1;
+
+  /* Lighter than the light-mode fill, so a filled control still reads as a
+     raised object against a near-black page — but only as light as AAA allows.
+     #2c6480 separates from the page better still (2.91:1 vs 2.59:1) and was the
+     first choice here, but white on it is 6.48:1, which fails the enhanced
+     contrast rule the accessibility suite runs. */
+  --cv-color-primary-fill: #2a5c76;              /* white on it: 7.26:1 */
+  --cv-gradient-primary: linear-gradient(135deg, #1a3f52, #2a5c76);
+
+  --cv-color-link: #7fc4de;
+  --cv-color-quote-accent: #7fc4de;
+
+  --cv-color-accent-tint: rgba(127, 196, 222, 0.15);
+  --cv-color-info-tint: rgba(14, 165, 233, 0.1);
+  --cv-color-info: #0ea5e9;
+  --cv-color-danger: #f87171;
+
+  --cv-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --cv-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 /* Skeleton shimmer loading effect */

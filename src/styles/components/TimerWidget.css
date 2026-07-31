@@ -14,7 +14,7 @@
           overflow: hidden;
         }
         .cv-timer-widget.cv-timer-has-bg {
-          color: #fff;
+          color: var(--cv-color-on-media, #fff);
         }
         .cv-timer-overlay {
           position: absolute;
@@ -70,12 +70,14 @@
           margin-top: 0.25rem;
         }
         .cv-timer-has-bg .cv-timer-block {
-          background: rgba(15, 17, 21, 0.55);
+          /* Deliberately more translucent than --cv-color-scrim-strong: the photo
+             behind these blocks should still read through them. */
+          background: var(--cv-timer-glass-bg, rgba(15, 17, 21, 0.55));
           border-color: rgba(255, 255, 255, 0.25);
           backdrop-filter: blur(2px);
         }
         .cv-timer-has-bg .cv-timer-value {
-          color: #fff;
+          color: var(--cv-color-on-media, #fff);
         }
         .cv-timer-has-bg .cv-timer-label {
           color: rgba(255, 255, 255, 0.75);
@@ -86,8 +88,8 @@
            look above); the block/value/label accent styling always applies,
            even over a photo, so e.g. neon's glow still reads on top of one. */
         .cv-timer-variant-dark:not(.cv-timer-has-bg) {
-          background-color: #0f172a;
-          color: #fff;
+          background-color: var(--cv-timer-dark-bg, #0f172a);
+          color: var(--cv-color-on-media, #fff);
           border-color: rgba(255, 255, 255, 0.12);
         }
         .cv-timer-variant-dark:not(.cv-timer-has-bg) .cv-timer-block {
@@ -95,15 +97,15 @@
           border-color: rgba(255, 255, 255, 0.14);
         }
         .cv-timer-variant-dark:not(.cv-timer-has-bg) .cv-timer-value {
-          color: #fff;
+          color: var(--cv-color-on-media, #fff);
         }
         .cv-timer-variant-dark:not(.cv-timer-has-bg) .cv-timer-label {
           color: rgba(255, 255, 255, 0.6);
         }
 
         .cv-timer-variant-gray:not(.cv-timer-has-bg) {
-          background-color: #64748b;
-          color: #fff;
+          background-color: var(--cv-timer-gray-bg, #64748b);
+          color: var(--cv-color-on-media, #fff);
           border-color: rgba(255, 255, 255, 0.15);
         }
         .cv-timer-variant-gray:not(.cv-timer-has-bg) .cv-timer-block {
@@ -111,32 +113,32 @@
           border-color: rgba(255, 255, 255, 0.2);
         }
         .cv-timer-variant-gray:not(.cv-timer-has-bg) .cv-timer-value {
-          color: #fff;
+          color: var(--cv-color-on-media, #fff);
         }
         .cv-timer-variant-gray:not(.cv-timer-has-bg) .cv-timer-label {
           color: rgba(255, 255, 255, 0.75);
         }
 
         .cv-timer-variant-neon:not(.cv-timer-has-bg) {
-          background-color: #0a0a12;
-          color: #fff;
-          border-color: rgba(6, 240, 240, 0.4);
+          background-color: var(--cv-timer-neon-bg, #0a0a12);
+          color: var(--cv-color-on-media, #fff);
+          border-color: var(--cv-timer-neon-border, rgba(6, 240, 240, 0.4));
         }
         .cv-timer-variant-neon .cv-timer-block {
           background: rgba(10, 10, 20, 0.55);
-          border: 1px solid rgba(6, 240, 240, 0.6);
-          box-shadow: 0 0 12px rgba(6, 240, 240, 0.5), inset 0 0 8px rgba(255, 0, 200, 0.15);
+          border: 1px solid var(--cv-timer-neon-edge, rgba(6, 240, 240, 0.6));
+          box-shadow: 0 0 12px var(--cv-timer-neon-glow, rgba(6, 240, 240, 0.5)), inset 0 0 8px rgba(255, 0, 200, 0.15);
         }
         .cv-timer-variant-neon .cv-timer-value {
-          color: #0ff0f0;
-          text-shadow: 0 0 8px rgba(6, 240, 240, 0.9), 0 0 16px rgba(6, 240, 240, 0.5);
+          color: var(--cv-timer-neon-accent, #0ff0f0);
+          text-shadow: 0 0 8px rgba(6, 240, 240, 0.9), 0 0 16px var(--cv-timer-neon-glow, rgba(6, 240, 240, 0.5));
         }
         .cv-timer-variant-neon .cv-timer-label {
-          color: rgba(255, 0, 200, 0.85);
+          color: var(--cv-timer-neon-accent-alt, rgba(255, 0, 200, 0.85));
           text-shadow: 0 0 6px rgba(255, 0, 200, 0.6);
         }
         .cv-timer-variant-neon .cv-timer-title {
-          color: #0ff0f0;
+          color: var(--cv-timer-neon-accent, #0ff0f0);
           text-shadow: 0 0 10px rgba(6, 240, 240, 0.7);
         }
 
