@@ -50,4 +50,24 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Bootstrap credential for the FIRST publish, and expected to be
+          # temporary.
+          #
+          # Trusted publishing is configured per package, on that package's own
+          # settings page — which cannot exist for a name that has never been
+          # published. So on a virgin package there is no trusted publisher for
+          # the OIDC token to match, npm rejects the exchange, and
+          # @semantic-release/npm fails in verifyConditions: before a version is
+          # computed, which is why the earlier runs produced no tag, no release
+          # and not even a failure issue.
+          #
+          # Once 1.0.0 exists on the registry, configure the Trusted Publisher
+          # at npmjs.com (repository ContentVeda/contentveda-ui, workflow
+          # release.yml, environment release), then delete this line and the
+          # NPM_TOKEN secret — OIDC takes over from the next release.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Keep provenance attestations even while publishing with a token.
+          # id-token: write is already granted above, and the repo is public,
+          # which is all npm needs to sign the build.
+          NPM_CONFIG_PROVENANCE: true
         run: npx semantic-release
