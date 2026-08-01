@@ -62,12 +62,12 @@ jobs:
             echo "::notice::DOCS_DISPATCH_TOKEN is not set, so no notification"\
                  "was sent. contentveda-docs will pick this commit up on its"\
                  "next scheduled poll. To make the sync immediate, add a token"\
-                 "with contents:write on nilkoushik/contentveda-docs as an"\
+                 "with contents:write on ContentVeda/contentveda-docs as an"\
                  "Actions secret named DOCS_DISPATCH_TOKEN."
             exit 0
           fi
 
-          gh api /repos/nilkoushik/contentveda-docs/dispatches \
+          gh api /repos/ContentVeda/contentveda-docs/dispatches \
             --method POST \
             -f event_type=ui-docs-updated \
             -F "client_payload[sha]=$GITHUB_SHA" \

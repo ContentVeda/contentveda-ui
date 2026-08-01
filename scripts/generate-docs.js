@@ -19,9 +19,12 @@ const ROOT          = path.resolve(__dirname, '..');
 const SRC_DIR       = path.join(ROOT, 'src', 'components');
 const MANIFEST      = require('./docs-manifest.json');
 const PROPS_DB      = require('./docs-props.json');   // prop descriptions live here, NOT in .lite.tsx
-const GITHUB_USER   = 'nilkoushik';
+// The org, not a user — these repos moved under ContentVeda. github.com paths
+// are case-insensitive, so the casing here is cosmetic; the github.io hostname
+// used for the Pages mirror is not, and is always lowercase.
+const GITHUB_OWNER  = 'ContentVeda';
 const REPO          = 'contentveda-ui';
-const GITHUB_URL    = `https://github.com/${GITHUB_USER}/${REPO}`;
+const GITHUB_URL    = `https://github.com/${GITHUB_OWNER}/${REPO}`;
 const PACKAGE_JSON  = require('../package.json');
 const VERSION       = PACKAGE_JSON.version;
 const MAJOR_VERSION = `v${VERSION.split('.')[0]}`; // e.g. "v1"
