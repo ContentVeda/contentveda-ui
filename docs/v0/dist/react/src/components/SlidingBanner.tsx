@@ -78,6 +78,7 @@ function SlidingBanner(props: SlidingBannerProps) {
   const bgEffectContext = useRef<BackgroundEffectContext>({
     animationFrameId: null,
     resizeHandler: null,
+    resizeObserver: null,
   });
   const observerBox = useRef<{
     disconnect: (() => void) | null;
