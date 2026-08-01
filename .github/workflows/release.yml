@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - beta
   workflow_dispatch:
 
 permissions:
@@ -74,8 +75,46 @@ jobs:
           path: tests/bdd/.allure-results
           retention-days: 30
 
+  # CodeQL runs from GitHub's default setup, not a workflow file here, so it is
+  # a separate run with no ordering relationship to this one -- the same problem
+  # verify solves for the test suite. Without this job the npm publish can beat
+  # its own security scan, and an npm version cannot be taken back.
+  #
+  # Waits on the "Analyze (...)" check runs for this commit rather than the
+  # code-scanning alerts API: those checks are what the branch ruleset itself
+  # gates on, so this gate and the ruleset agree by construction.
+  code-scanning:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+    steps:
+      - name: Wait for CodeQL on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for _ in $(seq 1 45); do
+            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" \
+              --jq '.check_runs[] | select(.name | startswith("Analyze")) | "\(.status) \(.conclusion)"')
+
+            # Keep waiting until at least one Analyze check exists and none is
+            # still running. An empty result means CodeQL has not been queued
+            # for this commit yet, which is a wait, not a pass.
+            if [ -n "$lines" ] && ! grep -qv '^completed ' <<<"$lines"; then
+              echo "$lines"
+              if grep -qvE '^completed (success|neutral)$' <<<"$lines"; then
+                echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
+                exit 1
+              fi
+              echo "CodeQL passed on $GITHUB_SHA."
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "Timed out waiting for CodeQL on $GITHUB_SHA - not publishing."
+          exit 1
+
   release:
-    needs: verify
+    needs: [verify, code-scanning]
     runs-on: ubuntu-latest
     # Scopes the OIDC token's environment claim to "release", matching the
     # Trusted Publisher configured on npmjs.com for this package — npm checks
