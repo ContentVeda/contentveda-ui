@@ -72,7 +72,7 @@ function copyDir(src, dest) {
 
 // ── Default Interactive Web Component Elements ─────────────────────────────
 const DEFAULT_WC_ELEMENTS = {
-  'banner': `<cv-banner id="interactive-preview" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
+  'banner': `<cv-banner id="interactive-preview" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' hotspots='[{"id":"hs-jacket","altText":"Quilted jacket","label":"Quilted jacket · $189","shape":"rect","coords":{"x":9,"y":20,"width":16,"height":30},"action":{"type":"link","url":"/products/quilted-jacket"},"showTooltip":true,"pulse":true},{"id":"hs-tote","altText":"Leather tote","label":"Leather tote · $240","shape":"oval","coords":{"x":44,"y":28,"width":13,"height":18},"action":{"type":"link","url":"/products/leather-tote"},"showTooltip":true,"pulse":true},{"id":"hs-boots","altText":"Chelsea boots","label":"Chelsea boots · $150","shape":"polygon","coords":{"x":66,"y":55,"width":22,"height":26},"points":[{"x":66,"y":60},{"x":80,"y":55},{"x":88,"y":72},{"x":70,"y":81}],"action":{"type":"deeplink","url":"/products/chelsea-boots","deeplink":"contentveda://products/chelsea-boots"},"showTooltip":true,"pulse":true}]' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
   
   'announcement-bar': `<cv-announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#245066" text-color="#ffffff" map-links='[{"url":"#"}]'></cv-announcement-bar>`,
   
@@ -425,6 +425,11 @@ function buildControlsForm(component) {
         val = `[\n  {"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},\n  {"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}}\n]`;
       } else if (propName === 'media' && component.slug === 'banner') {
         val = `{"type":"image","url":"../assets/img/placeholder-14.svg"}`;
+      } else if (propName === 'hotspots') {
+        // Seeded, not left blank: updatePreview removes the attribute for an
+        // empty JSON control, so an unseeded hotspots box silently strips the
+        // hotspots off the element it is previewing. One of each shape.
+        val = `[\n  {"id":"hs-jacket","altText":"Quilted jacket","label":"Quilted jacket · $189","shape":"rect","coords":{"x":9,"y":20,"width":16,"height":30},"action":{"type":"link","url":"/products/quilted-jacket"},"showTooltip":true,"pulse":true},\n  {"id":"hs-tote","altText":"Leather tote","label":"Leather tote · $240","shape":"oval","coords":{"x":44,"y":28,"width":13,"height":18},"action":{"type":"link","url":"/products/leather-tote"},"showTooltip":true,"pulse":true},\n  {"id":"hs-boots","altText":"Chelsea boots","label":"Chelsea boots · $150","shape":"polygon","coords":{"x":66,"y":55,"width":22,"height":26},"points":[{"x":66,"y":60},{"x":80,"y":55},{"x":88,"y":72},{"x":70,"y":81}],"action":{"type":"deeplink","url":"/products/chelsea-boots","deeplink":"contentveda://products/chelsea-boots"},"showTooltip":true,"pulse":true}\n]`;
       } else if (propName === 'mapLinks') {
         val = `[{"url":"#"}]`;
       } else if (propName === 'config') {
