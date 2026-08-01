@@ -472,6 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // First collect all config.*
     inputs.forEach(input => {
       const name = input.name;
+      if (!name) return;
       if (name.startsWith('config.')) {
         hasConfig = true;
         const key = name.split('.')[1];
@@ -500,6 +501,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Now update other attributes
     inputs.forEach(input => {
       const name = input.name;
+      // Not every control in the form maps to a prop. The colour controls pair
+      // a picker with a text field that mirrors it, and that field carries no
+      // name — without this guard it reached setAttribute('') below, which
+      // throws InvalidCharacterError. The throw escaped forEach and abandoned
+      // the rest of the loop, so every control *after* a colour one silently
+      // stopped updating the preview.
+      if (!name) return;
       if (name.startsWith('config.')) return;
 
       if (input.type === 'checkbox') {
