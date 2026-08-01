@@ -90,7 +90,7 @@ promotion, precisely when `beta` has nothing `main` lacks.
 
 Nothing would be published even if it did run — the commits it brings across
 are `chore:` and merges, so semantic-release finds no releasable change. The
-skip is about not spending a BDD run and a CodeQL wait to publish nothing.
+skip is about not spending a full BDD run to publish nothing.
 
 If the merge conflicts, the step aborts and warns rather than guessing. `beta`
 carrying unpromoted work is the normal state and resolving that blind risks
@@ -162,13 +162,20 @@ in the plugin list.
 | Event                     | Runs                                                    |
 | ------------------------- | ------------------------------------------------------- |
 | PR into `main`/`beta`/`release/*` | Playwright checks, CodeQL, **Next Version** preview |
-| Push to `beta`            | BDD suite → CodeQL gate → publish `X.Y.Z-beta.N` to `@beta` |
-| Push to `main`            | BDD suite → CodeQL gate → publish `X.Y.Z` to `@latest`, record version PR, merge back into `beta` |
+| Push to `beta`            | BDD suite → publish `X.Y.Z-beta.N` to `@beta`           |
+| Push to `main`            | BDD suite → publish `X.Y.Z` to `@latest`, record version PR, merge back into `beta` |
 | After a release           | `notify-docs` tells `contentveda-docs` to rebuild the site |
 
-Publishing is gated on both the 101-scenario BDD suite and CodeQL completing
-successfully for that exact commit. An npm version cannot be taken back, so
-neither gate is advisory.
+Publishing is gated on the 101-scenario BDD suite. An npm version cannot be
+taken back, so that gate is not advisory.
+
+CodeQL is not re-checked at release time. `main`'s ruleset already blocks the
+*merge* on it — a `pull_request` rule so nothing reaches `main` except through a
+PR, and a `code_scanning` rule requiring CodeQL at `high_or_higher` / `errors` —
+so a commit cannot land on `main` unscanned. `beta` is not scanned at all, since
+default setup covers the default branch and PRs aimed at it and nothing else, so
+prereleases publish ahead of their analysis. The same code is scanned on the PR
+that promotes it, before anything reaches `@latest`.
 
 ## Troubleshooting
 
