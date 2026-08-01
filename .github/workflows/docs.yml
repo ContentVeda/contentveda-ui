@@ -70,8 +70,21 @@ jobs:
       - name: Generate Allure report
         run: npm run report:allure
 
+      # enablement: true because this repo has no Pages site yet -- GET
+      # /repos/:owner/:repo/pages returns 404, which is what this step failed on
+      # ("Get Pages site failed... verify that the repository has Pages enabled
+      # and configured to build using GitHub Actions"). With it, the action
+      # creates the site and sets its build type to Actions on the first run,
+      # using the pages: write permission granted above, instead of needing
+      # someone to click through Settings -> Pages first.
+      #
+      # It stays useful after that first run: it is idempotent on an existing
+      # site, so a repo restored from scratch or a fork does not hit the same
+      # wall.
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload docs/ as Pages artifact
         uses: actions/upload-pages-artifact@v3
