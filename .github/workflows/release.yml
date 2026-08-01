@@ -92,6 +92,28 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # CodeQL's default setup scans the default branch and pull requests
+          # aimed at it -- nothing else. A push to beta gets no analysis at all,
+          # so waiting for one here just burns the timeout and fails a release
+          # that was never going to be scanned.
+          #
+          # That was not obvious, because early beta releases did pass this gate:
+          # those commits happened to also be the head of a pull request into
+          # main, and inherited its CodeQL runs. Coverage on beta is incidental,
+          # not a rule, and a gate cannot rest on it.
+          #
+          # Nothing ships unscanned as a result. Everything on beta reaches main
+          # through a pull request, which is scanned, and main's own push is
+          # gated below. Only the prerelease on the beta dist-tag goes out ahead
+          # of its analysis.
+          #
+          # If beta should be gated too, add it under Settings -> Code security
+          # -> CodeQL default setup, and drop this branch check.
+          if [ "$GITHUB_REF_NAME" != 'main' ]; then
+            echo "::notice::CodeQL does not scan $GITHUB_REF_NAME, so there is nothing to wait for. This commit is scanned when it is promoted to main."
+            exit 0
+          fi
+
           for _ in $(seq 1 45); do
             lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100" \
               --jq '.check_runs[] | select(.name | startswith("Analyze")) | "\(.status) \(.conclusion)"')
