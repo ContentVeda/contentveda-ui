@@ -162,13 +162,21 @@ in the plugin list.
 | Event                     | Runs                                                    |
 | ------------------------- | ------------------------------------------------------- |
 | PR into `main`/`beta`/`release/*` | Playwright checks, CodeQL, **Next Version** preview |
-| Push to `beta`            | BDD suite → CodeQL gate → publish `X.Y.Z-beta.N` to `@beta` |
+| Push to `beta`            | BDD suite → publish `X.Y.Z-beta.N` to `@beta`            |
 | Push to `main`            | BDD suite → CodeQL gate → publish `X.Y.Z` to `@latest`, record version PR, merge back into `beta` |
 | After a release           | `notify-docs` tells `contentveda-docs` to rebuild the site |
 
-Publishing is gated on both the 101-scenario BDD suite and CodeQL completing
-successfully for that exact commit. An npm version cannot be taken back, so
-neither gate is advisory.
+Publishing to `@latest` is gated on both the 101-scenario BDD suite and CodeQL
+completing successfully for that exact commit. An npm version cannot be taken
+back, so neither gate is advisory.
+
+The CodeQL half applies to `main` only, because CodeQL's default setup scans the
+default branch and pull requests aimed at it and nothing else — a push to `beta`
+is never analysed, so there is nothing to wait for. Prereleases therefore go out
+ahead of their analysis; the same code is scanned on the pull request that
+promotes it, and again on main's own push, before anything reaches `@latest`.
+To gate `beta` as well, add it under **Settings → Code security → CodeQL default
+setup** and remove the branch check in `release.yml`.
 
 ## Troubleshooting
 
