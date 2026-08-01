@@ -115,9 +115,9 @@ export default function Page() {
 
 ## 📖 Documentation
 
-Full interactive docs are hosted on GitHub Pages:
+Full interactive docs are published at:
 
-**[contentveda.github.io/contentveda-ui](https://contentveda.github.io/contentveda-ui)**
+**[docs.contentveda.com/ui](https://docs.contentveda.com/ui/)**
 
 Each component page includes:
 - Live in-browser preview
@@ -136,14 +136,15 @@ dist/               Compiled output (not committed; built on publish)
   react/
   svelte/
   webcomponent/
-docs/               GitHub Pages documentation site
+docs/               Generated docs, synced to docs.contentveda.com
   index.html
   components/       One page per component
   css/docs.css
   js/docs.js
 .github/workflows/
-  publish.yml       npm publish on git tag
-  docs.yml          GitHub Pages deploy on main push
+  playwright.yml    Checks on push/PR to main and beta
+  release.yml       Verify, CodeQL gate, then semantic-release
+  notify-docs.yml   Tells contentveda-docs to rebuild the site
 ```
 
 ---

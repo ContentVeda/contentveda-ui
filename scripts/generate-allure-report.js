@@ -4,8 +4,11 @@
  *
  * Generates the Allure HTML report from tests/bdd/.allure-results (produced by
  * `npm run test:bdd`) into docs/v{major}/allure-report/, so it publishes
- * alongside the versioned component docs on GitHub Pages -- one report per
- * major version, same as docs/v1, docs/v2, etc.
+ * alongside the versioned component docs on docs.contentveda.com -- one report
+ * per major version, same as docs/v1, docs/v2, etc.
+ *
+ * The publishing is done by sync-ui-docs.yml in contentveda-docs, which runs
+ * this script itself and serves the result at /ui/v{major}/allure-report/.
  */
 
 'use strict';
