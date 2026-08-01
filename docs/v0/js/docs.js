@@ -306,7 +306,7 @@ function generateLiveDemoCode() {
   // for its own placeholder images. Those don't resolve on a different origin
   // (jsfiddle.net, codesandbox.io), so rewrite them to absolute URLs against
   // the published docs site.
-  const rawCode = codeEl.innerText.replace(/(["'])(\.\.\/)?assets\//g, '$1https://nilkoushik.github.io/contentveda-ui/assets/');
+  const rawCode = codeEl.innerText.replace(/(["'])(\.\.\/)?assets\//g, '$1https://contentveda.github.io/contentveda-ui/assets/');
 
   // `theme.css` only carries shared CSS variables/resets — each component's
   // actual layout/visual styles live in their own `src/styles/components/*.css`
