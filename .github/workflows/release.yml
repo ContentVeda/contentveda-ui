@@ -63,11 +63,26 @@ jobs:
           fetch-depth: 0   # semantic-release needs full history to analyze commits since the last tag
           persist-credentials: false
 
+      # Deliberately no `registry-url`. It looks like the setting that tells npm
+      # where to publish; what it actually does is write an .npmrc containing
+      #
+      #   //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+      #   always-auth=true
+      #
+      # and point NPM_CONFIG_USERCONFIG at it. @semantic-release/npm then sees a
+      # token configured, takes verifyTokenAuth instead of the OIDC exchange,
+      # resolves that placeholder to an empty string and fails with
+      # EINVALIDNPMTOKEN — which is why dropping the NPM_TOKEN env var alone did
+      # not fix it: the token path was being chosen by the npmrc, not by the
+      # variable. The `npm warn Unknown user config "always-auth"` at the top of
+      # those failing logs is this file being written.
+      #
+      # The registry is already in package.json (publishConfig) and is npm's
+      # default anyway, so nothing is lost by leaving this out.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
       - name: Install dependencies
