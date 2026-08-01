@@ -22,6 +22,8 @@ export type BackgroundEffectName =
 export interface BackgroundEffectContext {
   animationFrameId: number | null;
   resizeHandler: (() => void) | null;
+  /** Watches the canvas's own box, so the buffer follows late layout. */
+  resizeObserver: ResizeObserver | null;
 }
 
 type EffectRenderer = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, ctxBox: BackgroundEffectContext) => void;
@@ -1225,14 +1227,26 @@ export function startBackgroundEffect(
   ctxBox.resizeHandler = resize;
   window.addEventListener('resize', ctxBox.resizeHandler);
 
-  // In some hosts (notably the web-component target's shadow DOM), the
-  // canvas's own layout hasn't settled yet on this synchronous call, so
-  // offsetWidth/offsetHeight above can read 0 — every effect then draws
-  // into a zero-size buffer forever, since nothing else ever re-measures.
-  // Re-run once after layout has had a chance to commit; renderers read
-  // canvas.width/height fresh every frame, so this alone is enough to
-  // self-heal without restarting the renderer.
+  // The canvas's layout is often not settled on this synchronous call — in the
+  // web-component target's shadow DOM, and whenever the host's height comes
+  // from something that loads late, such as a background image. offsetWidth or
+  // offsetHeight then reads 0 and every effect draws into a zero-size buffer.
+  //
+  // A single rAF retry used to cover this, and did not go far enough: a widget
+  // sized by its background image is still 0 high on the next frame, so both
+  // measurements read 0 and nothing re-measured again. On the published docs
+  // that left the timer's canvas at 768x0 — the effect running perfectly, into
+  // nothing.
+  //
+  // Observing the canvas instead reacts to layout whenever it actually
+  // happens, however late, and covers container resizes for free. Renderers
+  // read canvas.width/height fresh every frame, so re-measuring is enough on
+  // its own — the renderer never needs restarting.
   requestAnimationFrame(resize);
+  if (typeof ResizeObserver !== 'undefined') {
+    ctxBox.resizeObserver = new ResizeObserver(resize);
+    ctxBox.resizeObserver.observe(canvas);
+  }
 
   renderer(ctx, canvas, ctxBox);
 }
@@ -1245,6 +1259,10 @@ export function stopBackgroundEffect(ctxBox: BackgroundEffectContext): void {
   if (ctxBox.resizeHandler) {
     window.removeEventListener('resize', ctxBox.resizeHandler);
     ctxBox.resizeHandler = null;
+  }
+  if (ctxBox.resizeObserver) {
+    ctxBox.resizeObserver.disconnect();
+    ctxBox.resizeObserver = null;
   }
 }
 
