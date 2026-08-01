@@ -1,9 +1,14 @@
 name: Playwright Tests
+# The branch filters match the *base* of a pull request, not its head. Without
+# beta here, the feat/fix -> beta half of the promotion flow ran no checks at
+# all: a PR into beta matched neither filter, and only the later beta -> main PR
+# was tested. That is the wrong end to find out at, since beta is where changes
+# land first.
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, beta ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, beta ]
 jobs:
   test:
     timeout-minutes: 60
