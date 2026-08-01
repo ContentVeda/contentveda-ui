@@ -1,39 +1,29 @@
 module.exports = {
-  // main is the release branch, publishing to npm's `beta` dist-tag instead of
-  // `latest`, so that everything released from here lands on
-  // `@contentveda/ui@beta` while the API is still moving. Going stable later is
-  // one line: drop `channel`.
+  // Channel and version suffix both follow the branch name, which is
+  // semantic-release's native model:
   //
-  // What this does *not* do is keep a bare `npm i @contentveda/ui` from
-  // resolving. The registry currently reads:
+  //   feat/fix branch --PR--> beta --PR--> main
   //
-  //   dist-tags: { "beta": "0.0.1", "latest": "0.0.1" }
+  //   beta  ->  0.0.2-beta.1  published to  @contentveda/ui@beta
+  //   main  ->  0.0.2         published to  @contentveda/ui@latest
   //
-  // because 0.0.1 was published by hand to bootstrap trusted publishing (see
-  // the release job in .github/workflows/release.yml), and a plain `npm
-  // publish` sets `latest` whether you meant to or not. Every package on the
-  // registry has a `latest`; it can be pointed at a different version but not
-  // taken away, so this cannot be undone from here — it is a registry-side
-  // change, not a config one.
+  // This replaces an earlier `[{ name: 'main', channel: 'beta' }]`. That form
+  // existed only to dodge ERELEASEBRANCHES: `prerelease` marks a branch as a
+  // *prerelease* branch, and semantic-release refuses to run unless an ordinary
+  // release branch exists alongside it, which a single-branch repo could not
+  // provide. Keeping main as the stable branch supplies exactly that, so the
+  // workaround is no longer needed -- and the versions carry a real -beta.N
+  // suffix instead of being plain numbers that merely sat on a beta dist-tag.
   //
-  // The practical effect: `channel` keeps `latest` from *advancing*, so a bare
-  // install stays pinned on the bootstrap 0.0.1 and never picks up anything
-  // newer, while real consumers track `@beta`. That is close enough to the
-  // intent to leave alone; if a bare install must break instead, move `latest`
-  // deliberately with `npm dist-tag`.
-  //
-  // Note this is `channel`, not `prerelease`. They sound interchangeable and
-  // are not: `prerelease` marks a branch as a *prerelease* branch, and
-  // semantic-release requires at least one ordinary release branch besides
-  // those. Setting it on the only branch leaves the release-branch list empty
-  // and the run dies with ERELEASEBRANCHES before it does anything.
-  //
-  // The trade-off is that versions are plain — 0.0.1, then 0.0.2 — rather than
-  // 0.0.1-beta.1. Getting the -beta.N suffix needs a dedicated prerelease
-  // branch to merge into and a release branch kept alongside it, which is more
-  // branching than this project runs today. The dist-tag is what actually keeps
-  // people off it by accident.
-  branches: [{ name: 'main', channel: 'beta' }],
+  // One consequence worth knowing: `latest` starts advancing again. It has been
+  // pinned to 0.0.1 since that version was hand-published to bootstrap trusted
+  // publishing (a plain `npm publish` sets `latest` whether you mean it or
+  // not), and the old config kept it frozen there. From here it moves whenever
+  // beta is merged to main -- which is the point of promoting through main.
+  branches: [
+    'main',
+    { name: 'beta', prerelease: true }
+  ],
   plugins: [
     // Determine the version bump (major/minor/patch) from Conventional Commit
     // messages since the last release tag.
@@ -50,13 +40,23 @@ module.exports = {
     // this repo's own "prepublishOnly" script).
     '@semantic-release/npm',
     // Create the GitHub Release for the new tag, with the generated notes
-    // attached, at the same time the tag itself is created.
-    '@semantic-release/github',
-    // Commit the updated package.json/package-lock.json/CHANGELOG.md back
-    // to the release branch and create the git tag.
-    ['@semantic-release/git', {
-      assets: ['package.json', 'package-lock.json', 'CHANGELOG.md'],
-      message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}'
-    }]
+    // attached, at the same time the tag itself is created. This goes through
+    // the Releases API and writes a tag ref, so the branch ruleset on main
+    // does not apply to it -- which is what makes the setup below viable.
+    // Tagging still happens here: this creates the tag and the GitHub Release
+    // through the Releases API, which writes a tag ref and so is untouched by
+    // the branch ruleset on main.
+    '@semantic-release/github'
+
+    // No @semantic-release/git on purpose. It pushes the CHANGELOG/version
+    // commit straight to main, which the ruleset rejects (GH013) on two counts
+    // -- changes must come via pull request, and CodeQL results are required
+    // for a commit semantic-release created seconds earlier, which can never
+    // have them. It fails in `prepare`, abandoning the release before publish.
+    //
+    // Cost is only that CHANGELOG.md and the version bump stop landing in git;
+    // the tag and Release are the record instead. @semantic-release/changelog
+    // above still earns its place, since package.json's "files" ships
+    // CHANGELOG.md and it is written before the tarball is packed.
   ]
 };
