@@ -258,6 +258,7 @@ class SlidingBanner extends HTMLElement {
     this._bgEffectContext = {
       animationFrameId: null,
       resizeHandler: null,
+      resizeObserver: null,
     };
     this._observerBox = {
       disconnect: null,
