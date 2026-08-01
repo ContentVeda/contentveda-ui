@@ -18,10 +18,6 @@
   <a href="https://github.com/ContentVeda/contentveda-ui/issues">🐛 Bug Reports</a>
 </p>
 
-> **Formerly Chronos UI.** This package was renamed from `@chronos-ui/core` to `@contentveda/ui`. Existing `@chronos-ui/core` imports keep working via a compatibility package — see the [announcement](./docs/ANNOUNCEMENT-CONTENTVEDA.md) and [migration guide](./docs/MIGRATION-CONTENTVEDA.md).
-
----
-
 ## ✨ Components
 
 | Component | Description |
@@ -42,21 +38,8 @@
 ## 🚀 Installation
 
 ```bash
-npm install @contentveda/ui
+npm install @contentveda/ui@beta
 ```
-
-<details>
-<summary>Migrating from <code>@chronos-ui/core</code>?</summary>
-
-```bash
-npm uninstall @chronos-ui/core
-npm install @contentveda/ui
-```
-
-`@chronos-ui/core` still works — it now re-exports `@contentveda/ui` — but new features and fixes only ship under the new name. See the [migration guide](./docs/MIGRATION-CONTENTVEDA.md) for the full timeline and a codemod for bulk import updates.
-</details>
-
----
 
 ## 💻 Usage
 
@@ -175,4 +158,4 @@ docs/               GitHub Pages documentation site
 
 ## 📄 License
 
-[MIT](./LICENSE) © ContentVeda UI Contributors (formerly Chronos UI Contributors)
+[MIT](./LICENSE) © ContentVeda UI Contributors

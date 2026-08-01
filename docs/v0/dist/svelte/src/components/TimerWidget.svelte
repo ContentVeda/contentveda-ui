@@ -21,7 +21,7 @@
 
 <script lang="ts">
   let animContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -201,8 +201,7 @@
       style={stringifyStyles({
         background: overlay || "var(--cv-color-scrim, rgba(0, 0, 0, 0.45))",
       })}
-      class="cv-timer-overlay"
-    />
+      class="cv-timer-overlay"></div>
   {/if}
   {#if backgroundEffectClass() !== "none"}
     <canvas
@@ -217,8 +216,7 @@
       })}
       class="cv-timer-bg-effect"
       aria-hidden="true"
-      bind:this={canvasRef}
-    />
+      bind:this={canvasRef}></canvas>
   {/if}
   <div
     style={stringifyStyles({

@@ -280,10 +280,10 @@ export default function AlternatingSlider(props: AlternatingSliderProps) {
       {(props.config?.showArrows &&
         (!props.config?.hideArrowsIfNoScroll || state.slideSets.length > 1)) && (
         <>
-          <button class="cv-alt-arrow prev" aria-label="Previous" onClick={() => state.prev()}>
+          <button type="button" class="cv-alt-arrow prev" aria-label="Previous" onClick={() => state.prev()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
           </button>
-          <button class="cv-alt-arrow next" aria-label="Next" onClick={() => state.next()}>
+          <button type="button" class="cv-alt-arrow next" aria-label="Next" onClick={() => state.next()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
           </button>
         </>
@@ -292,7 +292,7 @@ export default function AlternatingSlider(props: AlternatingSliderProps) {
       {props.config?.showDots && (
         <div class="cv-alt-dots">
           {state.slideSets.map((_, index) => (
-            <button
+            <button type="button"
               key={`dot-${index}`}
               class={`cv-alt-dot ${index === state.currentIndex ? 'active' : ''}`}
               aria-label={`Go to slide ${index + 1}`}

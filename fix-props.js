@@ -33,8 +33,12 @@ if (fs.existsSync(srcDir)) {
     // background effect, or the lazy-mount IntersectionObserver cleanup).
     // This affects every component that carries such a ref, not just one, so
     // patch each undeclared name generically rather than one-off per file.
+    // NOTE: these shapes are the source of truth for the Svelte target — adding
+    // a field to the useRef initializer in the .lite.tsx does NOT reach the
+    // generated component, because the declaration is injected from here. Keep
+    // this table in sync with the refs' real shapes.
     const genericRefDefaults = {
-      observerBox: '{ disconnect: null }',
+      observerBox: '{ disconnect: null, row: null }',
       animContext: '{ animationFrameId: null, resizeHandler: null }',
       bgEffectContext: '{ animationFrameId: null, resizeHandler: null }',
       latestNext: '{ fn: () => {} }'

@@ -66,7 +66,7 @@
 <script lang="ts">
   let latestNext = { fn: () => {} };
   let bgEffectContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { afterUpdate, onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -242,7 +242,11 @@
   onDestroy(() => {
     stopAutoPlay();
     plugin().stop(bgEffectContext);
-    if (animContext.dimResizeHandler) {
+    // Same guard as RowScrollable: onDestroy also runs on the server. The
+    // handler is only assigned in onMount so this branch is normally skipped
+    // there, but the typeof check makes that safe by construction rather than
+    // by coincidence.
+    if (typeof window !== "undefined" && animContext.dimResizeHandler) {
       window.removeEventListener("resize", animContext.dimResizeHandler);
     }
     if (observerBox.disconnect) observerBox.disconnect();
@@ -267,7 +271,7 @@
   }}
 >
   {#if backgroundClass() !== "none"}
-    <canvas class="cv-sliding-banner-canvas" bind:this={canvasRef} />
+    <canvas class="cv-sliding-banner-canvas" bind:this={canvasRef}></canvas>
   {/if}
   {#if config?.height === "auto" && items?.[0]?.media?.url}
     <img
@@ -318,8 +322,7 @@
             playsInline={true}
             class={`cv-sliding-bg-video ${
               showSkeleton() ? "cv-image-shimmer" : ""
-            }`}
-          />
+            }`}></video>
         {/if}
         {#if shouldMount() && item.media?.type !== "video"}
           <div
@@ -329,8 +332,7 @@
                 : "none",
               backgroundPosition: config?.bgPosition || "center",
             })}
-            class={`cv-sliding-bg ${showSkeleton() ? "cv-image-shimmer" : ""}`}
-          />
+            class={`cv-sliding-bg ${showSkeleton() ? "cv-image-shimmer" : ""}`}></div>
         {/if}
         {#if animationClass() === "curtain" && item.media?.type !== "video"}
           <div
@@ -340,8 +342,7 @@
                 : "none",
               backgroundPosition: config?.bgPosition || "center",
             })}
-            class="cv-curtain-panel cv-curtain-panel-left"
-          />
+            class="cv-curtain-panel cv-curtain-panel-left"></div>
           <div
             style={stringifyStyles({
               backgroundImage: item.media?.url
@@ -349,13 +350,12 @@
                 : "none",
               backgroundPosition: config?.bgPosition || "center",
             })}
-            class="cv-curtain-panel cv-curtain-panel-right"
-          />
+            class="cv-curtain-panel cv-curtain-panel-right"></div>
         {/if}
         {#if animationClass() === "cube"}
-          <div class="cv-cube-side" />
+          <div class="cv-cube-side"></div>
         {/if}
-        <div class="cv-sliding-overlay" />
+        <div class="cv-sliding-overlay"></div>
         <div
           style={stringifyStyles({
             textAlign: item.textAlignment || config?.align || "center",
@@ -377,31 +377,27 @@
                 height: "32px",
                 marginBottom: "16px",
               })}
-              class="cv-skeleton-title cv-image-shimmer"
-            />
+              class="cv-skeleton-title cv-image-shimmer"></div>
             <div
               style={stringifyStyles({
                 width: "70%",
                 height: "16px",
                 marginBottom: "10px",
               })}
-              class="cv-skeleton-text cv-image-shimmer"
-            />
+              class="cv-skeleton-text cv-image-shimmer"></div>
             <div
               style={stringifyStyles({
                 width: "40%",
                 height: "16px",
                 marginBottom: "24px",
               })}
-              class="cv-skeleton-text cv-image-shimmer"
-            />
+              class="cv-skeleton-text cv-image-shimmer"></div>
             <div
               style={stringifyStyles({
                 width: "130px",
                 height: "40px",
               })}
-              class="cv-skeleton-button cv-image-shimmer"
-            />
+              class="cv-skeleton-button cv-image-shimmer"></div>
           {/if}
           {#if !showSkeleton()}
             <h2 class="cv-sliding-title">{item.title}</h2>
@@ -411,8 +407,9 @@
             {/if}
 
             {#if item.ctaText}
-              <a class="cv-sliding-cta" href={item.mapLinks?.[0]?.url || "#"}
-                >{item.ctaText}</a
+              <a
+                class="cv-sliding-cta"
+                href={item.mapLinks?.[0]?.url || undefined}>{item.ctaText}</a
               >
             {/if}
           {/if}

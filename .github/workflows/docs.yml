@@ -1,9 +1,14 @@
 name: Deploy Docs to GitHub Pages
 
+# Chained after Release rather than run alongside it. The Pages mirror is
+# generated from package.json's version, so deploying it in parallel with the
+# release published docs named after the version the release was about to
+# replace. Release succeeds even when it has nothing to publish, so ordinary
+# pushes still refresh Pages.
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['Release']
+    types: [completed]
   workflow_dispatch:   # allow manual trigger
 
 permissions:
@@ -17,6 +22,11 @@ concurrency:
 
 jobs:
   deploy:
+    # workflow_run fires for failed runs too, so a broken release must not go on
+    # to publish a Pages site built from it.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
