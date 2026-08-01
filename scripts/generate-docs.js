@@ -13,6 +13,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 // ── Paths ──────────────────────────────────────────────────────────────────
 const ROOT          = path.resolve(__dirname, '..');
@@ -26,13 +27,60 @@ const GITHUB_OWNER  = 'ContentVeda';
 const REPO          = 'contentveda-ui';
 const GITHUB_URL    = `https://github.com/${GITHUB_OWNER}/${REPO}`;
 const PACKAGE_JSON  = require('../package.json');
-const VERSION       = PACKAGE_JSON.version;
+
+// The released version, which is deliberately NOT package.json's.
+//
+// Releases are cut by semantic-release, and this project does not run
+// @semantic-release/git -- main's ruleset rejects the commit it would push back
+// (see release.config.js). So nothing ever writes the new version into
+// package.json, and the value committed here is frozen at whatever was last
+// recorded by hand. Building the docs from it would pin them to that version
+// forever: every beta would publish claiming the old number, and the first
+// major would build into docs/v0 while step 5 below deleted the tree it had
+// just written.
+//
+// The git tag is the real record -- semantic-release creates it on the released
+// commit through the GitHub API, which is the one part of the release the
+// branch ruleset does not block. So read that, and fall back only when it is
+// unavailable.
+//
+// Order matters: an explicit override wins, so a caller building docs for a
+// specific version does not have to fake a tag. Then the tag. Then
+// package.json, which covers a plain local `npm run docs` in a tree with no
+// tags fetched -- a shallow CI checkout without tags lands here too, which is
+// why the sync workflow in contentveda-docs fetches them.
+function resolveVersion() {
+  if (process.env.CV_DOCS_VERSION) return process.env.CV_DOCS_VERSION.replace(/^v/, '');
+
+  try {
+    const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0'], {
+      cwd: ROOT,
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).toString().trim();
+    if (/^v?\d+\.\d+\.\d+/.test(tag)) return tag.replace(/^v/, '');
+  } catch {
+    // No git, no tags, or a shallow clone with none reachable. Fall through.
+  }
+
+  return PACKAGE_JSON.version;
+}
+
+const VERSION       = resolveVersion();
 const MAJOR_VERSION = `v${VERSION.split('.')[0]}`; // e.g. "v1"
 // Shown in the sidebar version picker. Before the first release package.json
 // carries semantic-release's 0.0.0-development placeholder, and printing that
 // as "v0.x.x (Latest)" would advertise a version that does not exist.
 const IS_UNRELEASED = /^0\.0\.0/.test(VERSION);
-const VERSION_LABEL = IS_UNRELEASED ? 'Unreleased (main)' : `v${MAJOR_VERSION.slice(1)}.x.x (Latest)`;
+// A prerelease (0.0.2-beta.1) shares the major tree with the stable line, so
+// only the label distinguishes them. Naming it exactly rather than as
+// "v0.x.x (Latest)" matters here, because beta releases publish to the same
+// site: without this the site would call beta docs the latest stable ones.
+const PRERELEASE    = /^\d+\.\d+\.\d+-(\w+)/.exec(VERSION);
+const VERSION_LABEL = IS_UNRELEASED
+  ? 'Unreleased (main)'
+  : PRERELEASE
+    ? `v${VERSION} (${PRERELEASE[1].charAt(0).toUpperCase()}${PRERELEASE[1].slice(1)})`
+    : `v${MAJOR_VERSION.slice(1)}.x.x (Latest)`;
 
 const DOCS_DIR      = path.join(ROOT, 'docs');
 const VERSION_DIR   = path.join(DOCS_DIR, MAJOR_VERSION);
@@ -1033,6 +1081,26 @@ function main() {
 </html>`;
   fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), redirectHtml, 'utf8');
   console.log(`  ✓  docs/index.html redirect set up targeting ${MAJOR_VERSION}`);
+
+  // 4b. Record what was built, for whoever publishes it.
+  //
+  // sync-ui-docs.yml in contentveda-docs has to know which vN tree to validate
+  // and where to put the Allure report. It used to work that out by reading
+  // this package's package.json and taking the major -- the same stale value
+  // this script stopped trusting above. Left alone the two would disagree the
+  // moment a major shipped: this script would write docs/v1 while the sync
+  // looked for docs/v0 and failed the release.
+  //
+  // Publishing the resolved version alongside the tree removes the guesswork:
+  // the tree states what it is, and the consumer reads it instead of
+  // recomputing it from a different source and hoping they match.
+  const versionManifest = { version: VERSION, major: MAJOR_VERSION, label: VERSION_LABEL };
+  fs.writeFileSync(
+    path.join(DOCS_DIR, 'version.json'),
+    JSON.stringify(versionManifest, null, 2) + '\n',
+    'utf8'
+  );
+  console.log(`  ✓  docs/version.json records ${VERSION} (${MAJOR_VERSION})`);
 
   // 5. Drop the pre-release docs tree once a real version exists.
   //
