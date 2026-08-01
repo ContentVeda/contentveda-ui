@@ -298,8 +298,7 @@
       autoPlay={true}
       loop={true}
       muted={true}
-      playsInline={true}
-    />
+      playsInline={true}></video>
   {/if}
   {#if shouldMount() && !isLoading && !hasVideo() && imageUrl() && config?.height === "auto"}
     <img
@@ -328,8 +327,7 @@
       })}
       class="cv-banner-bg-effect"
       aria-hidden="true"
-      bind:this={canvasRef}
-    />
+      bind:this={canvasRef}></canvas>
   {/if}
   {#if shouldMount() && !!hotspots?.length}
     <div
@@ -475,31 +473,27 @@
             height: "36px",
             marginBottom: "16px",
           })}
-          class="cv-skeleton-title cv-image-shimmer"
-        />
+          class="cv-skeleton-title cv-image-shimmer"></div>
         <div
           style={stringifyStyles({
             width: "80%",
             height: "18px",
             marginBottom: "10px",
           })}
-          class="cv-skeleton-text cv-image-shimmer"
-        />
+          class="cv-skeleton-text cv-image-shimmer"></div>
         <div
           style={stringifyStyles({
             width: "50%",
             height: "18px",
             marginBottom: "24px",
           })}
-          class="cv-skeleton-text cv-image-shimmer"
-        />
+          class="cv-skeleton-text cv-image-shimmer"></div>
         <div
           style={stringifyStyles({
             width: "140px",
             height: "42px",
           })}
-          class="cv-skeleton-button cv-image-shimmer"
-        />
+          class="cv-skeleton-button cv-image-shimmer"></div>
       {/if}
       {#if !showSkeleton()}
         {#if title}

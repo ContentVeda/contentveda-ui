@@ -341,6 +341,7 @@ class AlternatingSlider extends HTMLElement {
         </div>
         <template data-el="show-alternating-slider-17">
           <button
+            type="button"
             class="cv-alt-arrow prev"
             aria-label="Previous"
             data-el="button-alternating-slider-1"
@@ -355,6 +356,7 @@ class AlternatingSlider extends HTMLElement {
             </svg>
           </button>
           <button
+            type="button"
             class="cv-alt-arrow next"
             aria-label="Next"
             data-el="button-alternating-slider-2"
@@ -372,7 +374,7 @@ class AlternatingSlider extends HTMLElement {
         <template data-el="show-alternating-slider-18">
           <div class="cv-alt-dots">
             <template data-el="for-alternating-slider-3">
-              <button data-el="button-alternating-slider-3"></button>
+              <button type="button" data-el="button-alternating-slider-3"></button>
             </template>
           </div>
         </template>

@@ -73,10 +73,10 @@
 
 <div bind:this={rootRef} class={`cv-media-grid ${className || ""}`}>
   {#if showSkeleton()}
-    <div class="cv-media-primary cv-image-shimmer" />
+    <div class="cv-media-primary cv-image-shimmer"></div>
     <div class="cv-media-secondary-col">
-      <div class="cv-media-secondary-item cv-image-shimmer" />
-      <div class="cv-media-secondary-item cv-image-shimmer" />
+      <div class="cv-media-secondary-item cv-image-shimmer"></div>
+      <div class="cv-media-secondary-item cv-image-shimmer"></div>
     </div>
   {/if}
   {#if !showSkeleton()}
@@ -89,8 +89,7 @@
             autoPlay={true}
             loop={true}
             muted={true}
-            playsInline={true}
-          />
+            playsInline={true}></video>
         {/if}
         {#if primaryMedia.media?.type !== "video"}
           <img
@@ -116,8 +115,7 @@
                 autoPlay={true}
                 loop={true}
                 muted={true}
-                playsInline={true}
-              />
+                playsInline={true}></video>
             {/if}
             {#if item.media?.type !== "video"}
               <img
