@@ -35,13 +35,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
 function RowScrollable(props: RowScrollableProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-    row: {
-      disconnect: () => void;
-      observe: (el: any) => void;
-    } | null;
-  }>({
+  const observerBox = useRef<any>({
     disconnect: null,
     row: null,
   });

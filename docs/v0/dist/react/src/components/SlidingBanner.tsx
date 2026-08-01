@@ -441,7 +441,7 @@ function SlidingBanner(props: SlidingBannerProps) {
                   {item.ctaText ? (
                     <a
                       className="cv-sliding-cta"
-                      href={item.mapLinks?.[0]?.url || "#"}
+                      href={item.mapLinks?.[0]?.url || undefined}
                     >
                       {item.ctaText}
                     </a>

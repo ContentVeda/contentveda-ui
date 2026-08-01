@@ -246,7 +246,7 @@ class GridBanner extends HTMLElement {
     this._root.querySelectorAll("[data-el='a-grid-banner-1']").forEach((el) => {
       const item = this.getScope(el, "item");
       const index = this.getScope(el, "index");
-      el.setAttribute("href", item.mapLinks?.[0]?.url || "#");
+      el.setAttribute("href", item.mapLinks?.[0]?.url || undefined);
       el.key = item.id || index;
     });
 

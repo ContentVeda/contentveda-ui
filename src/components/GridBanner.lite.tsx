@@ -89,7 +89,7 @@ export default function GridBanner(props: GridBannerProps) {
       }}
     >
       {props.items?.map((item, index) => (
-        <a href={item.mapLinks?.[0]?.url || '#'} class="cv-grid-item" key={item.id || index}>
+        <a href={item.mapLinks?.[0]?.url || undefined} class="cv-grid-item" key={item.id || index}>
           <div
             class={`cv-grid-img-wrap ${state.showSkeleton ? 'cv-image-shimmer' : ''}`}
             style={{

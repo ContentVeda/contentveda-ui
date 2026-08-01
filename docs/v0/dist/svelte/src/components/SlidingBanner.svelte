@@ -66,7 +66,7 @@
 <script lang="ts">
   let latestNext = { fn: () => {} };
   let bgEffectContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { afterUpdate, onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -407,8 +407,9 @@
             {/if}
 
             {#if item.ctaText}
-              <a class="cv-sliding-cta" href={item.mapLinks?.[0]?.url || "#"}
-                >{item.ctaText}</a
+              <a
+                class="cv-sliding-cta"
+                href={item.mapLinks?.[0]?.url || undefined}>{item.ctaText}</a
               >
             {/if}
           {/if}

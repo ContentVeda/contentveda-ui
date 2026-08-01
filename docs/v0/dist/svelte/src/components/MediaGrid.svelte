@@ -25,7 +25,7 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -81,7 +81,10 @@
   {/if}
   {#if !showSkeleton()}
     {#if primaryMedia}
-      <a class="cv-media-primary" href={primaryMedia.mapLinks?.[0]?.url || "#"}>
+      <a
+        class="cv-media-primary"
+        href={primaryMedia.mapLinks?.[0]?.url || undefined}
+      >
         {#if primaryMedia.media?.type === "video"}
           <video
             class="cv-media-asset"
@@ -106,7 +109,7 @@
         {#each secondaryMedia as item (item.id)}
           <a
             class="cv-media-secondary-item"
-            href={item.mapLinks?.[0]?.url || "#"}
+            href={item.mapLinks?.[0]?.url || undefined}
           >
             {#if item.media?.type === "video"}
               <video

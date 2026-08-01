@@ -94,7 +94,7 @@ export default function Banner(props: BannerProps) {
       return props.media?.url || props.backgroundImageUrl || '';
     },
     get linkUrl() {
-      return props.mapLinks?.[0]?.url || props.ctaLink || '#';
+      return props.mapLinks?.[0]?.url || props.ctaLink || undefined;
     },
     get gradientOverlay() {
       return props.config?.bgGradient || props.bgGradient || '';
@@ -124,7 +124,7 @@ export default function Banner(props: BannerProps) {
       return props.config?.backgroundEffectPlugin || defaultBackgroundEffectPlugin;
     },
     hotspotHref(h: Hotspot) {
-      return h.action?.type === 'deeplink' ? (h.action.deeplink || h.action.url || '#') : (h.action?.url || '#');
+      return h.action?.type === 'deeplink' ? (h.action.deeplink || h.action.url || undefined) : (h.action?.url || undefined);
     },
     hotspotLabel(h: Hotspot) {
       return h.altText || h.label || 'Hotspot link';

@@ -331,7 +331,7 @@ export default function SlidingBanner(props: SlidingBannerProps) {
                 <h2 class="cv-sliding-title">{item.title}</h2>
                 {item.subtitle && <p class="cv-sliding-subtitle">{item.subtitle}</p>}
                 {item.ctaText && (
-                  <a href={item.mapLinks?.[0]?.url || '#'} class="cv-sliding-cta">
+                  <a href={item.mapLinks?.[0]?.url || undefined} class="cv-sliding-cta">
                     {item.ctaText}
                   </a>
                 )}

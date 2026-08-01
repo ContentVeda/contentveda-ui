@@ -82,7 +82,7 @@ function MediaGrid(props: MediaGridProps) {
           {props.primaryMedia ? (
             <a
               className="cv-media-primary"
-              href={props.primaryMedia.mapLinks?.[0]?.url || "#"}
+              href={props.primaryMedia.mapLinks?.[0]?.url || undefined}
             >
               {props.primaryMedia.media?.type === "video" ? (
                 <video
@@ -110,7 +110,7 @@ function MediaGrid(props: MediaGridProps) {
               {props.secondaryMedia?.map((item) => (
                 <a
                   className="cv-media-secondary-item"
-                  href={item.mapLinks?.[0]?.url || "#"}
+                  href={item.mapLinks?.[0]?.url || undefined}
                   key={item.id}
                 >
                   {item.media?.type === "video" ? (
