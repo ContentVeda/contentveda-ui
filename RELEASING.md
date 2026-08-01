@@ -81,6 +81,17 @@ step 5 above would never happen.
 holds work `main` has not seen, so this is a real merge. Rebasing to achieve the
 same tidiness is the one thing that breaks the release — see Rule 1.
 
+**The back-merge does not start a release of its own.** Its commit carries
+`[skip ci]`, so the push to `beta` runs nothing. That is why it is forced to
+create a merge commit (`--no-ff`): a fast-forward makes no commit, the message
+is discarded, and `beta`'s head becomes `main`'s commit — whose message decides
+whether the workflows run. Fast-forward is the common case right after a
+promotion, precisely when `beta` has nothing `main` lacks.
+
+Nothing would be published even if it did run — the commits it brings across
+are `chore:` and merges, so semantic-release finds no releasable change. The
+skip is about not spending a BDD run and a CodeQL wait to publish nothing.
+
 If the merge conflicts, the step aborts and warns rather than guessing. `beta`
 carrying unpromoted work is the normal state and resolving that blind risks
 discarding it, so merge it by hand:
