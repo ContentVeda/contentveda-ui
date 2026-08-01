@@ -93,22 +93,40 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for _ in $(seq 1 45); do
-            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" \
+            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100" \
               --jq '.check_runs[] | select(.name | startswith("Analyze")) | "\(.status) \(.conclusion)"')
 
             # Keep waiting until at least one Analyze check exists and none is
             # still running. An empty result means CodeQL has not been queued
             # for this commit yet, which is a wait, not a pass.
-            if [ -n "$lines" ] && ! grep -qv '^completed ' <<<"$lines"; then
-              echo "$lines"
-              if grep -qvE '^completed (success|neutral)$' <<<"$lines"; then
-                echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
-                exit 1
-              fi
-              echo "CodeQL passed on $GITHUB_SHA."
-              exit 0
+            if [ -z "$lines" ] || grep -qv '^completed ' <<<"$lines"; then
+              sleep 20
+              continue
             fi
-            sleep 20
+
+            echo "$lines"
+
+            # Superseded runs report "cancelled", and that is not a verdict.
+            # GitHub cancels an in-flight CodeQL analysis when a newer one for
+            # the same commit starts, which is routine on a merge: the beta
+            # branch's analysis of a commit gets cancelled the moment main picks
+            # the same commit up. Counting those as failures blocked 0.0.2 on a
+            # commit CodeQL had in fact scanned clean -- two cancelled runs
+            # sitting beside a successful one for the same analysis.
+            verdicts=$(grep -vE ' (cancelled|skipped)$' <<<"$lines" || true)
+
+            if [ -z "$verdicts" ]; then
+              echo "Every CodeQL run for $GITHUB_SHA was cancelled, so nothing scanned it - not publishing."
+              exit 1
+            fi
+
+            if grep -qvE '^completed (success|neutral)$' <<<"$verdicts"; then
+              echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
+              exit 1
+            fi
+
+            echo "CodeQL passed on $GITHUB_SHA."
+            exit 0
           done
           echo "Timed out waiting for CodeQL on $GITHUB_SHA - not publishing."
           exit 1
