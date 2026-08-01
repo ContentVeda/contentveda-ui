@@ -94,7 +94,13 @@ export default function RowScrollable(props: RowScrollableProps) {
     if (el) {
       el.removeEventListener('scroll', state.checkScroll);
     }
-    window.removeEventListener('resize', state.checkScroll);
+    // Guarded: Svelte 5 runs onDestroy during *server* teardown too, so an
+    // unguarded window access here throws `window is not defined` and 500s any
+    // SSR page that renders this component — it never reaches the listener it
+    // was trying to remove, because onMount never added one.
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', state.checkScroll);
+    }
     if (observerBox.disconnect) observerBox.disconnect();
   });
 

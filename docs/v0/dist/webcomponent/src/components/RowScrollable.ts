@@ -127,7 +127,13 @@ class RowScrollable extends HTMLElement {
     if (el) {
       el.removeEventListener("scroll", this.state.checkScroll);
     }
-    window.removeEventListener("resize", this.state.checkScroll);
+    // Guarded: Svelte 5 runs onDestroy during *server* teardown too, so an
+    // unguarded window access here throws `window is not defined` and 500s any
+    // SSR page that renders this component — it never reaches the listener it
+    // was trying to remove, because onMount never added one.
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", this.state.checkScroll);
+    }
     if (self._observerBox.disconnect) self._observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
