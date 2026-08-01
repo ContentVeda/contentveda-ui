@@ -19,8 +19,8 @@ name: Notify contentveda-docs
 #
 # Which is why this workflow does no building. Nothing it could verify would
 # not be verified again, on the same commit, by the job that actually
-# publishes. It sends the SHA and gets out of the way; the release and Pages
-# workflows still build and test this repo on their own account.
+# publishes. It sends the SHA and gets out of the way; the release workflow
+# still builds and tests this repo on its own account.
 
 # Runs after Release, not alongside it. On a plain `push` trigger this raced the
 # release: the docs site would start building a commit whose version had not
@@ -70,15 +70,24 @@ jobs:
             exit 0
           fi
 
-          # No sha in the payload, on purpose. On a workflow_run trigger
-          # GITHUB_SHA is the commit that *started* the release — which is one
-          # commit behind the version bump semantic-release just made. Pinning
-          # the docs build to it would publish docs named after the previous
-          # version. Omitting it lets the docs repo build main, which is the
-          # released state.
+          # The sha is sent now, where it used to be deliberately omitted.
+          #
+          # The old reasoning was that GITHUB_SHA trails the version-bump commit
+          # semantic-release had just pushed, so pinning to it would publish
+          # docs named after the previous version — leaving it out let the docs
+          # repo build main instead. @semantic-release/git is gone (see
+          # release.config.js), so no such commit is created any more: the
+          # commit the release ran on *is* the released state.
+          #
+          # And "build main" is now actively wrong, because releases also come
+          # from beta. sync-ui-docs.yml over in contentveda-docs already takes
+          # client_payload.sha to pick the exact contentveda-ui commit to build,
+          # falling back to main when it is absent — so sending it is all that
+          # is needed for a beta release to publish beta's docs.
           gh api /repos/ContentVeda/contentveda-docs/dispatches \
             --method POST \
             -f event_type=ui-docs-updated \
+            -f "client_payload[sha]=${{ github.event.workflow_run.head_sha }}" \
             -F "client_payload[run_url]=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
           echo "Notified contentveda-docs for ${GITHUB_SHA:0:7}."
