@@ -70,7 +70,7 @@ export default function Banner(props: BannerProps) {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null });
+  const animContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null, resizeObserver: null });
 
   const state = useStore({
     isVisible: false,

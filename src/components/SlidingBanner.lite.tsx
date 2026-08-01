@@ -61,7 +61,7 @@ export default function SlidingBanner(props: SlidingBannerProps) {
     intervalId: null as any,
     dimResizeHandler: null as any
   });
-  const bgEffectContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null });
+  const bgEffectContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null, resizeObserver: null });
   const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
   // Autoplay's setInterval is only ever created once (on mount / on becoming
   // visible / on mouse-leave) and left running for its full delay — it is
