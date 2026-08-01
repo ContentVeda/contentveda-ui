@@ -849,7 +849,7 @@ class SlidingBanner extends HTMLElement {
       .querySelectorAll("[data-el='a-sliding-banner-1']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        el.setAttribute("href", item.mapLinks?.[0]?.url || "#");
+        el.setAttribute("href", item.mapLinks?.[0]?.url || undefined);
       });
 
     this._root

@@ -249,7 +249,7 @@ class MediaGrid extends HTMLElement {
     this._root.querySelectorAll("[data-el='a-media-grid-1']").forEach((el) => {
       el.setAttribute(
         "href",
-        this.props.primaryMedia.mapLinks?.[0]?.url || "#"
+        this.props.primaryMedia.mapLinks?.[0]?.url || undefined
       );
     });
 
@@ -308,7 +308,7 @@ class MediaGrid extends HTMLElement {
 
     this._root.querySelectorAll("[data-el='a-media-grid-2']").forEach((el) => {
       const item = this.getScope(el, "item");
-      el.setAttribute("href", item.mapLinks?.[0]?.url || "#");
+      el.setAttribute("href", item.mapLinks?.[0]?.url || undefined);
       el.key = item.id;
     });
 

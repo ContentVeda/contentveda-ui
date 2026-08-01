@@ -131,7 +131,7 @@ function Banner(props: BannerProps) {
   }
 
   function linkUrl() {
-    return props.mapLinks?.[0]?.url || props.ctaLink || "#";
+    return props.mapLinks?.[0]?.url || props.ctaLink || undefined;
   }
 
   function gradientOverlay() {
@@ -172,8 +172,8 @@ function Banner(props: BannerProps) {
 
   function hotspotHref(h: Hotspot) {
     return h.action?.type === "deeplink"
-      ? h.action.deeplink || h.action.url || "#"
-      : h.action?.url || "#";
+      ? h.action.deeplink || h.action.url || undefined
+      : h.action?.url || undefined;
   }
 
   function hotspotLabel(h: Hotspot) {

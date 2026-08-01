@@ -40,7 +40,7 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -111,7 +111,7 @@
   class={`cv-grid-banner ${className || ""}`}
 >
   {#each items as item, index (item.id || index)}
-    <a class="cv-grid-item" href={item.mapLinks?.[0]?.url || "#"}
+    <a class="cv-grid-item" href={item.mapLinks?.[0]?.url || undefined}
       ><div
         style={stringifyStyles({
           height: config?.height || "",

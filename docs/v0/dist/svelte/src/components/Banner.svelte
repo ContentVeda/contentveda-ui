@@ -82,7 +82,7 @@
 
 <script lang="ts">
   let animContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -124,8 +124,8 @@
 
   function hotspotHref(h: Hotspot) {
     return h.action?.type === "deeplink"
-      ? h.action.deeplink || h.action.url || "#"
-      : h.action?.url || "#";
+      ? h.action.deeplink || h.action.url || undefined
+      : h.action?.url || undefined;
   }
   function hotspotLabel(h: Hotspot) {
     return h.altText || h.label || "Hotspot link";
@@ -182,7 +182,7 @@
     return media?.url || backgroundImageUrl || "";
   };
   $: linkUrl = () => {
-    return mapLinks?.[0]?.url || ctaLink || "#";
+    return mapLinks?.[0]?.url || ctaLink || undefined;
   };
   $: gradientOverlay = () => {
     return config?.bgGradient || bgGradient || "";

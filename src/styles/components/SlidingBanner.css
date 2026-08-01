@@ -6,8 +6,12 @@
   height: 500px;
   overflow: hidden;
   background: var(--cv-color-media-base, #000);
-  border-radius: var(--cv-border-radius-md);
-  box-shadow: var(--cv-shadow-md);
+  /* Square by default: this is usually a full-bleed hero at the top of a page,
+     where rounded corners and a drop shadow read as a floating card and leave
+     slivers of page background in the corners. Both stay overridable for the
+     embedded-in-a-column case. */
+  border-radius: var(--cv-sliding-banner-radius, 0);
+  box-shadow: var(--cv-sliding-banner-shadow, none);
 }
 
 .cv-sliding-banner-canvas {

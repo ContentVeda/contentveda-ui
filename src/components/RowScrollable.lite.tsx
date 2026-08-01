@@ -72,10 +72,7 @@ export default function RowScrollable(props: RowScrollableProps) {
     moment it rendered. The other three refs here survive because none of them
     names a DOM lib type in type position. Keep it that way.
   */
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-    row: { disconnect: () => void; observe: (el: any) => void } | null;
-  }>({ disconnect: null, row: null });
+  const observerBox = useRef<any>({ disconnect: null, row: null });
 
   onMount(() => {
     const el = rowRef;

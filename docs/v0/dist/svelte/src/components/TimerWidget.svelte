@@ -21,7 +21,7 @@
 
 <script lang="ts">
   let animContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
