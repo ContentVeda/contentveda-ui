@@ -2,9 +2,9 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@contentveda/ui"><img src="https://img.shields.io/npm/v/@contentveda/ui?style=flat-square&color=245066&label=npm" alt="npm version" /></a>
-  <a href="https://github.com/nilkoushik/contentveda-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License" /></a>
-  <a href="https://github.com/nilkoushik/contentveda-ui/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/nilkoushik/contentveda-ui/release.yml?style=flat-square&label=release" alt="Build status" /></a>
-  <a href="https://nilkoushik.github.io/contentveda-ui"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-2c6480?style=flat-square" alt="Docs" /></a>
+  <a href="https://github.com/ContentVeda/contentveda-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License" /></a>
+  <a href="https://github.com/ContentVeda/contentveda-ui/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/ContentVeda/contentveda-ui/release.yml?style=flat-square&label=release" alt="Build status" /></a>
+  <a href="https://contentveda.github.io/contentveda-ui"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-2c6480?style=flat-square" alt="Docs" /></a>
 </p>
 
 <p align="center">
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="https://nilkoushik.github.io/contentveda-ui">📖 Documentation</a> ·
+  <a href="https://contentveda.github.io/contentveda-ui">📖 Documentation</a> ·
   <a href="https://www.npmjs.com/package/@contentveda/ui">📦 npm Package</a> ·
-  <a href="https://github.com/nilkoushik/contentveda-ui/issues">🐛 Bug Reports</a>
+  <a href="https://github.com/ContentVeda/contentveda-ui/issues">🐛 Bug Reports</a>
 </p>
 
 > **Formerly Chronos UI.** This package was renamed from `@chronos-ui/core` to `@contentveda/ui`. Existing `@chronos-ui/core` imports keep working via a compatibility package — see the [announcement](./docs/ANNOUNCEMENT-CONTENTVEDA.md) and [migration guide](./docs/MIGRATION-CONTENTVEDA.md).
@@ -134,7 +134,7 @@ export default function Page() {
 
 Full interactive docs are hosted on GitHub Pages:
 
-**[nilkoushik.github.io/contentveda-ui](https://nilkoushik.github.io/contentveda-ui)**
+**[contentveda.github.io/contentveda-ui](https://contentveda.github.io/contentveda-ui)**
 
 Each component page includes:
 - Live in-browser preview

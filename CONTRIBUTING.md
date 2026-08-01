@@ -5,7 +5,7 @@ Thank you for your interest in contributing! This document outlines the process 
 ## Development Setup
 
 ```bash
-git clone https://github.com/nilkoushik/contentveda-ui.git
+git clone https://github.com/ContentVeda/contentveda-ui.git
 cd contentveda-ui
 npm install
 ```
