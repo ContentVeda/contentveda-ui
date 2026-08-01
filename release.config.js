@@ -1,5 +1,12 @@
 module.exports = {
-  branches: ['main'],
+  // main publishes prereleases: 0.0.1-beta.1, 0.0.1-beta.2, and so on, under
+  // npm's `beta` dist-tag rather than `latest`. `npm i @contentveda/ui` keeps
+  // resolving to nothing until a stable release is cut, which is the point —
+  // the API is not frozen yet, and nobody should land on it by default.
+  //
+  // Going stable later is a one-line change: drop `prerelease` and the next
+  // release from main becomes a normal version on `latest`.
+  branches: [{ name: 'main', prerelease: 'beta' }],
   plugins: [
     // Determine the version bump (major/minor/patch) from Conventional Commit
     // messages since the last release tag.
