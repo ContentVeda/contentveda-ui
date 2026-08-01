@@ -93,22 +93,40 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for _ in $(seq 1 45); do
-            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" \
+            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100" \
               --jq '.check_runs[] | select(.name | startswith("Analyze")) | "\(.status) \(.conclusion)"')
 
             # Keep waiting until at least one Analyze check exists and none is
             # still running. An empty result means CodeQL has not been queued
             # for this commit yet, which is a wait, not a pass.
-            if [ -n "$lines" ] && ! grep -qv '^completed ' <<<"$lines"; then
-              echo "$lines"
-              if grep -qvE '^completed (success|neutral)$' <<<"$lines"; then
-                echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
-                exit 1
-              fi
-              echo "CodeQL passed on $GITHUB_SHA."
-              exit 0
+            if [ -z "$lines" ] || grep -qv '^completed ' <<<"$lines"; then
+              sleep 20
+              continue
             fi
-            sleep 20
+
+            echo "$lines"
+
+            # Superseded runs report "cancelled", and that is not a verdict.
+            # GitHub cancels an in-flight CodeQL analysis when a newer one for
+            # the same commit starts, which is routine on a merge: the beta
+            # branch's analysis of a commit gets cancelled the moment main picks
+            # the same commit up. Counting those as failures blocked 0.0.2 on a
+            # commit CodeQL had in fact scanned clean -- two cancelled runs
+            # sitting beside a successful one for the same analysis.
+            verdicts=$(grep -vE ' (cancelled|skipped)$' <<<"$lines" || true)
+
+            if [ -z "$verdicts" ]; then
+              echo "Every CodeQL run for $GITHUB_SHA was cancelled, so nothing scanned it - not publishing."
+              exit 1
+            fi
+
+            if grep -qvE '^completed (success|neutral)$' <<<"$verdicts"; then
+              echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
+              exit 1
+            fi
+
+            echo "CodeQL passed on $GITHUB_SHA."
+            exit 0
           done
           echo "Timed out waiting for CodeQL on $GITHUB_SHA - not publishing."
           exit 1
@@ -237,3 +255,125 @@ jobs:
           # and generates provenance attestations without NPM_CONFIG_PROVENANCE
           # being set, since id-token: write is granted above.
         run: npx semantic-release
+
+      # Writes the released version back into package.json/package-lock.json.
+      #
+      # @semantic-release/git would normally do this as part of the release, and
+      # is deliberately not in the plugin list: it pushes straight to the
+      # release branch, and main's ruleset rejects that (see release.config.js).
+      # Doing it here instead means the push is ours, so it can take the route
+      # each branch actually allows.
+      #
+      # Worth knowing this is cosmetic. The published tarball already carries
+      # the right version -- semantic-release sets it before packing -- and
+      # nothing in the build reads this field for correctness any more, since
+      # generate-docs.js resolves the version from the tag. This keeps the
+      # checked-in tree honest about what shipped; it does not make anything
+      # work that was broken.
+      #
+      # The tag is the source of truth, not semantic-release's stdout: it is
+      # created on this commit through the GitHub API, so it has to be fetched
+      # back before it is visible locally. No tag on HEAD means nothing was
+      # released -- a run over commits that contain no feat/fix, or a re-run of
+      # a commit already published -- and there is nothing to record.
+      #
+      # Only main records, and beta deliberately never does. If both wrote their
+      # own number, they would be editing the same package.json line from a
+      # common ancestor and every back-merge would collide on it -- and the two
+      # branches still could not agree, since beta is by definition ahead. Held
+      # to main's stable version the field matches on both, and the prerelease
+      # identity stays where semantic-release actually reads it: the git tag and
+      # npm's beta dist-tag.
+      - name: Record the released version
+        if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch --tags --force --quiet
+
+          tag=$(git tag --points-at HEAD | grep -E '^v[0-9]' | head -n1)
+          if [ -z "$tag" ]; then
+            echo "::notice::No release tag on HEAD, so nothing was released and there is no version to record."
+            exit 0
+          fi
+
+          npm version "${tag#v}" --no-git-tag-version --allow-same-version
+
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "::notice::package.json already records ${tag#v}."
+            exit 0
+          fi
+
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The checkout above sets persist-credentials: false, so the remote
+          # carries no token and has to be given one to push with.
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # [skip ci] because this commit cannot produce a release: a chore is
+          # not a releasable type, so re-triggering would spend a full run --
+          # including the CodeQL wait -- to publish nothing.
+          git add package.json package-lock.json
+          git commit -m "chore(release): record the published ${tag#v} [skip ci]"
+
+          # A pull request rather than a push: main requires one, and requires
+          # CodeQL results that a just-created commit cannot have. That is the
+          # same wall @semantic-release/git hits, so going around it by pushing
+          # would only reproduce the failure this replaced.
+          branch="chore/record-${tag#v}"
+          git checkout -b "$branch"
+          git push -u origin "$branch"
+          gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$branch" \
+            --title "chore(release): record the published ${tag#v}" \
+            --body "Records the version published by [run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in package.json and package-lock.json. Only the two version fields change.
+
+          Merging this is what carries the version on to beta: the next push to main brings the branches level again."
+
+      # Keeps beta level with main.
+      #
+      # Runs on every push to main rather than only the ones that publish, and
+      # that is the point: the version lands through a pull request, so the
+      # commit carrying it arrives on a later push than the release itself. A
+      # step that only fired on releases would forever leave beta one commit
+      # short of the number it is supposed to match.
+      #
+      # Merges GITHUB_SHA specifically, not whatever HEAD happens to be -- the
+      # step above may have left HEAD on the chore branch, and that commit is
+      # not on main yet.
+      #
+      # A conflict is left alone. beta carrying work main has not seen is the
+      # normal state, and resolving that blind risks discarding it; a warning
+      # asks for hands instead.
+      - name: Bring beta level with main
+        if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin beta >/dev/null 2>&1; then
+            echo "::notice::No beta branch to sync."
+            exit 0
+          fi
+
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          git fetch origin beta --quiet
+          git checkout -B beta origin/beta
+
+          if git merge-base --is-ancestor "$GITHUB_SHA" HEAD; then
+            echo "::notice::beta already contains $GITHUB_SHA."
+            exit 0
+          fi
+
+          if git merge --no-edit "$GITHUB_SHA" -m "chore: merge main into beta [skip ci]"; then
+            git push origin beta
+            echo "beta brought level with main at ${GITHUB_SHA:0:7}."
+          else
+            git merge --abort
+            echo "::warning::main does not merge cleanly into beta - merge it by hand."
+          fi
