@@ -22,18 +22,16 @@ name: Notify contentveda-docs
 # publishes. It sends the SHA and gets out of the way; the release and Pages
 # workflows still build and test this repo on their own account.
 
+# Runs after Release, not alongside it. On a plain `push` trigger this raced the
+# release: the docs site would start building a commit whose version had not
+# been stamped yet, so its docs tree was named after the *old* version. And
+# because semantic-release commits the version bump with [skip ci], that commit
+# never triggers anything itself — chaining here is the only point at which the
+# released state exists and something can react to it.
 on:
-  push:
-    branches: [main]
-    # Only the inputs that can change the generated output. Skips the run for
-    # README edits, workflow tweaks and the like.
-    paths:
-      - 'src/**'
-      - 'docs/**'
-      - 'scripts/generate-docs.js'
-      - 'scripts/docs-manifest.json'
-      - 'scripts/docs-props.json'
-      - 'package.json'
+  workflow_run:
+    workflows: ['Release']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -45,6 +43,11 @@ concurrency:
 
 jobs:
   notify:
+    # workflow_run fires for failures too, and a failed release must not tell
+    # the docs site to go and publish itself.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
@@ -67,10 +70,15 @@ jobs:
             exit 0
           fi
 
+          # No sha in the payload, on purpose. On a workflow_run trigger
+          # GITHUB_SHA is the commit that *started* the release — which is one
+          # commit behind the version bump semantic-release just made. Pinning
+          # the docs build to it would publish docs named after the previous
+          # version. Omitting it lets the docs repo build main, which is the
+          # released state.
           gh api /repos/ContentVeda/contentveda-docs/dispatches \
             --method POST \
             -f event_type=ui-docs-updated \
-            -F "client_payload[sha]=$GITHUB_SHA" \
             -F "client_payload[run_url]=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
           echo "Notified contentveda-docs for ${GITHUB_SHA:0:7}."
