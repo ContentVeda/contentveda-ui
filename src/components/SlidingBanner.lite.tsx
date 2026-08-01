@@ -220,7 +220,11 @@ export default function SlidingBanner(props: SlidingBannerProps) {
   onUnMount(() => {
     state.stopAutoPlay();
     state.plugin.stop(bgEffectContext);
-    if (animContext.dimResizeHandler) {
+    // Same guard as RowScrollable: onDestroy also runs on the server. The
+    // handler is only assigned in onMount so this branch is normally skipped
+    // there, but the typeof check makes that safe by construction rather than
+    // by coincidence.
+    if (typeof window !== 'undefined' && animContext.dimResizeHandler) {
       window.removeEventListener('resize', animContext.dimResizeHandler);
     }
     if (observerBox.disconnect) observerBox.disconnect();
