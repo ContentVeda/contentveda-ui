@@ -48,8 +48,48 @@ Tags from *earlier* promotions survive a rebase, because they are already in
 `main`'s history. It is precisely the unpromoted ones that vanish, which is the
 state `beta` is in whenever you are about to open the PR.
 
-You should not need to do this by hand anyway: `release.yml` merges `main` into
-`beta` automatically after every push to `main`.
+You should not need to do this by hand anyway — see below.
+
+## Keeping beta on top of main
+
+Promotion is one direction (`beta` → `main`), so without a return path `beta`
+would drift: it would never contain the commit recording the released version,
+and each promotion PR would carry a larger diff of things `main` already has.
+
+So `main` is merged back into `beta` after every push to `main`. This is
+automatic — the `Bring beta level with main` step in `release.yml` — and the
+full cycle is:
+
+```
+1.  fix: lands on beta            -> publishes 0.0.2-beta.1 to @beta
+2.  beta merged to main (PR)      -> publishes 0.0.2 to @latest, tags v0.0.2
+3.  main opens a PR recording 0.0.2 in package.json
+4.  that PR merges                -> main now carries 0.0.2
+5.  main merged back into beta    -> beta carries 0.0.2 too
+6.  next fix: on beta             -> publishes 0.0.3-beta.1
+```
+
+Two details that look like mistakes and are not:
+
+**It runs on every push to `main`, not only ones that publish.** The version
+arrives through a pull request (step 3), so the commit carrying it lands on a
+*later* push than the release itself. A step that only fired on releases would
+leave `beta` permanently one commit short of the number it is meant to match —
+step 5 above would never happen.
+
+**It merges rather than fast-forwards, and it never rebases.** `beta` normally
+holds work `main` has not seen, so this is a real merge. Rebasing to achieve the
+same tidiness is the one thing that breaks the release — see Rule 1.
+
+If the merge conflicts, the step aborts and warns rather than guessing. `beta`
+carrying unpromoted work is the normal state and resolving that blind risks
+discarding it, so merge it by hand:
+
+```bash
+git checkout beta
+git merge origin/main      # not rebase
+git push origin beta
+```
 
 ## Rule 2 — the version is decided by commit messages
 
