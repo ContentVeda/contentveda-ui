@@ -4,11 +4,16 @@ name: Playwright Tests
 # all: a PR into beta matched neither filter, and only the later beta -> main PR
 # was tested. That is the wrong end to find out at, since beta is where changes
 # land first.
+#
+# release/* is included so a release branch is checked on the way in and on the
+# way out. It is a merge source, not a publishing branch: nothing in
+# release.config.js matches it, so pushing one publishes nothing -- it is
+# somewhere to assemble a release before promoting it into beta or main.
 on:
   push:
-    branches: [ main, master, beta ]
+    branches: [ main, master, beta, 'release/*' ]
   pull_request:
-    branches: [ main, master, beta ]
+    branches: [ main, master, beta, 'release/*' ]
 jobs:
   test:
     timeout-minutes: 60

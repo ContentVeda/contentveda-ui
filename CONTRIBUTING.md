@@ -48,20 +48,31 @@ docs(readme): add svelte usage example
 chore: bump mitosis to 0.14.0
 ```
 
+The prefix decides the next version, so it is not cosmetic: `fix:` is a patch,
+`feat:` a minor, and `BREAKING CHANGE:` in the body a major. `chore:`, `ci:`,
+`docs:`, `test:` and `refactor:` release nothing. See [RELEASING.md](RELEASING.md).
+
 ## Pull Request Process
 
-1. Fork the repository and create a branch from `main`.
+1. Create a branch from `beta` — that is where changes land first. `main` only
+   receives merges from `beta`.
 2. Make your changes and ensure `npm run build` succeeds.
-3. Update `CHANGELOG.md` under the `[Unreleased]` section.
-4. Open a Pull Request with a clear description of the change.
+3. Open a Pull Request against `beta` with a clear description of the change.
+4. Check the **Next Version** run on the PR: it reports the version merging
+   would publish, so a wrong commit prefix is visible before it is merged.
+
+Do not edit `CHANGELOG.md` by hand — semantic-release generates it from commit
+messages.
+
+Rebase your own `feat/*` or `fix/*` branch as much as you like. Never rebase
+`beta` or `main`: it orphans the release tags and makes semantic-release try to
+republish a version that already exists. [RELEASING.md](RELEASING.md) explains why.
 
 ## Releasing (Maintainers Only)
 
-```bash
-# Bump version (patch | minor | major)
-npm version patch
+Releases are automatic. Merging to `beta` publishes a `X.Y.Z-beta.N` prerelease
+to npm's `beta` tag; merging `beta` to `main` publishes `X.Y.Z` to `latest`.
+Versions are computed from commit messages, never set by hand.
 
-# This auto-runs: build → git tag → git push → npm publish
-```
-
-The GitHub Actions `publish.yml` workflow handles npm publishing on tagged commits.
+The full process, including why `package.json` carries main's version and not
+beta's, is in [RELEASING.md](RELEASING.md).
