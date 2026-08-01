@@ -7,10 +7,10 @@
   "homepage": "https://docs.contentveda.com/ui/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nilkoushik/contentveda-ui.git"
+    "url": "git+https://github.com/ContentVeda/contentveda-ui.git"
   },
   "bugs": {
-    "url": "https://github.com/nilkoushik/contentveda-ui/issues"
+    "url": "https://github.com/ContentVeda/contentveda-ui/issues"
   },
   "publishConfig": {
     "access": "public"
