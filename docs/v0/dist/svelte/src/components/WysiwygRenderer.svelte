@@ -11,7 +11,7 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";

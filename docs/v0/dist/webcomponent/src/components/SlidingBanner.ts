@@ -276,7 +276,11 @@ class SlidingBanner extends HTMLElement {
     // onUnMount
     this.state.stopAutoPlay();
     this.state.plugin.stop(self._bgEffectContext);
-    if (self._animContext.dimResizeHandler) {
+    // Same guard as RowScrollable: onDestroy also runs on the server. The
+    // handler is only assigned in onMount so this branch is normally skipped
+    // there, but the typeof check makes that safe by construction rather than
+    // by coincidence.
+    if (typeof window !== "undefined" && self._animContext.dimResizeHandler) {
       window.removeEventListener("resize", self._animContext.dimResizeHandler);
     }
     if (self._observerBox.disconnect) self._observerBox.disconnect();
@@ -845,7 +849,7 @@ class SlidingBanner extends HTMLElement {
       .querySelectorAll("[data-el='a-sliding-banner-1']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        el.setAttribute("href", item.mapLinks?.[0]?.url || "#");
+        el.setAttribute("href", item.mapLinks?.[0]?.url || undefined);
       });
 
     this._root

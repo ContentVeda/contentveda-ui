@@ -35,10 +35,9 @@ import { observeLazyMount } from "../utils/lazyObserver";
 function RowScrollable(props: RowScrollableProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
+  const observerBox = useRef<any>({
     disconnect: null,
+    row: null,
   });
   const [canScrollLeft, setCanScrollLeft] = useState(() => false);
 
@@ -81,6 +80,10 @@ function RowScrollable(props: RowScrollableProps) {
       setTimeout(() => {
         checkScroll();
       }, 150);
+      if (typeof ResizeObserver !== "undefined") {
+        observerBox.current.row = new ResizeObserver(() => checkScroll());
+        observerBox.current.row.observe(el);
+      }
     }
     window.addEventListener("resize", checkScroll);
     if (props.lazyLoad === false) {
@@ -105,8 +108,18 @@ function RowScrollable(props: RowScrollableProps) {
       if (el) {
         el.removeEventListener("scroll", checkScroll);
       }
-      window.removeEventListener("resize", checkScroll);
+      // Guarded: Svelte 5 runs onDestroy during *server* teardown too, so an
+      // unguarded window access here throws `window is not defined` and 500s any
+      // SSR page that renders this component — it never reaches the listener it
+      // was trying to remove, because onMount never added one.
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", checkScroll);
+      }
       if (observerBox.current.disconnect) observerBox.current.disconnect();
+      if (observerBox.current.row) {
+        observerBox.current.row.disconnect();
+        observerBox.current.row = null;
+      }
     };
   }, []);
 
@@ -132,7 +145,7 @@ function RowScrollable(props: RowScrollableProps) {
         >
           {props.items?.map((item) => (
             <a
-              href={item.mapLinks?.[0]?.url || "#"}
+              href={item.mapLinks?.[0]?.url || undefined}
               className={`cv-scrollable-card ${
                 showSkeleton() ? "cv-image-shimmer" : ""
               }`}
@@ -180,8 +193,9 @@ function RowScrollable(props: RowScrollableProps) {
         </div>
         {props.config?.showArrows !== false ? (
           <>
-            {!props.config?.hideArrowsIfNoScroll || canScrollLeft ? (
+            {props.config?.hideArrowsIfNoScroll === false || canScrollLeft ? (
               <button
+                type="button"
                 className="cv-scrollable-arrow prev"
                 aria-label="Previous"
                 onClick={(event) => scroll("left")}
@@ -200,8 +214,9 @@ function RowScrollable(props: RowScrollableProps) {
                 </svg>
               </button>
             ) : null}
-            {!props.config?.hideArrowsIfNoScroll || canScrollRight ? (
+            {props.config?.hideArrowsIfNoScroll === false || canScrollRight ? (
               <button
+                type="button"
                 className="cv-scrollable-arrow next"
                 aria-label="Next"
                 onClick={(event) => scroll("right")}

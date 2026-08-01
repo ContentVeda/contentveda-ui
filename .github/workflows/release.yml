@@ -10,7 +10,38 @@ permissions:
   contents: read
 
 jobs:
+  # Gate on the suite before anything is published. semantic-release runs
+  # prepublishOnly, which only builds — so without this a commit that compiles
+  # but fails its tests goes to npm, and npm versions cannot be taken back.
+  #
+  # This duplicates what playwright.yml already runs on the same push, and that
+  # is deliberate: that workflow is a separate run with no ordering relationship
+  # to this one, so depending on it would mean publishing while it is still
+  # going. A job in this workflow is the only thing `needs` can actually wait
+  # for.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build library and generate docs pages
+        run: npm run build
+
+      - name: Run BDD suite
+        run: npm run test:bdd
+
   release:
+    needs: verify
     runs-on: ubuntu-latest
     # Scopes the OIDC token's environment claim to "release", matching the
     # Trusted Publisher configured on npmjs.com for this package — npm checks

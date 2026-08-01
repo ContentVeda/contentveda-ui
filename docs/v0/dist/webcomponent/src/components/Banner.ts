@@ -132,7 +132,7 @@ class Banner extends HTMLElement {
         return self.props.media?.url || self.props.backgroundImageUrl || "";
       },
       get linkUrl() {
-        return self.props.mapLinks?.[0]?.url || self.props.ctaLink || "#";
+        return self.props.mapLinks?.[0]?.url || self.props.ctaLink || undefined;
       },
       get gradientOverlay() {
         return self.props.config?.bgGradient || self.props.bgGradient || "";
@@ -168,8 +168,8 @@ class Banner extends HTMLElement {
       },
       hotspotHref(h: Hotspot) {
         return h.action?.type === "deeplink"
-          ? h.action.deeplink || h.action.url || "#"
-          : h.action?.url || "#";
+          ? h.action.deeplink || h.action.url || undefined
+          : h.action?.url || undefined;
       },
       hotspotLabel(h: Hotspot) {
         return h.altText || h.label || "Hotspot link";

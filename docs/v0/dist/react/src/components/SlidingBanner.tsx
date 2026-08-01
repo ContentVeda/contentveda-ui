@@ -244,7 +244,14 @@ function SlidingBanner(props: SlidingBannerProps) {
     return () => {
       stopAutoPlay();
       plugin().stop(bgEffectContext.current);
-      if (animContext.current.dimResizeHandler) {
+      // Same guard as RowScrollable: onDestroy also runs on the server. The
+      // handler is only assigned in onMount so this branch is normally skipped
+      // there, but the typeof check makes that safe by construction rather than
+      // by coincidence.
+      if (
+        typeof window !== "undefined" &&
+        animContext.current.dimResizeHandler
+      ) {
         window.removeEventListener(
           "resize",
           animContext.current.dimResizeHandler
@@ -434,7 +441,7 @@ function SlidingBanner(props: SlidingBannerProps) {
                   {item.ctaText ? (
                     <a
                       className="cv-sliding-cta"
-                      href={item.mapLinks?.[0]?.url || "#"}
+                      href={item.mapLinks?.[0]?.url || undefined}
                     >
                       {item.ctaText}
                     </a>

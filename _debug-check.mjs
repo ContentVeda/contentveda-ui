@@ -28,7 +28,7 @@ if (!run) {
         for (const a of annData) console.log('  annotation:', a.message);
       }
     } else {
-      const npmResp = await page.goto('https://registry.npmjs.org/@chronos-ui/core');
+      const npmResp = await page.goto('https://registry.npmjs.org/@contentveda/ui');
       const npmData = await npmResp.json();
       console.log('npm dist-tags:', JSON.stringify(npmData['dist-tags']));
 

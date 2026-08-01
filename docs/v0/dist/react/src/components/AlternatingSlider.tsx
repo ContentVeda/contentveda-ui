@@ -445,6 +445,7 @@ function AlternatingSlider(props: AlternatingSliderProps) {
       (!props.config?.hideArrowsIfNoScroll || slideSets().length > 1) ? (
         <>
           <button
+            type="button"
             className="cv-alt-arrow prev"
             aria-label="Previous"
             onClick={(event) => prev()}
@@ -459,6 +460,7 @@ function AlternatingSlider(props: AlternatingSliderProps) {
             </svg>
           </button>
           <button
+            type="button"
             className="cv-alt-arrow next"
             aria-label="Next"
             onClick={(event) => next()}
@@ -478,6 +480,7 @@ function AlternatingSlider(props: AlternatingSliderProps) {
         <div className="cv-alt-dots">
           {slideSets()?.map((_, index) => (
             <button
+              type="button"
               key={`dot-${index}`}
               className={`cv-alt-dot ${index === currentIndex ? "active" : ""}`}
               aria-label={`Go to slide ${index + 1}`}

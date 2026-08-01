@@ -32,7 +32,7 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null };
+  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -95,6 +95,10 @@
       setTimeout(() => {
         checkScroll();
       }, 150);
+      if (typeof ResizeObserver !== "undefined") {
+        observerBox.row = new ResizeObserver(() => checkScroll());
+        observerBox.row.observe(el);
+      }
     }
     window.addEventListener("resize", checkScroll);
     if (lazyLoad === false) {
@@ -118,8 +122,18 @@
     if (el) {
       el.removeEventListener("scroll", checkScroll);
     }
-    window.removeEventListener("resize", checkScroll);
+    // Guarded: Svelte 5 runs onDestroy during *server* teardown too, so an
+    // unguarded window access here throws `window is not defined` and 500s any
+    // SSR page that renders this component — it never reaches the listener it
+    // was trying to remove, because onMount never added one.
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", checkScroll);
+    }
     if (observerBox.disconnect) observerBox.disconnect();
+    if (observerBox.row) {
+      observerBox.row.disconnect();
+      observerBox.row = null;
+    }
   });
 </script>
 
@@ -144,7 +158,7 @@
     >
       {#each items as item (item.id)}
         <a
-          href={item.mapLinks?.[0]?.url || "#"}
+          href={item.mapLinks?.[0]?.url || undefined}
           class={`cv-scrollable-card ${
             showSkeleton() ? "cv-image-shimmer" : ""
           }`}
@@ -159,8 +173,7 @@
                     autoPlay={true}
                     loop={true}
                     muted={true}
-                    playsInline={true}
-                  />
+                    playsInline={true}></video>
                 {/if}
                 {#if item.media?.type !== "video"}
                   <img
@@ -184,12 +197,13 @@
       {/each}
     </div>
     {#if config?.showArrows !== false}
-      {#if !config?.hideArrowsIfNoScroll || canScrollLeft}
+      {#if config?.hideArrowsIfNoScroll === false || canScrollLeft}
         <button
           style={stringifyStyles({
             opacity: !canScrollLeft ? "0.35" : "1",
             pointerEvents: !canScrollLeft ? "none" : "auto",
           })}
+          type="button"
           class="cv-scrollable-arrow prev"
           aria-label="Previous"
           on:click={(event) => {
@@ -204,12 +218,13 @@
         >
       {/if}
 
-      {#if !config?.hideArrowsIfNoScroll || canScrollRight}
+      {#if config?.hideArrowsIfNoScroll === false || canScrollRight}
         <button
           style={stringifyStyles({
             opacity: !canScrollRight ? "0.35" : "1",
             pointerEvents: !canScrollRight ? "none" : "auto",
           })}
+          type="button"
           class="cv-scrollable-arrow next"
           aria-label="Next"
           on:click={(event) => {

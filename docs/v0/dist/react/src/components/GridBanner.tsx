@@ -96,7 +96,7 @@ function GridBanner(props: GridBannerProps) {
       {props.items?.map((item, index) => (
         <a
           className="cv-grid-item"
-          href={item.mapLinks?.[0]?.url || "#"}
+          href={item.mapLinks?.[0]?.url || undefined}
           key={item.id || index}
         >
           <div
