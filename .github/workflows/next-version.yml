@@ -1,0 +1,86 @@
+name: Next Version
+
+# Answers "what will merging this publish?" before it is merged, rather than
+# after. semantic-release picks the number from commit types, so the only way to
+# steer it is to know what it has decided while the pull request is still open:
+# a fix: lands 0.0.2, a feat: lands 0.1.0, a BREAKING CHANGE: lands 1.0.0, and
+# the difference is a commit message nobody sees again once it is merged.
+#
+# Runs on pull requests only. Pushes to main and beta already publish, and
+# release.yml logs the version as it goes.
+on:
+  pull_request:
+    branches:
+      - main
+      - beta
+      - 'release/*'
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # semantic-release works out the next version by comparing against the
+          # last tag, so it needs the tags and the history to reach them.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Work out the next version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          # actions/checkout leaves a detached HEAD on the pull request's merge
+          # commit. semantic-release decides which rules apply from the branch
+          # *name*, and a detached HEAD matches nothing in the branches config,
+          # so name it after the base. The question being asked is precisely
+          # "if this were on $BASE, what would it release?".
+          git checkout -q -B "$BASE"
+
+          # --no-ci because semantic-release detects the pull request otherwise
+          # and declines to compute anything at all -- which is right for
+          # publishing and useless for previewing.
+          #
+          # commit-analyzer alone: it is what decides the number, and the npm and
+          # github plugins would run verifyConditions and demand credentials a
+          # preview has no business holding.
+          npx semantic-release --dry-run --no-ci \
+            --plugins @semantic-release/commit-analyzer \
+            > /tmp/preview.log 2>&1 || true
+
+          version=$(grep -oE 'The next release version is [0-9][^ ]*' /tmp/preview.log \
+                    | head -n1 | awk '{print $NF}')
+
+          {
+            echo "## Next version on \`$BASE\`"
+            echo
+            if [ -n "$version" ]; then
+              echo "Merging this would publish **\`$version\`**."
+            elif grep -q 'no relevant changes' /tmp/preview.log; then
+              echo "No releasable commits. Merging this publishes nothing."
+              echo
+              echo "Only \`fix:\`, \`feat:\` and \`BREAKING CHANGE:\` produce a release."
+              echo "\`chore:\`, \`ci:\`, \`docs:\`, \`test:\` and \`refactor:\` do not."
+            else
+              echo "Could not determine the next version. Log:"
+              echo
+              echo '```'
+              tail -n 20 /tmp/preview.log
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [ -n "$version" ] && echo "Next version on $BASE: $version" || true
