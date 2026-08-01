@@ -114,6 +114,7 @@ class RowScrollable extends HTMLElement {
 
     this._observerBox = {
       disconnect: null,
+      row: null,
     };
 
     if (undefined) {
@@ -135,6 +136,10 @@ class RowScrollable extends HTMLElement {
       window.removeEventListener("resize", this.state.checkScroll);
     }
     if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (self._observerBox.row) {
+      self._observerBox.row.disconnect();
+      self._observerBox.row = null;
+    }
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -214,6 +219,7 @@ class RowScrollable extends HTMLElement {
           <template data-el="show-row-scrollable-8">
             <template data-el="show-row-scrollable-9">
               <button
+                type="button"
                 class="cv-scrollable-arrow prev"
                 aria-label="Previous"
                 data-el="button-row-scrollable-1"
@@ -230,6 +236,7 @@ class RowScrollable extends HTMLElement {
             </template>
             <template data-el="show-row-scrollable-10">
               <button
+                type="button"
                 class="cv-scrollable-arrow next"
                 aria-label="Next"
                 data-el="button-row-scrollable-2"
@@ -284,6 +291,12 @@ class RowScrollable extends HTMLElement {
       setTimeout(() => {
         this.state.checkScroll();
       }, 150);
+      if (typeof ResizeObserver !== "undefined") {
+        self._observerBox.row = new ResizeObserver(() =>
+          this.state.checkScroll()
+        );
+        self._observerBox.row.observe(el);
+      }
     }
     window.addEventListener("resize", this.state.checkScroll);
     if (this.props.lazyLoad === false) {
@@ -371,7 +384,7 @@ class RowScrollable extends HTMLElement {
       .querySelectorAll("[data-el='a-row-scrollable-1']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        el.setAttribute("href", item.mapLinks?.[0]?.url || "#");
+        el.setAttribute("href", item.mapLinks?.[0]?.url || undefined);
         el.className = `cv-scrollable-card ${
           this.state.showSkeleton ? "cv-image-shimmer" : ""
         }`;
@@ -483,7 +496,8 @@ class RowScrollable extends HTMLElement {
       .querySelectorAll("[data-el='show-row-scrollable-9']")
       .forEach((el) => {
         const whenCondition =
-          !this.props.config?.hideArrowsIfNoScroll || this.state.canScrollLeft;
+          this.props.config?.hideArrowsIfNoScroll === false ||
+          this.state.canScrollLeft;
         if (whenCondition) {
           this.showContent(el);
         }
@@ -504,7 +518,8 @@ class RowScrollable extends HTMLElement {
       .querySelectorAll("[data-el='show-row-scrollable-10']")
       .forEach((el) => {
         const whenCondition =
-          !this.props.config?.hideArrowsIfNoScroll || this.state.canScrollRight;
+          this.props.config?.hideArrowsIfNoScroll === false ||
+          this.state.canScrollRight;
         if (whenCondition) {
           this.showContent(el);
         }

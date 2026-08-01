@@ -62,7 +62,20 @@ export default function RowScrollable(props: RowScrollableProps) {
     }
   });
 
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
+  /*
+    Both observers live in one ref, and the row observer is typed structurally
+    rather than as `ResizeObserver`.
+
+    A second `useRef` typed `useRef<{ observer: ResizeObserver | null }>(...)`
+    generated *no declaration at all* in the Svelte target while its usages were
+    still emitted, so the component died with `rowObserverBox is not defined` the
+    moment it rendered. The other three refs here survive because none of them
+    names a DOM lib type in type position. Keep it that way.
+  */
+  const observerBox = useRef<{
+    disconnect: (() => void) | null;
+    row: { disconnect: () => void; observe: (el: any) => void } | null;
+  }>({ disconnect: null, row: null });
 
   onMount(() => {
     const el = rowRef;
@@ -72,6 +85,10 @@ export default function RowScrollable(props: RowScrollableProps) {
       setTimeout(() => {
         state.checkScroll();
       }, 150);
+      if (typeof ResizeObserver !== 'undefined') {
+        observerBox.row = new ResizeObserver(() => state.checkScroll());
+        observerBox.row.observe(el);
+      }
     }
     window.addEventListener('resize', state.checkScroll);
 
@@ -102,6 +119,10 @@ export default function RowScrollable(props: RowScrollableProps) {
       window.removeEventListener('resize', state.checkScroll);
     }
     if (observerBox.disconnect) observerBox.disconnect();
+    if (observerBox.row) {
+      observerBox.row.disconnect();
+      observerBox.row = null;
+    }
   });
 
   return (
@@ -115,7 +136,7 @@ export default function RowScrollable(props: RowScrollableProps) {
         >
           {props.items?.map((item) => (
             <a
-              href={item.mapLinks?.[0]?.url || '#'}
+              href={item.mapLinks?.[0]?.url || undefined}
               class={`cv-scrollable-card ${state.showSkeleton ? 'cv-image-shimmer' : ''}`}
               key={item.id}
             >
@@ -141,8 +162,8 @@ export default function RowScrollable(props: RowScrollableProps) {
 
         {props.config?.showArrows !== false && (
           <>
-            <Show when={!props.config?.hideArrowsIfNoScroll || state.canScrollLeft}>
-              <button
+            <Show when={props.config?.hideArrowsIfNoScroll === false || state.canScrollLeft}>
+              <button type="button"
                 class="cv-scrollable-arrow prev"
                 aria-label="Previous"
                 onClick={() => state.scroll('left')}
@@ -154,8 +175,8 @@ export default function RowScrollable(props: RowScrollableProps) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
               </button>
             </Show>
-            <Show when={!props.config?.hideArrowsIfNoScroll || state.canScrollRight}>
-              <button
+            <Show when={props.config?.hideArrowsIfNoScroll === false || state.canScrollRight}>
+              <button type="button"
                 class="cv-scrollable-arrow next"
                 aria-label="Next"
                 onClick={() => state.scroll('right')}

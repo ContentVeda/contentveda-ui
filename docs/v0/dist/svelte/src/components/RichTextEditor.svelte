@@ -727,7 +727,7 @@
       </div>
     {/if}
     {#if showSeparator(0)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("code") || showToolbarOption("quote") || showToolbarOption("clear")}
       <div class="flex items-center gap-2 text-slate-300">
@@ -825,7 +825,7 @@
       </div>
     {/if}
     {#if showSeparator(1)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("headings")}
       <select
@@ -871,7 +871,7 @@
       >
     {/if}
     {#if showSeparator(2)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("foreColor") || showToolbarOption("backColor")}
       <div class="flex items-center gap-1 text-slate-300">
@@ -945,7 +945,7 @@
       </div>
     {/if}
     {#if showSeparator(3)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("justifyLeft") || showToolbarOption("justifyCenter") || showToolbarOption("justifyRight")}
       <div class="flex items-center gap-2 text-slate-300">
@@ -1054,7 +1054,7 @@
       </div>
     {/if}
     {#if showSeparator(4)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("image") || showToolbarOption("link") || showToolbarOption("table") || showToolbarOption("unorderedList") || showToolbarOption("orderedList") || showToolbarOption("horizontalRule") || showToolbarOption("video") || showToolbarOption("social")}
       <div class="flex items-center gap-2 text-slate-300">
@@ -1198,7 +1198,7 @@
                 stroke-linejoin="round"><path d="M5 12h14" /></svg
               ><span class="text-[10px] font-bold ml-0.5">R</span></button
             >
-            <div class="w-px h-4 cv-rte-tint-strong mx-0.5" />
+            <div class="w-px h-4 cv-rte-tint-strong mx-0.5"></div>
             <button
               type="button"
               class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
@@ -1428,7 +1428,7 @@
       </div>
     {/if}
     {#if showSeparator(5)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("insertButton") || showToolbarOption("addWidget")}
       <div class="flex items-center gap-2">
@@ -1500,7 +1500,7 @@
       </div>
     {/if}
     {#if showSeparator(6)}
-      <div class="w-px h-6 bg-white/10" />
+      <div class="w-px h-6 bg-white/10"></div>
     {/if}
     {#if showToolbarOption("save")}
       <div class="flex items-center gap-1 text-slate-400">

@@ -232,8 +232,7 @@
                         playsInline={true}
                         class={`cv-alt-bg-video ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}
-                      />
+                        }`}></video>
                     {/if}
                     {#if shouldMount() && slideRow[colIndex].media?.type !== "video"}
                       <div
@@ -245,10 +244,9 @@
                         })}
                         class={`cv-alt-bg ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}
-                      />
+                        }`}></div>
                     {/if}
-                    <div class="cv-alt-overlay" />
+                    <div class="cv-alt-overlay"></div>
                     <div
                       style={stringifyStyles({
                         textAlign: slideRow[colIndex].textAlignment || "left",
@@ -272,31 +270,27 @@
                             height: "24px",
                             marginBottom: "12px",
                           })}
-                          class="cv-skeleton-title cv-image-shimmer"
-                        />
+                          class="cv-skeleton-title cv-image-shimmer"></div>
                         <div
                           style={stringifyStyles({
                             width: "80%",
                             height: "14px",
                             marginBottom: "8px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"
-                        />
+                          class="cv-skeleton-text cv-image-shimmer"></div>
                         <div
                           style={stringifyStyles({
                             width: "50%",
                             height: "14px",
                             marginBottom: "16px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"
-                        />
+                          class="cv-skeleton-text cv-image-shimmer"></div>
                         <div
                           style={stringifyStyles({
                             width: "110px",
                             height: "36px",
                           })}
-                          class="cv-skeleton-button cv-image-shimmer"
-                        />
+                          class="cv-skeleton-button cv-image-shimmer"></div>
                       {/if}
                       {#if !showSkeleton()}
                         <h2 class="cv-alt-title">{slideRow[colIndex].title}</h2>
@@ -336,8 +330,7 @@
                         playsInline={true}
                         class={`cv-alt-bg-video ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}
-                      />
+                        }`}></video>
                     {/if}
                     {#if shouldMount() && slideRow[colIndex].media?.type !== "video"}
                       <div
@@ -349,10 +342,9 @@
                         })}
                         class={`cv-alt-bg ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}
-                      />
+                        }`}></div>
                     {/if}
-                    <div class="cv-alt-overlay" />
+                    <div class="cv-alt-overlay"></div>
                     <div
                       style={stringifyStyles({
                         textAlign: slideRow[colIndex].textAlignment || "left",
@@ -376,31 +368,27 @@
                             height: "24px",
                             marginBottom: "12px",
                           })}
-                          class="cv-skeleton-title cv-image-shimmer"
-                        />
+                          class="cv-skeleton-title cv-image-shimmer"></div>
                         <div
                           style={stringifyStyles({
                             width: "80%",
                             height: "14px",
                             marginBottom: "8px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"
-                        />
+                          class="cv-skeleton-text cv-image-shimmer"></div>
                         <div
                           style={stringifyStyles({
                             width: "50%",
                             height: "14px",
                             marginBottom: "16px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"
-                        />
+                          class="cv-skeleton-text cv-image-shimmer"></div>
                         <div
                           style={stringifyStyles({
                             width: "110px",
                             height: "36px",
                           })}
-                          class="cv-skeleton-button cv-image-shimmer"
-                        />
+                          class="cv-skeleton-button cv-image-shimmer"></div>
                       {/if}
                       {#if !showSkeleton()}
                         <h2 class="cv-alt-title">{slideRow[colIndex].title}</h2>
@@ -429,6 +417,7 @@
   </div>
   {#if config?.showArrows && (!config?.hideArrowsIfNoScroll || slideSets().length > 1)}
     <button
+      type="button"
       class="cv-alt-arrow prev"
       aria-label="Previous"
       on:click={(event) => {
@@ -442,6 +431,7 @@
       ></button
     >
     <button
+      type="button"
       class="cv-alt-arrow next"
       aria-label="Next"
       on:click={(event) => {
@@ -459,6 +449,7 @@
     <div class="cv-alt-dots">
       {#each slideSets() as _, index (`dot-${index}`)}
         <button
+          type="button"
           class={`cv-alt-dot ${index === currentIndex ? "active" : ""}`}
           aria-label={`Go to slide ${index + 1}`}
           on:click={(event) => {

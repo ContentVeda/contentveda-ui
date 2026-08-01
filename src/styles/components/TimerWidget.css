@@ -127,15 +127,15 @@
         .cv-timer-variant-neon .cv-timer-block {
           background: rgba(10, 10, 20, 0.55);
           border: 1px solid var(--cv-timer-neon-edge, rgba(6, 240, 240, 0.6));
-          box-shadow: 0 0 12px var(--cv-timer-neon-glow, rgba(6, 240, 240, 0.5)), inset 0 0 8px rgba(255, 0, 200, 0.15);
+          box-shadow: 0 0 12px var(--cv-timer-neon-glow, rgba(6, 240, 240, 0.5)), inset 0 0 8px rgba(127, 196, 222, 0.15);
         }
         .cv-timer-variant-neon .cv-timer-value {
           color: var(--cv-timer-neon-accent, #0ff0f0);
           text-shadow: 0 0 8px rgba(6, 240, 240, 0.9), 0 0 16px var(--cv-timer-neon-glow, rgba(6, 240, 240, 0.5));
         }
         .cv-timer-variant-neon .cv-timer-label {
-          color: var(--cv-timer-neon-accent-alt, rgba(255, 0, 200, 0.85));
-          text-shadow: 0 0 6px rgba(255, 0, 200, 0.6);
+          color: var(--cv-timer-neon-accent-alt, rgba(127, 196, 222, 0.85));
+          text-shadow: 0 0 6px var(--cv-timer-neon-glow, rgba(127, 196, 222, 0.6));
         }
         .cv-timer-variant-neon .cv-timer-title {
           color: var(--cv-timer-neon-accent, #0ff0f0);

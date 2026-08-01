@@ -65,12 +65,24 @@
   color: white;
 }
 .cv-alt-title {
+  /* Explicit, not inherited. These sit on a photograph, so the colour has
+     to contrast with the image rather than the page — and a consuming app
+     with a global `h1..h6 { color: ... }` rule would otherwise win over the
+     container's inherited white, because a direct rule beats inheritance
+     regardless of specificity. That made the title invisible in both themes. */
+  color: var(--cv-color-on-media, #ffffff);
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 0.5rem;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 .cv-alt-subtitle {
+  /* Explicit, not inherited. These sit on a photograph, so the colour has
+     to contrast with the image rather than the page — and a consuming app
+     with a global `h1..h6 { color: ... }` rule would otherwise win over the
+     container's inherited white, because a direct rule beats inheritance
+     regardless of specificity. That made the title invisible in both themes. */
+  color: var(--cv-color-on-media, #ffffff);
   font-size: 1.25rem;
   margin-bottom: 1.5rem;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);

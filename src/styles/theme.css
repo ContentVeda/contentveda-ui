@@ -157,7 +157,9 @@
   /* Glass blocks over a photo background — translucent on purpose. */
   --cv-timer-glass-bg: rgba(15, 17, 21, 0.55);
   --cv-timer-neon-glow: rgba(6, 240, 240, 0.5);
-  --cv-timer-neon-accent-alt: rgba(255, 0, 200, 0.85);
+  /* Was magenta, the last non-brand hue in the palette. The neon look keeps
+     its two-tone treatment, now cyan paired with the brand light teal. */
+  --cv-timer-neon-accent-alt: rgba(127, 196, 222, 0.85);
 }
 
 [data-theme="dark"] {

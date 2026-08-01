@@ -134,8 +134,7 @@
               autoPlay={true}
               loop={true}
               muted={true}
-              playsInline={true}
-            />
+              playsInline={true}></video>
           {/if}
 
           {#if item.media?.type !== "video"}
@@ -169,16 +168,14 @@
               height: "14px",
               margin: "0 0 6px 0",
             })}
-            class="cv-skeleton-text cv-image-shimmer"
-          />
+            class="cv-skeleton-text cv-image-shimmer"></div>
           <div
             style={stringifyStyles({
               width: "40%",
               height: "10px",
               margin: 0,
             })}
-            class="cv-skeleton-text cv-image-shimmer"
-          />
+            class="cv-skeleton-text cv-image-shimmer"></div>
         </div>
       {/if}
       {#if !showSkeleton()}
