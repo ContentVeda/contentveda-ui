@@ -81,24 +81,20 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Bootstrap credential for the FIRST publish, and expected to be
-          # temporary.
+          # No NPM_TOKEN here, and that is load-bearing rather than an omission.
           #
-          # Trusted publishing is configured per package, on that package's own
-          # settings page — which cannot exist for a name that has never been
-          # published. So on a virgin package there is no trusted publisher for
-          # the OIDC token to match, npm rejects the exchange, and
-          # @semantic-release/npm fails in verifyConditions: before a version is
-          # computed, which is why the earlier runs produced no tag, no release
-          # and not even a failure issue.
+          # @semantic-release/npm picks its auth path by whether NPM_TOKEN is
+          # *present*, not whether it is usable. `NPM_TOKEN: ${{ secrets.X }}`
+          # with the secret unset still exports an empty string, which is enough
+          # to send it down verifyTokenAuth instead of the OIDC exchange — and
+          # it then fails with EINVALIDNPMTOKEN in verifyConditions, before a
+          # version is ever computed. So the variable must be absent, not empty.
           #
-          # Once 1.0.0 exists on the registry, configure the Trusted Publisher
-          # at npmjs.com (repository ContentVeda/contentveda-ui, workflow
-          # release.yml, environment release), then delete this line and the
-          # NPM_TOKEN secret — OIDC takes over from the next release.
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # Keep provenance attestations even while publishing with a token.
-          # id-token: write is already granted above, and the repo is public,
-          # which is all npm needs to sign the build.
-          NPM_CONFIG_PROVENANCE: true
+          # 0.0.1 was published from a local machine to bootstrap the package,
+          # because trusted publishing is configured on a package's own settings
+          # page and cannot exist for a name that has never been published. With
+          # that configured (repository ContentVeda/contentveda-ui, workflow
+          # release.yml, environment release), OIDC now covers every release —
+          # and generates provenance attestations without NPM_CONFIG_PROVENANCE
+          # being set, since id-token: write is granted above.
         run: npx semantic-release
