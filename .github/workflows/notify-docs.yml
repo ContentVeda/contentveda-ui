@@ -19,8 +19,8 @@ name: Notify contentveda-docs
 #
 # Which is why this workflow does no building. Nothing it could verify would
 # not be verified again, on the same commit, by the job that actually
-# publishes. It sends the SHA and gets out of the way; the release and Pages
-# workflows still build and test this repo on their own account.
+# publishes. It sends the SHA and gets out of the way; the release workflow
+# still builds and tests this repo on its own account.
 
 # Runs after Release, not alongside it. On a plain `push` trigger this raced the
 # release: the docs site would start building a commit whose version had not

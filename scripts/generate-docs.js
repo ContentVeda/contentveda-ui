@@ -99,8 +99,12 @@ const DEFAULT_WC_ELEMENTS = {
 // artwork), same link set, same Sign in button. Landing on /ui/ from the docs
 // site should not feel like landing on a different site.
 //
-// Links are absolute rather than root-relative because this tree is also
-// published on GitHub Pages, where /cms/api/ would resolve to nothing.
+// Links are absolute rather than root-relative. The original reason was a
+// GitHub Pages mirror at contentveda.github.io, where /cms/api/ resolved to
+// nothing; that mirror is gone, and on docs.contentveda.com a root-relative
+// link would now resolve fine. They stay absolute anyway: this tree is served
+// under /ui/, so anything pointing at a sibling product has to leave that
+// subtree, and an absolute URL is unambiguous wherever the tree is mounted.
 //
 // One addition the docs site does not have: a text-size control. These pages
 // carry long prop tables and code samples, which is exactly the reading a

@@ -17,7 +17,7 @@ src/
   components/   # Mitosis source files (.lite.tsx)
   styles/       # Global theme CSS variables
 dist/           # Compiled output (auto-generated, not committed)
-docs/           # GitHub Pages documentation site
+docs/           # Generated docs, synced to docs.contentveda.com
 ```
 
 ## Making Changes
