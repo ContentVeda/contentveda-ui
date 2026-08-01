@@ -265,11 +265,9 @@ for (const file of allFiles) {
         const isSameArray = template.__renderedArray && 
                             template.__renderedArray.length === array.length && 
                             array.every((val, i) => template.__renderedArray[i] === val);
-        console.log('[WC Debug] renderLoop template:', template.getAttribute('data-el'), 'isSameArray:', isSameArray);
         if (isSameArray) {
             return;
         }
-        console.log('[WC Debug] renderLoop recreating nodes for template:', template.getAttribute('data-el'));
         if (template.__renderedNodes) {
             template.__renderedNodes.forEach((child) => {
                 child.remove();

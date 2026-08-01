@@ -233,6 +233,7 @@ class Banner extends HTMLElement {
     this._animContext = {
       animationFrameId: null,
       resizeHandler: null,
+      resizeObserver: null,
     };
     this._observerBox = {
       disconnect: null,
