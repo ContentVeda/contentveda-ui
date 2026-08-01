@@ -75,86 +75,29 @@ jobs:
           path: tests/bdd/.allure-results
           retention-days: 30
 
-  # CodeQL runs from GitHub's default setup, not a workflow file here, so it is
-  # a separate run with no ordering relationship to this one -- the same problem
-  # verify solves for the test suite. Without this job the npm publish can beat
-  # its own security scan, and an npm version cannot be taken back.
+  # There is no CodeQL gate here, on purpose.
   #
-  # Waits on the "Analyze (...)" check runs for this commit rather than the
-  # code-scanning alerts API: those checks are what the branch ruleset itself
-  # gates on, so this gate and the ruleset agree by construction.
-  code-scanning:
-    runs-on: ubuntu-latest
-    permissions:
-      checks: read
-    steps:
-      - name: Wait for CodeQL on this commit
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # CodeQL's default setup scans the default branch and pull requests
-          # aimed at it -- nothing else. A push to beta gets no analysis at all,
-          # so waiting for one here just burns the timeout and fails a release
-          # that was never going to be scanned.
-          #
-          # That was not obvious, because early beta releases did pass this gate:
-          # those commits happened to also be the head of a pull request into
-          # main, and inherited its CodeQL runs. Coverage on beta is incidental,
-          # not a rule, and a gate cannot rest on it.
-          #
-          # Nothing ships unscanned as a result. Everything on beta reaches main
-          # through a pull request, which is scanned, and main's own push is
-          # gated below. Only the prerelease on the beta dist-tag goes out ahead
-          # of its analysis.
-          #
-          # If beta should be gated too, add it under Settings -> Code security
-          # -> CodeQL default setup, and drop this branch check.
-          if [ "$GITHUB_REF_NAME" != 'main' ]; then
-            echo "::notice::CodeQL does not scan $GITHUB_REF_NAME, so there is nothing to wait for. This commit is scanned when it is promoted to main."
-            exit 0
-          fi
-
-          for _ in $(seq 1 45); do
-            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100" \
-              --jq '.check_runs[] | select(.name | startswith("Analyze")) | "\(.status) \(.conclusion)"')
-
-            # Keep waiting until at least one Analyze check exists and none is
-            # still running. An empty result means CodeQL has not been queued
-            # for this commit yet, which is a wait, not a pass.
-            if [ -z "$lines" ] || grep -qv '^completed ' <<<"$lines"; then
-              sleep 20
-              continue
-            fi
-
-            echo "$lines"
-
-            # Superseded runs report "cancelled", and that is not a verdict.
-            # GitHub cancels an in-flight CodeQL analysis when a newer one for
-            # the same commit starts, which is routine on a merge: the beta
-            # branch's analysis of a commit gets cancelled the moment main picks
-            # the same commit up. Counting those as failures blocked 0.0.2 on a
-            # commit CodeQL had in fact scanned clean -- two cancelled runs
-            # sitting beside a successful one for the same analysis.
-            verdicts=$(grep -vE ' (cancelled|skipped)$' <<<"$lines" || true)
-
-            if [ -z "$verdicts" ]; then
-              echo "Every CodeQL run for $GITHUB_SHA was cancelled, so nothing scanned it - not publishing."
-              exit 1
-            fi
-
-            if grep -qvE '^completed (success|neutral)$' <<<"$verdicts"; then
-              echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
-              exit 1
-            fi
-
-            echo "CodeQL passed on $GITHUB_SHA."
-            exit 0
-          done
-          echo "Timed out waiting for CodeQL on $GITHUB_SHA - not publishing."
-          exit 1
-
+  # One used to wait for the "Analyze (...)" checks before publishing, on the
+  # reasoning that an npm version cannot be taken back so the publish must not
+  # beat its own scan. GitHub already guarantees that for main, and more firmly:
+  # the branch ruleset carries both a pull_request rule, so nothing reaches main
+  # except through a pull request, and a code_scanning rule set to CodeQL at
+  # high_or_higher / errors, which blocks the *merge*. A commit cannot arrive on
+  # main without having been scanned and cleared first, so by the time this
+  # workflow runs the answer is already in.
+  #
+  # Re-checking it cost two failed releases. Superseded analyses report
+  # "cancelled" and were read as failures, blocking 0.0.2 on a commit CodeQL had
+  # scanned clean; and beta is not scanned at all -- default setup covers the
+  # default branch and pull requests aimed at it, nothing else -- so every beta
+  # push sat out the full timeout and failed. Both were faults in the gate
+  # rather than in the code it was gating.
+  #
+  # beta publishes ahead of any analysis, which is the trade a prerelease
+  # channel makes. The same code is scanned on the pull request promoting it,
+  # before anything reaches @latest.
   release:
-    needs: [verify, code-scanning]
+    needs: verify
     runs-on: ubuntu-latest
     # Scopes the OIDC token's environment claim to "release", matching the
     # Trusted Publisher configured on npmjs.com for this package — npm checks
