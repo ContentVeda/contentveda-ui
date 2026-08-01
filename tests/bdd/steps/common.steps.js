@@ -42,13 +42,34 @@ Then('it should contain {int} elements matching {string}', async function (expec
   assert.equal(count, expectedCount, `Expected ${expectedCount} "${selector}" elements, found ${count}`);
 });
 
+// Polls for a frame that differs from the baseline instead of comparing a
+// single pair 700ms apart. Every effect redraws continuously -- they advance
+// their particles on each frame and have no steady state -- so on an idle
+// machine one pair is plenty. But requestAnimationFrame is throttled by the
+// browser, not driven by us: under CPU contention headless Chromium can starve
+// it for longer than the entire sampling window, and two identical samples then
+// report "the animation is stalled" when what actually happened is "the runner
+// was busy". That is a 1-in-4 failure on a 2-CPU box (reproduced on the autumn
+// effect) and the flake that turned CI red on a commit that had already passed.
+//
+// This still fails for a genuinely stalled canvas -- it just gives the frames
+// 8s to land rather than 700ms. The budget stays under the 20s step timeout
+// set above, even after the 5s attach wait.
 Then('the canvas should be actively animating', async function () {
   const canvas = this.subject().locator('canvas').first();
   await canvas.waitFor({ state: 'attached', timeout: 5000 });
-  const frame1 = await canvas.evaluate((c) => c.toDataURL());
-  await this.page.waitForTimeout(700);
-  const frame2 = await canvas.evaluate((c) => c.toDataURL());
-  assert.notEqual(frame1, frame2, 'Expected the canvas background effect to redraw over time, but two frames 700ms apart were identical');
+
+  const baseline = await canvas.evaluate((c) => c.toDataURL());
+  const deadline = Date.now() + 8000;
+  let latest = baseline;
+
+  while (Date.now() < deadline) {
+    await this.page.waitForTimeout(150);
+    latest = await canvas.evaluate((c) => c.toDataURL());
+    if (latest !== baseline) return;
+  }
+
+  assert.notEqual(latest, baseline, 'Expected the canvas background effect to redraw over time, but every frame sampled over 8s was identical to the first');
 });
 
 Then('it should contain an element matching {string} with alt text {string}', async function (selector, expectedAlt) {

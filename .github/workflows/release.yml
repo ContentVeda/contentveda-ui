@@ -37,8 +37,42 @@ jobs:
       - name: Build library and generate docs pages
         run: npm run build
 
+      # test:bdd runs `playwright install chromium` itself, but deliberately
+      # without --with-deps: that flag apt-installs system libraries and needs
+      # root, which is right for a runner and wrong for a contributor running
+      # the suite locally. So the OS-level half is done here instead, matching
+      # playwright.yml, and the npm script's own install becomes a fast no-op.
+      #
+      # Nothing has failed on this yet -- chromium currently launches on
+      # ubuntu-latest without it. But that is a property of the runner image,
+      # not a guarantee, and it is the image that changes underneath a pinned
+      # Playwright version. Being the only workflow missing it made this a
+      # standing suspect while triaging a failure it turned out not to cause.
+      - name: Install Playwright browsers with system dependencies
+        run: npx playwright install --with-deps chromium
+
       - name: Run BDD suite
         run: npm run test:bdd
+
+      # When the gate above trips, this is the only durable record of *why*.
+      # The run log itself is not enough: downloading it via the API needs
+      # repo-admin rights, so anyone triaging without them sees a failed step
+      # and no reason. cucumber.cjs already writes one JSON blob per scenario
+      # to tests/bdd/.allure-results carrying its status and, on failure, the
+      # assertion message -- it just died with the runner. Keeping it turns
+      # "verify failed" into a named scenario.
+      #
+      # `!cancelled()` rather than `failure()` deliberately: runs 13 and 14
+      # were the same commit, one green and one red, which is the signature of
+      # a flake rather than a regression. Diffing those two only works if the
+      # passing run left its results behind too.
+      - name: Upload BDD results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bdd-allure-results
+          path: tests/bdd/.allure-results
+          retention-days: 30
 
   release:
     needs: verify
