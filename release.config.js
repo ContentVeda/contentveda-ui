@@ -1,8 +1,26 @@
 module.exports = {
   // main is the release branch, publishing to npm's `beta` dist-tag instead of
-  // `latest`. So `npm i @contentveda/ui` resolves to nothing and only
-  // `@contentveda/ui@beta` installs anything — which is the point while the API
-  // is still moving. Going stable later is one line: drop `channel`.
+  // `latest`, so that everything released from here lands on
+  // `@contentveda/ui@beta` while the API is still moving. Going stable later is
+  // one line: drop `channel`.
+  //
+  // What this does *not* do is keep a bare `npm i @contentveda/ui` from
+  // resolving. The registry currently reads:
+  //
+  //   dist-tags: { "beta": "0.0.1", "latest": "0.0.1" }
+  //
+  // because 0.0.1 was published by hand to bootstrap trusted publishing (see
+  // the release job in .github/workflows/release.yml), and a plain `npm
+  // publish` sets `latest` whether you meant to or not. Every package on the
+  // registry has a `latest`; it can be pointed at a different version but not
+  // taken away, so this cannot be undone from here — it is a registry-side
+  // change, not a config one.
+  //
+  // The practical effect: `channel` keeps `latest` from *advancing*, so a bare
+  // install stays pinned on the bootstrap 0.0.1 and never picks up anything
+  // newer, while real consumers track `@beta`. That is close enough to the
+  // intent to leave alone; if a bare install must break instead, move `latest`
+  // deliberately with `npm dist-tag`.
   //
   // Note this is `channel`, not `prerelease`. They sound interchangeable and
   // are not: `prerelease` marks a branch as a *prerelease* branch, and

@@ -37,6 +37,20 @@ jobs:
       - name: Build library and generate docs pages
         run: npm run build
 
+      # test:bdd runs `playwright install chromium` itself, but deliberately
+      # without --with-deps: that flag apt-installs system libraries and needs
+      # root, which is right for a runner and wrong for a contributor running
+      # the suite locally. So the OS-level half is done here instead, matching
+      # playwright.yml, and the npm script's own install becomes a fast no-op.
+      #
+      # Nothing has failed on this yet -- chromium currently launches on
+      # ubuntu-latest without it. But that is a property of the runner image,
+      # not a guarantee, and it is the image that changes underneath a pinned
+      # Playwright version. Being the only workflow missing it made this a
+      # standing suspect while triaging a failure it turned out not to cause.
+      - name: Install Playwright browsers with system dependencies
+        run: npx playwright install --with-deps chromium
+
       - name: Run BDD suite
         run: npm run test:bdd
 
