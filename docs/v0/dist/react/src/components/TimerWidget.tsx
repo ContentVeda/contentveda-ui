@@ -34,6 +34,7 @@ function TimerWidget(props: TimerWidgetProps) {
   const animContext = useRef<BackgroundEffectContext>({
     animationFrameId: null,
     resizeHandler: null,
+    resizeObserver: null,
   });
   const observerBox = useRef<{
     disconnect: (() => void) | null;

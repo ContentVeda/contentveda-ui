@@ -87,6 +87,7 @@ function Banner(props: BannerProps) {
   const animContext = useRef<BackgroundEffectContext>({
     animationFrameId: null,
     resizeHandler: null,
+    resizeObserver: null,
   });
   const observerBox = useRef<{
     disconnect: (() => void) | null;
