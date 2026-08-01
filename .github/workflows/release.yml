@@ -370,7 +370,13 @@ jobs:
             exit 0
           fi
 
-          if git merge --no-edit "$GITHUB_SHA" -m "chore: merge main into beta [skip ci]"; then
+          # --no-ff is load-bearing, not tidiness. The [skip ci] that stops this
+          # push starting another release lives in the merge commit's message,
+          # and a fast-forward creates no commit to carry it -- beta's new head
+          # would just be main's commit, and its message decides whether the
+          # workflows run. Fast-forward is the common case right after a
+          # promotion, which is exactly when beta has nothing main lacks.
+          if git merge --no-ff --no-edit "$GITHUB_SHA" -m "chore: merge main into beta [skip ci]"; then
             git push origin beta
             echo "beta brought level with main at ${GITHUB_SHA:0:7}."
           else
