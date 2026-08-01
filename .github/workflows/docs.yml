@@ -38,6 +38,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # On a workflow_run trigger the default checkout is this repo's
+          # default branch, not the branch whose release triggered the run. With
+          # releases coming from both main and beta that silently does the wrong
+          # thing: a beta release would rebuild and republish main's docs, so
+          # the site would never show beta and the deploy would be pure churn.
+          # Pin to the commit the release actually ran on. workflow_dispatch
+          # carries no workflow_run context, hence the fallback.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
