@@ -255,3 +255,75 @@ jobs:
           # and generates provenance attestations without NPM_CONFIG_PROVENANCE
           # being set, since id-token: write is granted above.
         run: npx semantic-release
+
+      # Writes the released version back into package.json/package-lock.json.
+      #
+      # @semantic-release/git would normally do this as part of the release, and
+      # is deliberately not in the plugin list: it pushes straight to the
+      # release branch, and main's ruleset rejects that (see release.config.js).
+      # Doing it here instead means the push is ours, so it can take the route
+      # each branch actually allows.
+      #
+      # Worth knowing this is cosmetic. The published tarball already carries
+      # the right version -- semantic-release sets it before packing -- and
+      # nothing in the build reads this field for correctness any more, since
+      # generate-docs.js resolves the version from the tag. This keeps the
+      # checked-in tree honest about what shipped; it does not make anything
+      # work that was broken.
+      #
+      # The tag is the source of truth, not semantic-release's stdout: it is
+      # created on this commit through the GitHub API, so it has to be fetched
+      # back before it is visible locally. No tag on HEAD means nothing was
+      # released -- a run over commits that contain no feat/fix, or a re-run of
+      # a commit already published -- and there is nothing to record.
+      - name: Record the released version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch --tags --force --quiet
+
+          tag=$(git tag --points-at HEAD | grep -E '^v[0-9]' | head -n1)
+          if [ -z "$tag" ]; then
+            echo "::notice::No release tag on HEAD, so nothing was released and there is no version to record."
+            exit 0
+          fi
+
+          npm version "${tag#v}" --no-git-tag-version --allow-same-version
+
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "::notice::package.json already records ${tag#v}."
+            exit 0
+          fi
+
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The checkout above sets persist-credentials: false, so the remote
+          # carries no token and has to be given one to push with.
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # [skip ci] because this commit cannot produce a release: a chore is
+          # not a releasable type, so re-triggering would spend a full run --
+          # including the CodeQL wait -- to publish nothing.
+          git add package.json package-lock.json
+          git commit -m "chore(release): record the published ${tag#v} [skip ci]"
+
+          # Direct push where the branch permits it, a pull request where it
+          # does not. main requires review and CodeQL results that a
+          # just-created commit cannot have, which is the whole reason
+          # @semantic-release/git fails there; beta carries no ruleset, so the
+          # commit can simply land.
+          if [ "$GITHUB_REF_NAME" = 'main' ]; then
+            branch="chore/record-${tag#v}"
+            git checkout -b "$branch"
+            git push -u origin "$branch"
+            gh pr create \
+              --base "$GITHUB_REF_NAME" \
+              --head "$branch" \
+              --title "chore(release): record the published ${tag#v}" \
+              --body "Records the version published by [run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in package.json and package-lock.json.
+
+          Opened as a pull request rather than pushed, because this branch requires one. Only the two version fields change."
+          else
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
