@@ -5,7 +5,7 @@
     { "name": "subtitle",      "required": false, "type": "string",                        "description": "Sub-heading text displayed below the title" },
     { "name": "ctaText",       "required": false, "type": "string",                        "description": "Call-to-action button label; renders an anchor when set" },
     { "name": "media",         "required": false, "type": "BannerMedia",                   "description": "Background media: <code>{ type: 'image'|'video', url: string }</code>" },
-    { "name": "mapLinks",      "required": false, "type": "MapLink[]",                     "description": "Link objects; first entry used as the CTA href" },
+    { "name": "ctaLink",       "required": false, "type": "string",                        "description": "CTA destination link URL or app route" },
     { "name": "textAlignment", "required": false, "type": "'left' | 'center' | 'right'",  "description": "Text alignment for all banner content" },
     { "name": "className",     "required": false, "type": "string",                        "description": "Additional CSS class names on the root element" },
     { "name": "isLoading",     "required": false, "type": "boolean",                       "description": "Applies the <code>cv-image-shimmer</code> skeleton animation" },
@@ -18,7 +18,7 @@
     { "name": "lazyRootMargin","required": false, "type": "string",                        "description": "IntersectionObserver rootMargin, e.g. preload distance (default: '200px')" }
   ],
   "AnnouncementBar": [
-    { "name": "message",         "required": true,  "type": "string",              "description": "The announcement text content" },
+    { "name": "message",         "required": false, "type": "string",              "description": "The announcement text content" },
     { "name": "mapLinks",        "required": false, "type": "{ url: string }[]",  "description": "When provided, wraps message in an anchor using first entry's URL" },
     { "name": "backgroundColor", "required": false, "type": "string",              "description": "CSS colour for the bar background (default: <code>var(--cv-color-primary, #245066)</code>)" },
     { "name": "textColor",       "required": false, "type": "string",              "description": "CSS colour for the message text (default: <code>#ffffff</code>)" },

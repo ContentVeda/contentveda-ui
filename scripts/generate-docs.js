@@ -159,6 +159,9 @@ const DEFAULT_WC_ELEMENTS = {
 // reader may want larger.
 const SITE_BASE = CANONICAL_BASE.replace(/\/ui\/?$/, '');
 const APP_URL   = 'https://app.contentveda.com';
+// The marketing site, which is a different host from SITE_BASE (the docs one).
+// The brand lockup targets this, matching DocsNav's own SITE_URL.
+const MAIN_SITE_URL = 'https://contentveda.com';
 
 // Theme and text size have to be on the element before the first paint, or the
 // page renders light and snaps to dark (and at the default size and jumps).
@@ -196,7 +199,15 @@ function buildHeader(prefix, actionHtml) {
   return `
     <header class="cv-nav">
       <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
-      <a class="cv-brand" href="${prefix}index.html">
+      <!--
+        Points at the marketing site, not at ${prefix}index.html. This tree is
+        served under /ui/, and the docs site's own brand link leaves for
+        contentveda.com the same way — a lockup that only ever returns you to
+        the page you are already on gives a reader no way back out of /ui/.
+        The sidebar's "Home" link is what returns you to this tree's landing
+        page.
+      -->
+      <a class="cv-brand" href="${MAIN_SITE_URL}" title="ContentVeda (contentveda.com)">
         ${BRAND_MARK}
         <span class="cv-brand-word">Content<b>Veda</b></span>
         <span class="cv-brand-sub">UI</span>
@@ -241,6 +252,13 @@ function buildSidebar(activeSlug, isLandingPage) {
         <div class="sidebar-section-label" style="margin-top:1rem">Components</div>
         ${links}
         <div class="sidebar-section-label" style="margin-top:1rem">Resources</div>
+        <!--
+          The cross-product links (Content API, GraphQL, Components, Main site)
+          are NOT repeated here. docs.js injects them at the top of this nav as
+          .sidebar-mobile-main-nav, because that row is what replaces .cv-links
+          when the header drops them on mobile. Adding them here as well would
+          list every one of them twice in the same drawer.
+        -->
         <a href="${GITHUB_URL}" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">⭐</span> GitHub</a>
         <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">📦</span> npm</a>
         <a href="${GITHUB_URL}/tree/main/examples" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">🧩</span> Example Apps</a>
@@ -493,7 +511,20 @@ function buildControlsForm(component) {
         <span class="json-error-msg">❌ Invalid JSON Formatting</span>
       `;
     } else {
-      const defaultText = defaultValue && defaultValue !== 'undefined' ? defaultValue.replace(/"/g, '') : '';
+      let defaultText = '';
+      if (propName === 'message' && component.slug === 'announcement-bar') {
+        defaultText = '🚀 Free shipping on orders over $75 — Shop the sale →';
+      } else if (propName === 'title' && component.slug === 'banner') {
+        defaultText = 'Experience Vibrant Colors & Premium Innovation';
+      } else if (propName === 'subtitle' && component.slug === 'banner') {
+        defaultText = 'Explore our premium collection of responsive components. Zero dependencies, ultra lightweight.';
+      } else if (propName === 'ctaText' && component.slug === 'banner') {
+        defaultText = 'Explore Collection';
+      } else if (propName === 'ctaLink' && component.slug === 'banner') {
+        defaultText = '/shop';
+      } else if (defaultValue && defaultValue !== 'undefined') {
+        defaultText = defaultValue.replace(/"/g, '');
+      }
       inputHtml = `
         <input type="text" name="${attrName}" value="${defaultText}" class="control-input">
       `;
@@ -767,7 +798,18 @@ document.addEventListener('DOMContentLoaded', () => {
           input.classList.add('invalid');
         }
       } else {
-        preview.setAttribute(name, input.value);
+        const val = input.value;
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
+        preview.setAttribute(name, val);
+        preview.setAttribute(camel, val);
+        preview.setAttribute(kebab, val);
+        if (preview.props) {
+          preview.props[camel] = val;
+          preview.props[kebab] = val;
+        }
+        if (typeof preview.forceUpdate === 'function') preview.forceUpdate();
+        if (typeof preview.update === 'function') preview.update();
       }
     });
 
