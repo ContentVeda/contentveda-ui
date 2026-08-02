@@ -1093,7 +1093,7 @@ class RichTextEditor extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -2349,7 +2349,7 @@ class RichTextEditor extends HTMLElement {
             ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none"
             : "w-full"
         } ${this.props.className || ""}`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           boxSizing: "border-box",
           background: "var(--cv-color-surface-sunken, #0f172a)",
           border: this.state.isFullscreen
@@ -2362,7 +2362,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface, rgba(15, 23, 42, 0.85))",
           borderBottom:
             "1px solid var(--cv-color-border, rgba(255,255,255,0.08))",
@@ -2383,7 +2383,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-1']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-accent-tint, rgba(127, 196, 222, 0.15))",
           color: "var(--cv-color-primary-hover, #a8d8ea)",
           border: "none",
@@ -2667,7 +2667,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-1']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "14px",
           fontWeight: "normal",
         });
@@ -2676,7 +2676,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "24px",
           fontWeight: "bold",
         });
@@ -2685,7 +2685,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "20px",
           fontWeight: "bold",
         });
@@ -2694,7 +2694,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "18px",
           fontWeight: "bold",
         });
@@ -3320,7 +3320,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: this.state.mode === "visual" ? "block" : "none",
           padding: "2rem 3rem",
           color: "var(--cv-color-text-main, #f1f5f9)",
@@ -3338,7 +3338,7 @@ class RichTextEditor extends HTMLElement {
         el.addEventListener("keyup", this.onDivRichTextEditor5Keyup);
         el.removeEventListener("mouseup", this.onDivRichTextEditor5Mouseup);
         el.addEventListener("mouseup", this.onDivRichTextEditor5Mouseup);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           minHeight: "350px",
           fontFamily: "Inter, sans-serif",
           lineHeight: "1.7",
@@ -3363,7 +3363,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-6']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "rgba(0, 0, 0, 0.6)",
         });
       });
@@ -3380,7 +3380,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-7']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
@@ -3392,7 +3392,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='h3-rich-text-editor-1']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "18px",
           fontWeight: "bold",
           marginBottom: "20px",
@@ -3403,7 +3403,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='svg-rich-text-editor-1']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           color: "var(--cv-color-link, #7fc4de)",
         });
       });
@@ -3411,7 +3411,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-8']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "16px",
@@ -3422,7 +3422,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-9']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -3432,7 +3432,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-1']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -3444,7 +3444,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='select-rich-text-editor-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -3462,7 +3462,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-6']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -3470,7 +3470,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-7']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -3478,7 +3478,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-8']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -3486,7 +3486,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-10']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -3496,7 +3496,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -3508,7 +3508,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='input-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -3526,7 +3526,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-11']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -3536,7 +3536,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -3548,7 +3548,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='input-rich-text-editor-5']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -3566,7 +3566,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-12']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
@@ -3577,7 +3577,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-28']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -3594,7 +3594,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-29']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-on-primary, #fff)",
@@ -3623,7 +3623,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-13']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
@@ -3635,7 +3635,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='h3-rich-text-editor-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "18px",
           fontWeight: "bold",
           marginBottom: "20px",
@@ -3646,7 +3646,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='svg-rich-text-editor-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           color: "var(--cv-color-link, #7fc4de)",
         });
       });
@@ -3654,7 +3654,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-14']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "16px",
@@ -3665,7 +3665,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-15']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -3679,7 +3679,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "14px",
           fontWeight: "500",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -3689,7 +3689,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='input-rich-text-editor-6']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "transparent",
           border: "none",
           textAlign: "right",
@@ -3707,7 +3707,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-16']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -3721,7 +3721,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-5']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "14px",
           fontWeight: "500",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -3731,7 +3731,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='input-rich-text-editor-7']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "transparent",
           border: "none",
           textAlign: "right",
@@ -3749,7 +3749,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-17']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
@@ -3760,7 +3760,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-30']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -3777,7 +3777,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-31']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-on-primary, #fff)",
@@ -3805,7 +3805,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-18']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
@@ -3817,7 +3817,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='h3-rich-text-editor-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "18px",
           fontWeight: "bold",
           marginBottom: "20px",
@@ -3828,7 +3828,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='svg-rich-text-editor-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           color: "var(--cv-color-info, #0ea5e9)",
         });
       });
@@ -3836,7 +3836,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-19']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -3847,7 +3847,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-6']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -3859,7 +3859,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='input-rich-text-editor-8']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -3878,7 +3878,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-20']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
@@ -3889,7 +3889,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-32']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -3906,7 +3906,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-33']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-on-primary, #fff)",
@@ -3933,7 +3933,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-21']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
@@ -3945,7 +3945,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='h3-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "18px",
           fontWeight: "bold",
           marginBottom: "20px",
@@ -3956,7 +3956,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='svg-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           color: "var(--cv-color-secondary, #5eb3d6)",
         });
       });
@@ -3964,7 +3964,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-22']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -3975,7 +3975,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-7']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -3987,7 +3987,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='select-rich-text-editor-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -4006,7 +4006,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-9']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4014,7 +4014,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-10']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4022,7 +4022,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-11']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4030,7 +4030,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-12']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4038,7 +4038,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-23']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
@@ -4049,7 +4049,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-34']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -4066,7 +4066,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-35']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-on-primary, #fff)",
@@ -4094,7 +4094,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-24']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
@@ -4106,7 +4106,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='h3-rich-text-editor-5']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "18px",
           fontWeight: "bold",
           marginBottom: "20px",
@@ -4117,7 +4117,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='svg-rich-text-editor-5']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           color: "var(--cv-color-info, #0ea5e9)",
         });
       });
@@ -4125,7 +4125,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-25']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "16px",
@@ -4136,7 +4136,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-26']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -4146,7 +4146,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-8']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -4158,7 +4158,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='select-rich-text-editor-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -4177,7 +4177,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-13']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4185,7 +4185,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-14']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4193,7 +4193,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-15']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4201,7 +4201,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='option-rich-text-editor-16']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
         });
       });
@@ -4209,7 +4209,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-27']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -4219,7 +4219,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='label-rich-text-editor-9']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           fontSize: "12px",
           fontWeight: "600",
           color: "var(--cv-color-text-muted, #94a3b8)",
@@ -4231,7 +4231,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='input-rich-text-editor-9']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
@@ -4250,7 +4250,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-28']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
@@ -4261,7 +4261,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-36']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-text-secondary, #cbd5e1)",
@@ -4278,7 +4278,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-37']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-on-primary, #fff)",
@@ -4296,7 +4296,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-29']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: this.state.mode === "source" ? "block" : "none",
         });
       });
@@ -4307,7 +4307,7 @@ class RichTextEditor extends HTMLElement {
         el.value = this.state.internalContent;
         el.removeEventListener("input", this.onTextareaRichTextEditor1Input);
         el.addEventListener("input", this.onTextareaRichTextEditor1Input);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           whiteSpace: "pre-wrap",
         });
         el.setAttribute("spellcheck", false);
@@ -4382,3 +4382,28 @@ class RichTextEditor extends HTMLElement {
 }
 
 customElements.define("rich-text-editor", RichTextEditor);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

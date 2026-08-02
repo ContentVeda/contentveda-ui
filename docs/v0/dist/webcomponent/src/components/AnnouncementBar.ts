@@ -55,7 +55,7 @@ class AnnouncementBar extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -141,7 +141,7 @@ class AnnouncementBar extends HTMLElement {
       .querySelectorAll("[data-el='div-announcement-bar-1']")
       .forEach((el) => {
         el.className = `cv-announcement-bar ${this.props.className || ""}`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           // Defaults pair white text with the ContentVeda brand teal, which
           // measures 8.70:1 -- clearing WCAG 2.1 AAA. Falls back through the
           // shared primary token so a consumer theming the library gets their
@@ -208,3 +208,28 @@ class AnnouncementBar extends HTMLElement {
 }
 
 customElements.define("announcement-bar", AnnouncementBar);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

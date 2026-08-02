@@ -194,7 +194,7 @@ class WysiwygRenderer extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -280,7 +280,7 @@ class WysiwygRenderer extends HTMLElement {
         el.className = `cv-wysiwyg-content ${
           !this.state.shouldMount ? "cv-image-shimmer" : ""
         } ${this.props.className || ""}`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           minHeight: !this.state.shouldMount ? "120px" : "",
         });
         el.innerHTML = this.state.renderedHtml;
@@ -302,3 +302,28 @@ class WysiwygRenderer extends HTMLElement {
 }
 
 customElements.define("wysiwyg-renderer", WysiwygRenderer);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

@@ -152,7 +152,7 @@ class RowScrollable extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -360,7 +360,7 @@ class RowScrollable extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-row-scrollable-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           position: "relative",
         });
       });
@@ -508,7 +508,7 @@ class RowScrollable extends HTMLElement {
       .forEach((el) => {
         el.removeEventListener("click", this.onButtonRowScrollable1Click);
         el.addEventListener("click", this.onButtonRowScrollable1Click);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           opacity: !this.state.canScrollLeft ? "0.35" : "1",
           pointerEvents: !this.state.canScrollLeft ? "none" : "auto",
         });
@@ -530,7 +530,7 @@ class RowScrollable extends HTMLElement {
       .forEach((el) => {
         el.removeEventListener("click", this.onButtonRowScrollable2Click);
         el.addEventListener("click", this.onButtonRowScrollable2Click);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           opacity: !this.state.canScrollRight ? "0.35" : "1",
           pointerEvents: !this.state.canScrollRight ? "none" : "auto",
         });
@@ -605,3 +605,28 @@ class RowScrollable extends HTMLElement {
 }
 
 customElements.define("row-scrollable", RowScrollable);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}
