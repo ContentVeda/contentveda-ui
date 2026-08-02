@@ -89,15 +89,67 @@ function initSidebar() {
   const sidebar = document.querySelector('.docs-sidebar');
   if (!toggle || !sidebar) return;
 
-  toggle.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
+  // Dynamically add backdrop overlay if not present
+  let backdrop = document.querySelector('.sidebar-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'sidebar-backdrop';
+    document.body.appendChild(backdrop);
+  }
+
+  // Prepend main section navigation into the mobile sidebar drawer
+  const navContainer = sidebar.querySelector('.sidebar-nav');
+  if (navContainer && !navContainer.querySelector('.sidebar-mobile-main-nav')) {
+    const mainNav = document.createElement('div');
+    mainNav.className = 'sidebar-mobile-main-nav';
+    mainNav.style.borderBottom = '1px solid var(--border)';
+    mainNav.style.marginBottom = '0.5rem';
+    mainNav.style.paddingBottom = '0.5rem';
+    mainNav.innerHTML = `
+      <div class="sidebar-section-label">Documentation</div>
+      <a class="sidebar-link" href="https://docs.contentveda.com/cms/api/"><span class="sidebar-link-icon">⚡</span> Content API</a>
+      <a class="sidebar-link" href="https://docs.contentveda.com/cms/graphql/"><span class="sidebar-link-icon">◈</span> GraphQL</a>
+      <a class="sidebar-link active" href="https://docs.contentveda.com/ui/"><span class="sidebar-link-icon">❖</span> Components</a>
+    `;
+    navContainer.insertBefore(mainNav, navContainer.firstChild);
+  }
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
   });
 
-  // Close on backdrop click
-  document.addEventListener('click', (e) => {
-    if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
-      sidebar.classList.remove('open');
+  backdrop.addEventListener('click', closeSidebar);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+      closeSidebar();
     }
+  });
+
+  // Close when clicking any link inside the sidebar on mobile
+  sidebar.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeSidebar();
+      }
+    });
   });
 }
 
