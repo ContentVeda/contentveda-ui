@@ -187,7 +187,7 @@ class AlternatingSlider extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -470,7 +470,7 @@ class AlternatingSlider extends HTMLElement {
           "mouseleave",
           this.onDivAlternatingSlider1Mouseleave
         );
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           height: this.props.config?.height || "",
           minHeight:
             this.props.config?.height === "auto"
@@ -494,7 +494,7 @@ class AlternatingSlider extends HTMLElement {
       .querySelectorAll("[data-el='img-alternating-slider-1']")
       .forEach((el) => {
         el.setAttribute("src", this.props.items[0].media.url);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "100%",
           height: "auto",
           display: "block",
@@ -506,7 +506,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           gridTemplateColumns: `repeat(${this.state.columns}, 1fr)`,
           position:
             this.props.config?.height === "auto" ? "absolute" : "relative",
@@ -535,7 +535,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           transform: `translateY(${
             colIndex % 2 === 0
               ? -this.state.currentIndex * 100
@@ -556,7 +556,7 @@ class AlternatingSlider extends HTMLElement {
       .forEach((el) => {
         el.key = `cell-${slideIndex}-${colIndex}`;
         const slideIndex = this.getScope(el, "slideIndex");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           top: `${colIndex % 2 === 0 ? slideIndex * 100 : -slideIndex * 100}%`,
         });
       });
@@ -583,7 +583,7 @@ class AlternatingSlider extends HTMLElement {
       .querySelectorAll("[data-el='a-alternating-slider-1']")
       .forEach((el) => {
         el.setAttribute("href", slideRow[colIndex].mapLinks[0].url);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "block",
           textDecoration: "none",
           color: "inherit",
@@ -611,7 +611,7 @@ class AlternatingSlider extends HTMLElement {
         el.className = `cv-alt-bg-video ${
           this.state.showSkeleton ? "cv-image-shimmer" : ""
         }`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           position: "absolute",
           top: 0,
           left: 0,
@@ -634,7 +634,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-6']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           backgroundImage: slideRow[colIndex].media?.url
             ? `url(${slideRow[colIndex].media.url})`
             : "none",
@@ -648,7 +648,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-7']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           textAlign: slideRow[colIndex].textAlignment || "left",
           display: "flex",
           flexDirection: "column",
@@ -673,7 +673,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-8']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "60%",
           height: "24px",
           marginBottom: "12px",
@@ -683,7 +683,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-9']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "80%",
           height: "14px",
           marginBottom: "8px",
@@ -693,7 +693,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-10']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "50%",
           height: "14px",
           marginBottom: "16px",
@@ -703,7 +703,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-11']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "110px",
           height: "36px",
         });
@@ -784,7 +784,7 @@ class AlternatingSlider extends HTMLElement {
         el.className = `cv-alt-bg-video ${
           this.state.showSkeleton ? "cv-image-shimmer" : ""
         }`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           position: "absolute",
           top: 0,
           left: 0,
@@ -807,7 +807,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-15']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           backgroundImage: slideRow[colIndex].media?.url
             ? `url(${slideRow[colIndex].media.url})`
             : "none",
@@ -821,7 +821,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-16']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           textAlign: slideRow[colIndex].textAlignment || "left",
           display: "flex",
           flexDirection: "column",
@@ -846,7 +846,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-17']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "60%",
           height: "24px",
           marginBottom: "12px",
@@ -856,7 +856,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-18']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "80%",
           height: "14px",
           marginBottom: "8px",
@@ -866,7 +866,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-19']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "50%",
           height: "14px",
           marginBottom: "16px",
@@ -876,7 +876,7 @@ class AlternatingSlider extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-alternating-slider-20']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "110px",
           height: "36px",
         });
@@ -1050,3 +1050,28 @@ class AlternatingSlider extends HTMLElement {
 }
 
 customElements.define("alternating-slider", AlternatingSlider);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

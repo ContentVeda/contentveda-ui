@@ -23,7 +23,19 @@ export interface GridBannerConfig {
 }
 export interface GridBannerProps {
   items: GridBannerItem[];
+  /** Items per row on screens wider than 768px. Defaults to 3. */
   columns?: number;
+  /**
+   * Items per row at 768px and below. Omit to let the component break by
+   * itself, which is 2 across.
+   */
+  columnsTablet?: number;
+  /**
+   * Items per row at 480px and below. Omit to inherit whatever the tablet
+   * breakpoint resolved to, so setting only `columnsTablet` carries all the
+   * way down rather than snapping back to the default on the smallest screens.
+   */
+  columnsMobile?: number;
   className?: string;
   isLoading?: boolean;
   config?: GridBannerConfig;
@@ -65,6 +77,12 @@ class GridBanner extends HTMLElement {
         const cols = self.props.columns || 3;
         return `repeat(${cols}, 1fr)`;
       },
+      get columnsTabletVar() {
+        return `${self.props.columnsTablet || 2}`;
+      },
+      get columnsMobileVar() {
+        return `${self.props.columnsMobile || self.props.columnsTablet || 2}`;
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -76,6 +94,8 @@ class GridBanner extends HTMLElement {
       "lazyRootMargin",
       "isLoading",
       "columns",
+      "columnsTablet",
+      "columnsMobile",
       "className",
       "config",
       "items",
@@ -110,7 +130,7 @@ class GridBanner extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -231,8 +251,10 @@ class GridBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-grid-banner-1']")
       .forEach((el) => {
         el.className = `cv-grid-banner ${this.props.className || ""}`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           gridTemplateColumns: this.state.gridTemplateColumns,
+          "--cv-grid-cols-tablet": this.state.columnsTabletVar,
+          "--cv-grid-cols-mobile": this.state.columnsMobileVar,
           height: this.props.config?.height || "",
           minHeight: this.props.config?.minHeight || "",
         });
@@ -256,7 +278,7 @@ class GridBanner extends HTMLElement {
         el.className = `cv-grid-img-wrap ${
           this.state.showSkeleton ? "cv-image-shimmer" : ""
         }`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           height: this.props.config?.height || "",
           minHeight: this.props.config?.minHeight || "",
           aspectRatio: this.props.config?.height ? "unset" : "16/9",
@@ -291,7 +313,7 @@ class GridBanner extends HTMLElement {
         el.setAttribute("loop", true);
         el.setAttribute("muted", true);
         el.setAttribute("playsInline", true);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           objectFit: "cover",
           width: "100%",
           height: "100%",
@@ -315,7 +337,7 @@ class GridBanner extends HTMLElement {
         const item = this.getScope(el, "item");
         el.setAttribute("src", item.media?.url);
         el.setAttribute("alt", item.title);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           objectFit: "cover",
           width: "100%",
           height: "100%",
@@ -336,7 +358,7 @@ class GridBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-grid-banner-3']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           display: "flex",
           flexDirection: "column",
           alignItems: item.textAlignment || "center",
@@ -348,7 +370,7 @@ class GridBanner extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-grid-banner-4']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "70%",
           height: "14px",
           margin: "0 0 6px 0",
@@ -358,7 +380,7 @@ class GridBanner extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-grid-banner-5']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "40%",
           height: "10px",
           margin: 0,
@@ -378,7 +400,7 @@ class GridBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-grid-banner-6']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           textAlign: item.textAlignment || "center",
         });
       });
@@ -459,3 +481,28 @@ class GridBanner extends HTMLElement {
 }
 
 customElements.define("grid-banner", GridBanner);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

@@ -30,7 +30,19 @@ export interface GridBannerConfig {
 
 export interface GridBannerProps {
   items: GridBannerItem[];
+  /** Items per row on screens wider than 768px. Defaults to 3. */
   columns?: number;
+  /**
+   * Items per row at 768px and below. Omit to let the component break by
+   * itself, which is 2 across.
+   */
+  columnsTablet?: number;
+  /**
+   * Items per row at 480px and below. Omit to inherit whatever the tablet
+   * breakpoint resolved to, so setting only `columnsTablet` carries all the
+   * way down rather than snapping back to the default on the smallest screens.
+   */
+  columnsMobile?: number;
   className?: string;
   isLoading?: boolean;
   config?: GridBannerConfig;
@@ -54,6 +66,29 @@ export default function GridBanner(props: GridBannerProps) {
     get gridTemplateColumns() {
       const cols = props.columns || 3;
       return `repeat(${cols}, 1fr)`;
+    },
+    /**
+     * The narrow-screen counts travel to CSS as custom properties rather than
+     * as more inline `grid-template-columns`, because an inline declaration
+     * cannot be conditional on a media query. GridBanner.css reads these inside
+     * its breakpoints.
+     *
+     * These always resolve to a concrete number — the automatic default when
+     * the prop is omitted — rather than to an empty string. That is deliberate:
+     * a custom property set to the empty value is *valid but empty*, so
+     * `var(--x, 2)` substitutes nothing instead of falling back to 2, and
+     * `repeat(, 1fr)` makes the whole declaration invalid at computed-value
+     * time. Emitting the default here keeps the three compile targets
+     * behaving identically and never depends on that edge of the spec.
+     *
+     * Mobile falls back to the tablet count before the default, so setting
+     * only `columnsTablet` carries all the way down.
+     */
+    get columnsTabletVar() {
+      return `${props.columnsTablet || 2}`;
+    },
+    get columnsMobileVar() {
+      return `${props.columnsMobile || props.columnsTablet || 2}`;
     }
   });
 
@@ -84,6 +119,8 @@ export default function GridBanner(props: GridBannerProps) {
       class={`cv-grid-banner ${props.className || ''}`}
       style={{
         gridTemplateColumns: state.gridTemplateColumns,
+        '--cv-grid-cols-tablet': state.columnsTabletVar,
+        '--cv-grid-cols-mobile': state.columnsMobileVar,
         height: props.config?.height || '',
         minHeight: props.config?.minHeight || ''
       }}
