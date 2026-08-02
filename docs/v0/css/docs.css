@@ -1021,6 +1021,21 @@ img, video { max-width: 100%; }
   padding: 4px;
 }
 
+/* Backdrop overlay for mobile drawer. docs.js creates the element, so it is
+   styled here rather than in the generated markup. */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+}
+
+.sidebar-backdrop.open {
+  display: block;
+}
+
 /* ── Scrollbar ──────────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-base); }
@@ -1051,12 +1066,23 @@ img, video { max-width: 100%; }
   .stats-bar { gap: 1.5rem; flex-wrap: wrap; }
 
   .landing-hero { padding: 3rem 1rem 2rem; }
+
+  .docs-content { padding: 1.5rem 1rem 4rem; }
+  .preview-body { padding: 1rem; }
+  .controls-body { padding: 1rem; }
+  .controls-body form#playground-form { grid-template-columns: 1fr; }
+  .tabs-bar { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
 }
 
-/* Same breakpoint the docs site drops its nav links at. The brand, the drawer
-   toggle and Sign in stay; "Star on GitHub" / "View Source" go, since the same
-   links are in the sidebar. */
-@media (max-width: 640px) {
+/* Matches the breakpoint above, where .docs-sidebar becomes a drawer and
+   .sidebar-toggle appears. The two have to be the same number: docs.js moves
+   the .cv-links destinations into that drawer, so if the links were dropped at
+   a narrower width than the drawer appears, the range in between would show
+   the hamburger and the links at once — and dropping them later would leave
+   them with nowhere to go. The brand, the toggle and Sign in stay;
+   "Star on GitHub" / "View Source" go, since the same links are in the
+   drawer. */
+@media (max-width: 768px) {
   .cv-nav { gap: 0.75rem; }
   .cv-links { display: none; }
   /* .cv-links carried the margin-left:auto that right-aligns everything after
@@ -1064,6 +1090,36 @@ img, video { max-width: 100%; }
   .cv-actions { margin-left: auto; }
   .cv-actions .btn-github { display: none; }
   .cv-brand-sub { display: none; }
+
+  /* Even with the links gone the bar did not fit a phone: the brand lockup,
+     the A−/A+ pair, the theme toggle and Sign in together measure past 375px,
+     so the row overflowed and "Sign in" broke onto two lines.
+
+     The text-size control is the one to drop. It is an addition this tree
+     makes for its long prop tables; the docs site's nav has no equivalent, so
+     removing it here is also what brings the two bars back into line. Pinch
+     zoom still works, and the reader's own browser text-size setting is
+     honoured because the pages size in rem. */
+  .cv-fontsize { display: none; }
+
+  /* Belt and braces: nothing in this bar may wrap. If a future addition
+     overflows again it should be visibly clipped rather than silently
+     reflowing the header to two lines. */
+  .cv-nav { flex-wrap: nowrap; }
+  .cv-brand { min-width: 0; flex-shrink: 1; }
+  .cv-brand-word { overflow: hidden; text-overflow: ellipsis; }
+  .cv-actions { flex-shrink: 0; }
+}
+
+/* Narrow phones. Measured rather than guessed: with the text-size control gone
+   the bar needs about 320px, so it still fits a 360px phone with the wordmark
+   intact. Only below that does the wordmark have to go, leaving the mark alone
+   to carry the brand — it is the recognisable part at this size, and it stays
+   a link home. */
+@media (max-width: 340px) {
+  .cv-nav { gap: 0.5rem; padding: 0 0.75rem; }
+  .cv-brand-word { display: none; }
+  .cv-signin { padding: 0.45rem 0.7rem; }
 }
 
 /* ── Interactive Playground Layout ─────────────────────── */
