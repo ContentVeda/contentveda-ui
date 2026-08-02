@@ -29,7 +29,15 @@
 
     <header class="cv-nav">
       <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
-      <a class="cv-brand" href="../index.html">
+      <!--
+        Points at the marketing site, not at ../index.html. This tree is
+        served under /ui/, and the docs site's own brand link leaves for
+        contentveda.com the same way — a lockup that only ever returns you to
+        the page you are already on gives a reader no way back out of /ui/.
+        The sidebar's "Home" link is what returns you to this tree's landing
+        page.
+      -->
+      <a class="cv-brand" href="https://contentveda.com" title="ContentVeda (contentveda.com)">
         <svg class="cv-brand-mark" width="49" height="30" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="148 218 722 440">
 <path fill="var(--m-v)" opacity="1.000000" stroke="none" 
 	d="
@@ -185,6 +193,13 @@ z"/>
       <a href="wysiwyg-renderer.html" class="sidebar-link"><span class="sidebar-link-icon">✍</span> WYSIWYG Renderer</a>
       <a href="rich-text-editor.html" class="sidebar-link"><span class="sidebar-link-icon">📝</span> Rich Text Editor</a>
         <div class="sidebar-section-label" style="margin-top:1rem">Resources</div>
+        <!--
+          The cross-product links (Content API, GraphQL, Components, Main site)
+          are NOT repeated here. docs.js injects them at the top of this nav as
+          .sidebar-mobile-main-nav, because that row is what replaces .cv-links
+          when the header drops them on mobile. Adding them here as well would
+          list every one of them twice in the same drawer.
+        -->
         <a href="https://github.com/ContentVeda/contentveda-ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">⭐</span> GitHub</a>
         <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">📦</span> npm</a>
         <a href="https://github.com/ContentVeda/contentveda-ui/tree/main/examples" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">🧩</span> Example Apps</a>
@@ -699,7 +714,18 @@ document.addEventListener('DOMContentLoaded', () => {
           input.classList.add('invalid');
         }
       } else {
-        preview.setAttribute(name, input.value);
+        const val = input.value;
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
+        preview.setAttribute(name, val);
+        preview.setAttribute(camel, val);
+        preview.setAttribute(kebab, val);
+        if (preview.props) {
+          preview.props[camel] = val;
+          preview.props[kebab] = val;
+        }
+        if (typeof preview.forceUpdate === 'function') preview.forceUpdate();
+        if (typeof preview.update === 'function') preview.update();
       }
     });
 
