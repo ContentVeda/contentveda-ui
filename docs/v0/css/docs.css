@@ -1027,6 +1027,20 @@ img, video { max-width: 100%; }
 ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 
+/* Backdrop overlay for mobile drawer */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+}
+
+.sidebar-backdrop.open {
+  display: block;
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 768px) {
   .docs-sidebar {
@@ -1064,6 +1078,12 @@ img, video { max-width: 100%; }
   .cv-actions { margin-left: auto; }
   .cv-actions .btn-github { display: none; }
   .cv-brand-sub { display: none; }
+
+  .docs-content { padding: 1.5rem 1rem 4rem; }
+  .preview-body { padding: 1rem; }
+  .controls-body { padding: 1rem; }
+  .controls-body form#playground-form { grid-template-columns: 1fr; }
+  .tabs-bar { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
 }
 
 /* ── Interactive Playground Layout ─────────────────────── */
