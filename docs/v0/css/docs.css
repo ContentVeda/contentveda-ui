@@ -1070,7 +1070,7 @@ img, video { max-width: 100%; }
 /* Same breakpoint the docs site drops its nav links at. The brand, the drawer
    toggle and Sign in stay; "Star on GitHub" / "View Source" go, since the same
    links are in the sidebar. */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .cv-nav { gap: 0.75rem; }
   .cv-links { display: none; }
   /* .cv-links carried the margin-left:auto that right-aligns everything after
