@@ -29,7 +29,19 @@
 
   export interface GridBannerProps {
     items: GridBannerItem[];
+    /** Items per row on screens wider than 768px. Defaults to 3. */
     columns?: number;
+    /**
+     * Items per row at 768px and below. Omit to let the component break by
+     * itself, which is 2 across.
+     */
+    columnsTablet?: number;
+    /**
+     * Items per row at 480px and below. Omit to inherit whatever the tablet
+     * breakpoint resolved to, so setting only `columnsTablet` carries all the
+     * way down rather than snapping back to the default on the smallest screens.
+     */
+    columnsMobile?: number;
     className?: string;
     isLoading?: boolean;
     config?: GridBannerConfig;
@@ -50,6 +62,8 @@
   export let lazyRootMargin: GridBannerProps["lazyRootMargin"];
   export let isLoading: GridBannerProps["isLoading"];
   export let columns: GridBannerProps["columns"];
+  export let columnsTablet: GridBannerProps["columnsTablet"];
+  export let columnsMobile: GridBannerProps["columnsMobile"];
   export let className: GridBannerProps["className"];
   export let config: GridBannerProps["config"];
   export let items: GridBannerProps["items"];
@@ -73,6 +87,12 @@
   $: gridTemplateColumns = () => {
     const cols = columns || 3;
     return `repeat(${cols}, 1fr)`;
+  };
+  $: columnsTabletVar = () => {
+    return `${columnsTablet || 2}`;
+  };
+  $: columnsMobileVar = () => {
+    return `${columnsMobile || columnsTablet || 2}`;
   };
 
   let rootRef;
@@ -104,6 +124,8 @@
 <div
   style={stringifyStyles({
     gridTemplateColumns: gridTemplateColumns(),
+    "--cv-grid-cols-tablet": columnsTabletVar(),
+    "--cv-grid-cols-mobile": columnsMobileVar(),
     height: config?.height || "",
     minHeight: config?.minHeight || "",
   })}
