@@ -92,7 +92,7 @@ class TimerWidget extends HTMLElement {
         return !!self.props.backgroundImageUrl;
       },
       get widthValue() {
-        return self.props.width || "auto";
+        return self.props.width || "100%";
       },
       get heightMode() {
         return self.props.height || "auto";
@@ -179,7 +179,7 @@ class TimerWidget extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -367,7 +367,7 @@ class TimerWidget extends HTMLElement {
         } ${this.state.hasBackgroundImage ? "cv-timer-has-bg" : ""} ${
           this.props.className || ""
         }`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: this.state.widthValue,
           height: this.state.fixedHeightValue || undefined,
           backgroundImage:
@@ -391,7 +391,7 @@ class TimerWidget extends HTMLElement {
       .querySelectorAll("[data-el='img-timer-widget-1']")
       .forEach((el) => {
         el.setAttribute("src", this.props.backgroundImageUrl);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "100%",
           height: "auto",
           display: "block",
@@ -412,7 +412,7 @@ class TimerWidget extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-timer-widget-2']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           background:
             this.props.overlay || "var(--cv-color-scrim, rgba(0, 0, 0, 0.45))",
         });
@@ -430,7 +430,7 @@ class TimerWidget extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='canvas-timer-widget-1']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           position: "absolute",
           top: 0,
           left: 0,
@@ -444,7 +444,7 @@ class TimerWidget extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-timer-widget-3']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           position: this.state.contentOverlaysBox ? "absolute" : "relative",
           top: this.state.contentOverlaysBox ? 0 : undefined,
           left: this.state.contentOverlaysBox ? 0 : undefined,
@@ -542,3 +542,28 @@ class TimerWidget extends HTMLElement {
 }
 
 customElements.define("timer-widget", TimerWidget);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

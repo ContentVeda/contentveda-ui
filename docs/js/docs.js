@@ -14,6 +14,18 @@
    and a theme applied at that point is a visible flash. */
 const THEME_KEY = 'contentveda-theme';
 
+// Same sun/moon line icons as the admin console's PublicNavbar and the docs
+// site's DocsNav, not the ☀/☾ glyphs this used to swap in via textContent.
+// Those render from whatever font the visitor's OS ships, so their weight and
+// baseline never quite matched the rest of this bar's icons, or the same
+// toggle on the other two sites. One vector pair, reused everywhere, sidesteps
+// that entirely — this is the one place among the three it's plain innerHTML
+// rather than framework markup, since this file has no templating of its own.
+const SUN_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>';
+const MOON_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>';
+
 function initTheme() {
   const btn = document.getElementById('theme-toggle');
   const root = document.documentElement;
@@ -21,7 +33,9 @@ function initTheme() {
   function label() {
     const dark = root.getAttribute('data-theme') === 'dark';
     if (!btn) return;
-    btn.textContent = dark ? '☀' : '☾';
+    // The icon shown is what the toggle switches *to*, same convention as
+    // the other two sites: dark mode shows the sun (click to go light).
+    btn.innerHTML = dark ? SUN_ICON : MOON_ICON;
     btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
     btn.setAttribute('aria-pressed', String(dark));
   }
@@ -89,15 +103,74 @@ function initSidebar() {
   const sidebar = document.querySelector('.docs-sidebar');
   if (!toggle || !sidebar) return;
 
-  toggle.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
+  // Dynamically add backdrop overlay if not present
+  let backdrop = document.querySelector('.sidebar-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'sidebar-backdrop';
+    document.body.appendChild(backdrop);
+  }
+
+  // Prepend main section navigation into the mobile sidebar drawer.
+  // The header's .cv-links row is hidden on mobile, so without this the
+  // cross-product links would be unreachable there. This mirrors the docs
+  // site's DocsNav, whose mobile drawer carries the same two groups.
+  const navContainer = sidebar.querySelector('.sidebar-nav');
+  if (navContainer && !navContainer.querySelector('.sidebar-mobile-main-nav')) {
+    const mainNav = document.createElement('div');
+    mainNav.className = 'sidebar-mobile-main-nav';
+    mainNav.style.borderBottom = '1px solid var(--border)';
+    mainNav.style.marginBottom = '0.5rem';
+    mainNav.style.paddingBottom = '0.5rem';
+    mainNav.innerHTML = `
+      <div class="sidebar-section-label">Documentation</div>
+      <a class="sidebar-link" href="https://docs.contentveda.com/cms/api/"><span class="sidebar-link-icon">⚡</span> Content API</a>
+      <a class="sidebar-link" href="https://docs.contentveda.com/cms/graphql/"><span class="sidebar-link-icon">◈</span> GraphQL</a>
+      <a class="sidebar-link active" href="https://docs.contentveda.com/ui/"><span class="sidebar-link-icon">❖</span> Components</a>
+      <div class="sidebar-section-label" style="margin-top:0.75rem;">Links</div>
+      <a class="sidebar-link" href="https://contentveda.com"><span class="sidebar-link-icon">↗</span> Main site</a>
+      <a class="sidebar-link" href="https://github.com/ContentVeda" target="_blank" rel="noopener"><span class="sidebar-link-icon">🐙</span> GitHub</a>
+      <a class="sidebar-link" href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener"><span class="sidebar-link-icon">📦</span> npm Package</a>
+    `;
+    navContainer.insertBefore(mainNav, navContainer.firstChild);
+  }
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
   });
 
-  // Close on backdrop click
-  document.addEventListener('click', (e) => {
-    if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
-      sidebar.classList.remove('open');
+  backdrop.addEventListener('click', closeSidebar);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+      closeSidebar();
     }
+  });
+
+  // Close when clicking any link inside the sidebar on mobile
+  sidebar.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeSidebar();
+      }
+    });
   });
 }
 
@@ -304,9 +377,26 @@ function generateLiveDemoCode() {
 
   // The code samples use paths relative to the docs site (e.g. "../assets/img/...")
   // for its own placeholder images. Those don't resolve on a different origin
-  // (jsfiddle.net, codesandbox.io), so rewrite them to absolute URLs against
-  // the published docs site.
-  const rawCode = codeEl.innerText.replace(/(["'])(\.\.\/)?assets\//g, '$1https://contentveda.github.io/contentveda-ui/assets/');
+  // (jsfiddle.net, codesandbox.io), so rewrite them to absolute URLs.
+  //
+  // Resolved against the page docs.js is actually running on — document.baseURI,
+  // not a hardcoded domain. This used to point at a GitHub Pages mirror
+  // (contentveda.github.io/contentveda-ui), which was retired in favour of
+  // docs.contentveda.com; every exported sandbox's images broke the day that
+  // mirror went away, silently, because nothing here would ever notice a 404 on
+  // an external host. Deriving the base from the current page instead means it
+  // is correct on whatever host and whatever version tree serves this file —
+  // docs.contentveda.com/ui/v0/, a future v1, a staging mirror, or a local
+  // preview — with nothing here to go stale the next time hosting changes.
+  //
+  // Component pages reference "../assets/…" (one level up, from components/);
+  // the landing page references "assets/…" directly. Capturing the whole
+  // quoted path and resolving it via the URL constructor handles both forms
+  // uniformly, rather than special-casing the optional "../".
+  const rawCode = codeEl.innerText.replace(
+    /(["'])((?:\.\.\/)?assets\/[^"'\s]+)\1/g,
+    (match, quote, relPath) => quote + new URL(relPath, document.baseURI).href + quote
+  );
 
   // `theme.css` only carries shared CSS variables/resets — each component's
   // actual layout/visual styles live in their own `src/styles/components/*.css`

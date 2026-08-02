@@ -27,7 +27,19 @@ export interface GridBannerConfig {
 }
 export interface GridBannerProps {
   items: GridBannerItem[];
+  /** Items per row on screens wider than 768px. Defaults to 3. */
   columns?: number;
+  /**
+   * Items per row at 768px and below. Omit to let the component break by
+   * itself, which is 2 across.
+   */
+  columnsTablet?: number;
+  /**
+   * Items per row at 480px and below. Omit to inherit whatever the tablet
+   * breakpoint resolved to, so setting only `columnsTablet` carries all the
+   * way down rather than snapping back to the default on the smallest screens.
+   */
+  columnsMobile?: number;
   className?: string;
   isLoading?: boolean;
   config?: GridBannerConfig;
@@ -60,6 +72,14 @@ function GridBanner(props: GridBannerProps) {
     return `repeat(${cols}, 1fr)`;
   }
 
+  function columnsTabletVar() {
+    return `${props.columnsTablet || 2}`;
+  }
+
+  function columnsMobileVar() {
+    return `${props.columnsMobile || props.columnsTablet || 2}`;
+  }
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       setIsVisible(true);
@@ -89,6 +109,8 @@ function GridBanner(props: GridBannerProps) {
       className={`cv-grid-banner ${props.className || ""}`}
       style={{
         gridTemplateColumns: gridTemplateColumns(),
+        "--cv-grid-cols-tablet": columnsTabletVar(),
+        "--cv-grid-cols-mobile": columnsMobileVar(),
         height: props.config?.height || "",
         minHeight: props.config?.minHeight || "",
       }}
