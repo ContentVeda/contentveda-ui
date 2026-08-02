@@ -97,7 +97,10 @@ function initSidebar() {
     document.body.appendChild(backdrop);
   }
 
-  // Prepend main section navigation into the mobile sidebar drawer
+  // Prepend main section navigation into the mobile sidebar drawer.
+  // The header's .cv-links row is hidden on mobile, so without this the
+  // cross-product links would be unreachable there. This mirrors the docs
+  // site's DocsNav, whose mobile drawer carries the same two groups.
   const navContainer = sidebar.querySelector('.sidebar-nav');
   if (navContainer && !navContainer.querySelector('.sidebar-mobile-main-nav')) {
     const mainNav = document.createElement('div');
