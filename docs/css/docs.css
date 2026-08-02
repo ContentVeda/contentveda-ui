@@ -253,19 +253,6 @@ img, video { max-width: 100%; }
   gap: 0.5rem;
 }
 
-.cv-signin {
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
-  background: var(--accent);
-  color: #fff;
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.cv-signin:hover { background: var(--accent-alt); color: #fff; }
-
 /* Theme toggle — the docs site's button, down to the 34px square and the
    sun/moon glyph showing the theme you would switch *to*. */
 .cv-theme-toggle {
@@ -276,10 +263,14 @@ img, video { max-width: 100%; }
   border: 1px solid var(--border);
   background: transparent;
   cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
   color: var(--text-primary);
   transition: background var(--transition), border-color var(--transition);
+  /* Centers the SVG icon now inside this button. The ☀/☾ glyph it replaced
+     sat in flow like any other text and needed nothing here beyond
+     font-size/line-height; an <svg> child does. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cv-theme-toggle:hover { background: var(--bg-hover); border-color: var(--border-accent); }
@@ -1119,7 +1110,6 @@ img, video { max-width: 100%; }
 @media (max-width: 340px) {
   .cv-nav { gap: 0.5rem; padding: 0 0.75rem; }
   .cv-brand-word { display: none; }
-  .cv-signin { padding: 0.45rem 0.7rem; }
 }
 
 /* ── Interactive Playground Layout ─────────────────────── */

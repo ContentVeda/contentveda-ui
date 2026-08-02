@@ -164,10 +164,16 @@ z"/>
           <button type="button" id="font-dec" aria-label="Decrease text size" title="Decrease text size">A−</button>
           <button type="button" id="font-inc" aria-label="Increase text size" title="Increase text size">A+</button>
         </div>
-        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+        <!--
+          Same SVG moon this repaints to on load if the resolved theme is
+          light (see docs.js's label()) — an inert starting point rather than
+          the ☀/☾ glyphs this rendered before, which came from the visitor's
+          OS font and didn't match the sun/moon icon pair every other button
+          on this bar, and the admin console's own toggle, already use.
+        -->
+        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
         <a href="https://github.com/ContentVeda/contentveda-ui/blob/main/src/components/Banner.lite.tsx"
            target="_blank" rel="noopener" class="btn-github">View Source</a>
-        <a class="cv-signin" href="https://app.contentveda.com">Sign in</a>
       </div>
     </header>
 <div class="docs-shell">
@@ -203,7 +209,15 @@ z"/>
         <a href="https://github.com/ContentVeda/contentveda-ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">⭐</span> GitHub</a>
         <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">📦</span> npm</a>
         <a href="https://github.com/ContentVeda/contentveda-ui/tree/main/examples" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">🧩</span> Example Apps</a>
-        <a href="../dist/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">📁</span> Compiled Dist</a>
+        <!--
+          "Compiled Dist" used to link to ../dist/ — a bare directory,
+          not a page. That depends on the host serving a directory listing for
+          it, which none of this site's hosts do (Hostinger, or any plain
+          static server, disables that by default), so the link went nowhere
+          useful. The actual compiled output people want is already reachable
+          per-component: the Web Component tab's own <script src> and the npm
+          link above both point at real, working files.
+        -->
         <a href="../allure-report/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">✅</span> Test Report</a>
       </nav>
     </aside>
