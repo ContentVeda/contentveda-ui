@@ -12,6 +12,14 @@
           box-shadow: var(--cv-shadow-sm);
           background-size: cover;
           overflow: hidden;
+          /* Establishes a query container sized to the widget's own resolved
+             width — fluid (the default, 100%) or an explicit width prop, it
+             doesn't matter which; the digit blocks below read cqi units off
+             of this box rather than the viewport, so a widget dropped into a
+             narrow sidebar column on a wide desktop scales exactly the same
+             way it does on a phone. */
+          container-type: inline-size;
+          container-name: cv-timer;
         }
         .cv-timer-widget.cv-timer-has-bg {
           color: var(--cv-color-on-media, #fff);
@@ -28,6 +36,12 @@
           position: relative;
           z-index: 1;
           padding: var(--cv-spacing-lg);
+          /* cqi, after the fixed value above: in a browser without container
+             query support, this line is invalid and never parses, so the
+             cascade leaves the --cv-spacing-lg declaration above in effect —
+             the widget still renders, just without the extra narrow-width
+             shrink. Same pattern on every cqi-based rule below. */
+          padding: clamp(0.75rem, 5cqi, 2rem);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -47,6 +61,8 @@
           display: flex;
           justify-content: center;
           gap: var(--cv-spacing-md);
+          gap: clamp(0.5rem, 4cqi, 1.5rem);
+          row-gap: clamp(0.5rem, 4cqi, 1.5rem);
         }
         .cv-timer-block {
           display: flex;
@@ -54,20 +70,69 @@
           align-items: center;
           background: var(--cv-color-background);
           padding: var(--cv-spacing-sm);
+          padding: clamp(0.4rem, 3cqi, 1rem);
           border-radius: var(--cv-border-radius-sm);
-          min-width: 60px;
+          /* The floor of 44px is a deliberate stop, not a fourth clamp
+             endpoint chosen for taste: the four blocks are meant to shrink
+             together and stay legible, not shrink until digits blur into a
+             smear. Below the width four floored blocks need, the wrap rule
+             further down takes over instead of squeezing them past this. */
+          min-width: 44px;
+          min-width: clamp(44px, 15cqi, 60px);
           border: var(--cv-border-width) solid var(--cv-color-border);
         }
         .cv-timer-value {
           font-size: 1.5rem;
+          font-size: clamp(1rem, 7cqi, 1.5rem);
           font-weight: 700;
           color: var(--cv-color-primary);
         }
         .cv-timer-label {
           font-size: 0.75rem;
+          font-size: clamp(0.6rem, 2.5cqi, 0.75rem);
           text-transform: uppercase;
           color: var(--cv-color-text-muted);
           margin-top: 0.25rem;
+          /* "MINUTES" is a single unbreakable word — with nothing telling the
+             browser it may break, a block squeezed narrower than that word
+             at its floor font-size let the text spill past the block's edge
+             and get clipped by .cv-timer-widget's overflow: hidden instead
+             of wrapping to a second line. */
+          overflow-wrap: anywhere;
+        }
+
+        /* Below the width four floored blocks (see the min-width comment
+           above) need to sit in one row with their gaps and the content
+           padding, wrapping to two rows of two beats the alternative — the
+           row silently overflowing .cv-timer-widget's `overflow: hidden` and
+           clipping the last block or two out of view entirely.
+
+           Grid, not flex-wrap with a percentage flex-basis: .cv-timer-content
+           sizes its children with align-items: center, i.e. shrink-to-fit,
+           and a wrapping flex container's shrink-to-fit width is one of the
+           genuinely ambiguous corners of the flexbox spec — it rendered
+           every block on its own line instead of two per row. Giving
+           .cv-timer-blocks an explicit width first removes the ambiguity
+           outright, for either layout mode; grid is used here because a
+           fixed two-column track is simpler to read than replicating the
+           same width fix for flex-basis. */
+        @container cv-timer (max-width: 260px) {
+          .cv-timer-blocks {
+            width: 100%;
+            display: grid;
+            /* minmax(0, 1fr), not a bare 1fr: a 1fr track's implicit floor is
+               auto — the widest item's own content/min-width contribution —
+               not zero. .cv-timer-block sets an explicit clamp()-based
+               min-width, and that value was feeding the track's automatic
+               minimum, leaving each track a few px wider than the container
+               actually had room for. minmax(0, 1fr) removes that floor, so
+               the track can never be wider than the space available for it. */
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .cv-timer-block {
+            width: 100%;
+            min-width: 0;
+          }
         }
         .cv-timer-has-bg .cv-timer-block {
           /* Deliberately more translucent than --cv-color-scrim-strong: the photo
