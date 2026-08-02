@@ -12,6 +12,20 @@
      embedded-in-a-column case. */
   border-radius: var(--cv-sliding-banner-radius, 0);
   box-shadow: var(--cv-sliding-banner-shadow, none);
+  /* Query container for .cv-sliding-content below, sized to THIS element's
+     own resolved box — width AND height (container-type: size, not just
+     inline-size), because content can overflow this fixed-height box from
+     either direction: a narrow width wraps title/subtitle to more lines,
+     while a short config.height/minHeight simply doesn't have the room
+     even for unwrapped text. Text below scales off cqmin (the smaller of
+     the two axes), so whichever one is actually the tight constraint drives
+     the shrink — a tall-but-narrow phone scales off width, a
+     wide-but-short custom height scales off height, and neither axis has
+     to guess at the other. size containment requires a definite height,
+     which this element already has (the 500px default, or the inline
+     style override below). */
+  container-type: size;
+  container-name: cv-sliding-banner;
 }
 
 .cv-sliding-banner-canvas {
@@ -72,8 +86,31 @@
   height: 100%;
   color: white;
   padding: 2rem;
+  /* cqmin, after the fixed value above: in a browser without container
+     query support this line is invalid and never parses, so the 2rem above
+     stands — same fallback pattern as TimerWidget. Shrinks the vertical
+     padding along with the text below on either a narrow or a short
+     container, so it isn't fighting the font-size clamps for the same
+     limited space. */
+  padding: clamp(1rem, 5cqmin, 2rem) 2rem;
   max-width: 800px;
   margin: 0 auto;
+}
+
+/* The boundary: dots sit at bottom:20px, absolutely positioned outside
+   this flow, so nothing here naturally keeps clear of them. This carves
+   out their space FIRST, as a reservation on the content box itself —
+   fixed at up to 3.5rem, but shrinking on a short container (14cqb, the
+   block/height axis specifically — dots are a vertical concern regardless
+   of width) so a small custom config.height doesn't lose most of its box
+   to a reservation sized for the 500px default. Only applied when dots are
+   actually showing (.has-dots, set from config.showDots) — nothing
+   reserved when they're off. Everything else (title/subtitle/CTA below)
+   scales to fit whatever's left of the box once this boundary is
+   subtracted out. */
+.has-dots .cv-sliding-content {
+  padding-bottom: 3.5rem;
+  padding-bottom: clamp(2rem, 14cqb, 3.5rem);
 }
 
 .cv-sliding-title {
@@ -84,7 +121,17 @@
      regardless of specificity. That made the title invisible in both themes. */
   color: var(--cv-color-on-media, #ffffff);
   font-size: 3rem;
+  /* A fixed 3rem title wraps to more lines the narrower this box gets, and
+     simply doesn't fit at all on a short custom height — either way the
+     box doesn't grow, so the fix has to be the content shrinking to fit
+     it. cqmin (the smaller of the container's width/height) picks up
+     whichever of those two is actually tight: 7cqmin lands at the 3rem
+     ceiling around a ~700px-wide-or-tall banner (typical tablet/desktop)
+     and scales down smoothly below that on either axis; the 1.35rem floor
+     is a legibility stop. */
+  font-size: clamp(1.35rem, 7cqmin, 3rem);
   margin-bottom: 1rem;
+  margin-bottom: clamp(0.4rem, 3cqmin, 1rem);
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
@@ -97,7 +144,11 @@
      regardless of specificity. That made the title invisible in both themes. */
   color: var(--cv-color-on-media, #ffffff);
   font-size: 1.5rem;
+  /* Same reasoning as the title above, scaled to keep the same visual
+     proportion to it (roughly half the title's size at every width/height). */
+  font-size: clamp(0.85rem, 3.3cqmin, 1.5rem);
   margin-bottom: 2rem;
+  margin-bottom: clamp(0.75rem, 5cqmin, 2rem);
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
@@ -105,9 +156,11 @@
   background: var(--cv-color-primary);
   color: white;
   padding: 1rem 2rem;
+  padding: clamp(0.55rem, 4cqmin, 1rem) clamp(1.1rem, 6cqmin, 2rem);
   text-decoration: none;
   border-radius: 4px;
   font-weight: bold;
+  font-size: clamp(0.8rem, 2.3cqmin, 1rem);
   transition: all 0.3s ease;
 }
 
