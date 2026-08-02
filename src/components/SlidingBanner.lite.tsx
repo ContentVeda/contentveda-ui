@@ -232,7 +232,7 @@ export default function SlidingBanner(props: SlidingBannerProps) {
   return (
     <div
       ref={rootRef}
-      class={`cv-sliding-banner ${state.showSkeleton ? 'cv-image-shimmer' : ''} ${props.className || ''} effect-${state.animationClass} bg-effect-${state.backgroundClass} quality-${state.qualityClass}`}
+      class={`cv-sliding-banner ${state.showSkeleton ? 'cv-image-shimmer' : ''} ${props.className || ''} effect-${state.animationClass} bg-effect-${state.backgroundClass} quality-${state.qualityClass} ${props.config?.showDots ? 'has-dots' : ''}`}
       onMouseEnter={() => state.stopAutoPlay()}
       onMouseLeave={() => state.startAutoPlay()}
       role="region"

@@ -262,7 +262,9 @@
   bind:this={rootRef}
   class={`cv-sliding-banner ${showSkeleton() ? "cv-image-shimmer" : ""} ${
     className || ""
-  } effect-${animationClass()} bg-effect-${backgroundClass()} quality-${qualityClass()}`}
+  } effect-${animationClass()} bg-effect-${backgroundClass()} quality-${qualityClass()} ${
+    config?.showDots ? "has-dots" : ""
+  }`}
   on:mouseenter={(event) => {
     stopAutoPlay();
   }}
