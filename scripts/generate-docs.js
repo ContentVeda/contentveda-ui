@@ -144,8 +144,18 @@ const DEFAULT_WC_ELEMENTS = {
 // ── Site header (shared across every page) ─────────────────────────────────
 // A hand-written copy of the docs site's DocsNav: same 60px sticky bar, same
 // lockup (mark + live-text wordmark, never the outlined lettering from the
-// artwork), same link set, same Sign in button. Landing on /ui/ from the docs
-// site should not feel like landing on a different site.
+// artwork), same link set. Landing on /ui/ from the docs site should not feel
+// like landing on a different site.
+//
+// No Sign in button, deliberately, even though this used to have one to match
+// DocsNav. DocsNav's own has since been removed — this is a public,
+// unauthenticated component-library docs site, and "Sign in" pointed at
+// app.contentveda.com, the CMS admin console: a different, private product
+// most readers here have no account on. The admin console's own static
+// release dropped the same button for the same reason (see PublicNavbar —
+// "rendering a Sign In button that 404s [for most visitors] is worse than
+// rendering nothing"). Keeping it here after DocsNav dropped it would have
+// been the one place left where the two sites disagreed.
 //
 // Links are absolute rather than root-relative. The original reason was a
 // GitHub Pages mirror at contentveda.github.io, where /cms/api/ resolved to
@@ -158,7 +168,6 @@ const DEFAULT_WC_ELEMENTS = {
 // carry long prop tables and code samples, which is exactly the reading a
 // reader may want larger.
 const SITE_BASE = CANONICAL_BASE.replace(/\/ui\/?$/, '');
-const APP_URL   = 'https://app.contentveda.com';
 // The marketing site, which is a different host from SITE_BASE (the docs one).
 // The brand lockup targets this, matching DocsNav's own SITE_URL.
 const MAIN_SITE_URL = 'https://contentveda.com';
@@ -222,9 +231,15 @@ function buildHeader(prefix, actionHtml) {
           <button type="button" id="font-dec" aria-label="Decrease text size" title="Decrease text size">A−</button>
           <button type="button" id="font-inc" aria-label="Increase text size" title="Increase text size">A+</button>
         </div>
-        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+        <!--
+          Same SVG moon this repaints to on load if the resolved theme is
+          light (see docs.js's label()) — an inert starting point rather than
+          the ☀/☾ glyphs this rendered before, which came from the visitor's
+          OS font and didn't match the sun/moon icon pair every other button
+          on this bar, and the admin console's own toggle, already use.
+        -->
+        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
         ${actionHtml}
-        <a class="cv-signin" href="${APP_URL}">Sign in</a>
       </div>
     </header>`;
 }
@@ -262,7 +277,15 @@ function buildSidebar(activeSlug, isLandingPage) {
         <a href="${GITHUB_URL}" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">⭐</span> GitHub</a>
         <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">📦</span> npm</a>
         <a href="${GITHUB_URL}/tree/main/examples" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">🧩</span> Example Apps</a>
-        <a href="${prefix}dist/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">📁</span> Compiled Dist</a>
+        <!--
+          "Compiled Dist" used to link to ${prefix}dist/ — a bare directory,
+          not a page. That depends on the host serving a directory listing for
+          it, which none of this site's hosts do (Hostinger, or any plain
+          static server, disables that by default), so the link went nowhere
+          useful. The actual compiled output people want is already reachable
+          per-component: the Web Component tab's own <script src> and the npm
+          link above both point at real, working files.
+        -->
         <a href="${prefix}allure-report/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">✅</span> Test Report</a>
       </nav>
     </aside>`;

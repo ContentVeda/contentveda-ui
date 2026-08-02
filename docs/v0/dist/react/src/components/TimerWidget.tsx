@@ -88,7 +88,7 @@ function TimerWidget(props: TimerWidgetProps) {
   }
 
   function widthValue() {
-    return props.width || "auto";
+    return props.width || "100%";
   }
 
   function heightMode() {

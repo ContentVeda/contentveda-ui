@@ -92,7 +92,7 @@ class TimerWidget extends HTMLElement {
         return !!self.props.backgroundImageUrl;
       },
       get widthValue() {
-        return self.props.width || "auto";
+        return self.props.width || "100%";
       },
       get heightMode() {
         return self.props.height || "auto";
