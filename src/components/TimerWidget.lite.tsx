@@ -55,8 +55,15 @@ export default function TimerWidget(props: TimerWidgetProps) {
     get hasBackgroundImage() {
       return !!props.backgroundImageUrl;
     },
+    // AlternatingSlider has no width prop at all — it always fills its
+    // parent. TimerWidget's is optional, for the "pin this to N px"
+    // sidebar-badge case, but 'auto' was the wrong default for everyone who
+    // leaves it unset: on a block box that's usually equivalent to 100%, but
+    // not inside a flex/grid parent, where an auto-sized item shrinks to its
+    // content instead of filling the row. Being explicit removes that
+    // ambiguity, and matches how AlternatingSlider behaves by default.
     get widthValue() {
-      return props.width || 'auto';
+      return props.width || '100%';
     },
     get heightMode() {
       return props.height || 'auto';
