@@ -350,6 +350,16 @@ img, video { max-width: 100%; }
   flex: 1;
 }
 
+/* docs.js injects .sidebar-mobile-main-nav into every page load unconditionally
+   — it's cheap DOM either way — but it only belongs on screens narrow enough
+   that .cv-nav's own .cv-links row has dropped (≤768px, the same breakpoint
+   .sidebar-toggle appears at, below). Without this, the block showed at every
+   width: on desktop it duplicated Content API/GraphQL/Components, which
+   .cv-links already carries there. */
+.sidebar-mobile-main-nav {
+  display: none;
+}
+
 .sidebar-section-label {
   font-size: 0.65rem;
   font-weight: 600;
@@ -1049,6 +1059,12 @@ img, video { max-width: 100%; }
   }
 
   .sidebar-toggle {
+    display: block;
+  }
+
+  /* Shown only at the width the drawer actually appears at — see the base
+     rule above .sidebar-nav for why it's hidden everywhere else. */
+  .sidebar-mobile-main-nav {
     display: block;
   }
 
