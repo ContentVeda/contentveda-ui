@@ -115,6 +115,19 @@ function initSidebar() {
   // The header's .cv-links row is hidden on mobile, so without this the
   // cross-product links would be unreachable there. This mirrors the docs
   // site's DocsNav, whose mobile drawer carries the same two groups.
+  //
+  // GitHub and npm are deliberately not repeated here — they're already in
+  // this same sidebar's own "Resources" section, a few groups further down,
+  // so adding them here would just be the same two links twice in one
+  // drawer. Only Content API/GraphQL/Components/Main site are added: the
+  // ones that are genuinely unreachable elsewhere once .cv-links (desktop)
+  // hides, since nothing else on the page carries them.
+  //
+  // display:none above 768px in docs.css hides this block outside the
+  // sidebar's own drawer breakpoint — without that, this injection (which
+  // always runs, on every load) would put Content API/GraphQL/Components
+  // above "Getting Started" on *desktop* too, duplicating the header's own
+  // .cv-links row, which is only ever hidden below that width.
   const navContainer = sidebar.querySelector('.sidebar-nav');
   if (navContainer && !navContainer.querySelector('.sidebar-mobile-main-nav')) {
     const mainNav = document.createElement('div');
@@ -129,8 +142,6 @@ function initSidebar() {
       <a class="sidebar-link active" href="https://docs.contentveda.com/ui/"><span class="sidebar-link-icon">❖</span> Components</a>
       <div class="sidebar-section-label" style="margin-top:0.75rem;">Links</div>
       <a class="sidebar-link" href="https://contentveda.com"><span class="sidebar-link-icon">↗</span> Main site</a>
-      <a class="sidebar-link" href="https://github.com/ContentVeda" target="_blank" rel="noopener"><span class="sidebar-link-icon">🐙</span> GitHub</a>
-      <a class="sidebar-link" href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener"><span class="sidebar-link-icon">📦</span> npm Package</a>
     `;
     navContainer.insertBefore(mainNav, navContainer.firstChild);
   }
