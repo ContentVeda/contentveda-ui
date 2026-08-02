@@ -88,7 +88,7 @@
     return !!backgroundImageUrl;
   };
   $: widthValue = () => {
-    return width || "auto";
+    return width || "100%";
   };
   $: heightMode = () => {
     return height || "auto";
