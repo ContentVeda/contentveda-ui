@@ -1064,6 +1064,34 @@ img, video { max-width: 100%; }
   .cv-actions { margin-left: auto; }
   .cv-actions .btn-github { display: none; }
   .cv-brand-sub { display: none; }
+
+  /* Even with the links gone the bar did not fit a phone: the brand lockup,
+     the A−/A+ pair, the theme toggle and Sign in together measure past 375px,
+     so the row overflowed and "Sign in" broke onto two lines.
+
+     The text-size control is the one to drop. It is an addition this tree
+     makes for its long prop tables; the docs site's nav has no equivalent, so
+     removing it here is also what brings the two bars back into line. Pinch
+     zoom still works, and the reader's own browser text-size setting is
+     honoured because the pages size in rem. */
+  .cv-fontsize { display: none; }
+
+  /* Belt and braces: nothing in this bar may wrap. If a future addition
+     overflows again it should be visibly clipped rather than silently
+     reflowing the header to two lines. */
+  .cv-nav { flex-wrap: nowrap; }
+  .cv-brand { min-width: 0; flex-shrink: 1; }
+  .cv-brand-word { overflow: hidden; text-overflow: ellipsis; }
+  .cv-actions { flex-shrink: 0; }
+}
+
+/* Narrow phones. The wordmark goes and the mark alone carries the brand —
+   it is the part that is recognisable at this size, and it stays a link
+   home. */
+@media (max-width: 380px) {
+  .cv-nav { gap: 0.5rem; padding: 0 0.75rem; }
+  .cv-brand-word { display: none; }
+  .cv-signin { padding: 0.45rem 0.7rem; }
 }
 
 /* ── Interactive Playground Layout ─────────────────────── */
