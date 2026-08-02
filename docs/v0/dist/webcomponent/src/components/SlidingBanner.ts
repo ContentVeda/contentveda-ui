@@ -544,7 +544,7 @@ class SlidingBanner extends HTMLElement {
           this.state.animationClass
         } bg-effect-${this.state.backgroundClass} quality-${
           this.state.qualityClass
-        }`;
+        } ${this.props.config?.showDots ? "has-dots" : ""}`;
         el.removeEventListener(
           "mouseenter",
           this.onDivSlidingBanner1Mouseenter

@@ -269,7 +269,9 @@ function SlidingBanner(props: SlidingBannerProps) {
         showSkeleton() ? "cv-image-shimmer" : ""
       } ${
         props.className || ""
-      } effect-${animationClass()} bg-effect-${backgroundClass()} quality-${qualityClass()}`}
+      } effect-${animationClass()} bg-effect-${backgroundClass()} quality-${qualityClass()} ${
+        props.config?.showDots ? "has-dots" : ""
+      }`}
       onMouseEnter={(event) => stopAutoPlay()}
       onMouseLeave={(event) => startAutoPlay()}
       style={{
