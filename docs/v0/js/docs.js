@@ -110,6 +110,10 @@ function initSidebar() {
       <a class="sidebar-link" href="https://docs.contentveda.com/cms/api/"><span class="sidebar-link-icon">⚡</span> Content API</a>
       <a class="sidebar-link" href="https://docs.contentveda.com/cms/graphql/"><span class="sidebar-link-icon">◈</span> GraphQL</a>
       <a class="sidebar-link active" href="https://docs.contentveda.com/ui/"><span class="sidebar-link-icon">❖</span> Components</a>
+      <div class="sidebar-section-label" style="margin-top:0.75rem;">Links</div>
+      <a class="sidebar-link" href="https://contentveda.com"><span class="sidebar-link-icon">↗</span> Main site</a>
+      <a class="sidebar-link" href="https://github.com/ContentVeda" target="_blank" rel="noopener"><span class="sidebar-link-icon">🐙</span> GitHub</a>
+      <a class="sidebar-link" href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener"><span class="sidebar-link-icon">📦</span> npm Package</a>
     `;
     navContainer.insertBefore(mainNav, navContainer.firstChild);
   }
