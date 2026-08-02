@@ -221,20 +221,27 @@ jobs:
           # being set, since id-token: write is granted above.
         run: npx semantic-release
 
-      # Writes the released version back into package.json/package-lock.json.
+      # Writes the released version back into package.json/package-lock.json,
+      # and the docs/ tree alongside it.
       #
-      # @semantic-release/git would normally do this as part of the release, and
-      # is deliberately not in the plugin list: it pushes straight to the
-      # release branch, and main's ruleset rejects that (see release.config.js).
-      # Doing it here instead means the push is ours, so it can take the route
-      # each branch actually allows.
+      # @semantic-release/git would normally do the package.json half as part
+      # of the release, and is deliberately not in the plugin list: it pushes
+      # straight to the release branch, and main's ruleset rejects that (see
+      # release.config.js). Doing it here instead means the push is ours, so
+      # it can take the route each branch actually allows.
       #
-      # Worth knowing this is cosmetic. The published tarball already carries
-      # the right version -- semantic-release sets it before packing -- and
-      # nothing in the build reads this field for correctness any more, since
-      # generate-docs.js resolves the version from the tag. This keeps the
-      # checked-in tree honest about what shipped; it does not make anything
-      # work that was broken.
+      # docs/ has to be included, not just package.json/package-lock.json —
+      # this used to stage only those two, and it broke the step after this
+      # one. The Release step above already ran `npm run build` (semantic-
+      # release's own `prepublishOnly` triggers it), which regenerates
+      # docs/version.json and docs/v0/** against the tag that step just
+      # created — genuinely correct, not a build artifact; see the /dist/
+      # note in .gitignore for why docs/v0/ is committed at all. Left
+      # uncommitted, that regeneration is exactly the dirty working tree that
+      # made "Bring beta level with main"'s `git checkout -B beta
+      # origin/beta` fail outright: checkout refuses to overwrite
+      # uncommitted local changes, full stop, and every release from 0.0.2
+      # through 0.2.1 hit this without once completing to a merged PR.
       #
       # The tag is the source of truth, not semantic-release's stdout: it is
       # created on this commit through the GitHub API, so it has to be fetched
@@ -243,7 +250,7 @@ jobs:
       # a commit already published -- and there is nothing to record.
       #
       # Only main records, and beta deliberately never does. If both wrote their
-      # own number, they would be editing the same package.json line from a
+      # own package.json number, they would be editing the same line from a
       # common ancestor and every back-merge would collide on it -- and the two
       # branches still could not agree, since beta is by definition ahead. Held
       # to main's stable version the field matches on both, and the prerelease
@@ -264,8 +271,8 @@ jobs:
 
           npm version "${tag#v}" --no-git-tag-version --allow-same-version
 
-          if git diff --quiet -- package.json package-lock.json; then
-            echo "::notice::package.json already records ${tag#v}."
+          if git diff --quiet -- package.json package-lock.json docs/; then
+            echo "::notice::package.json and docs/ already record ${tag#v}."
             exit 0
           fi
 
@@ -279,7 +286,7 @@ jobs:
           # [skip ci] because this commit cannot produce a release: a chore is
           # not a releasable type, so re-triggering would spend a full run --
           # including the CodeQL wait -- to publish nothing.
-          git add package.json package-lock.json
+          git add package.json package-lock.json docs/
           git commit -m "chore(release): record the published ${tag#v} [skip ci]"
 
           # A pull request rather than a push: main requires one, and requires
@@ -293,7 +300,7 @@ jobs:
             --base "$GITHUB_REF_NAME" \
             --head "$branch" \
             --title "chore(release): record the published ${tag#v}" \
-            --body "Records the version published by [run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in package.json and package-lock.json. Only the two version fields change.
+            --body "Records the version published by [run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in package.json, package-lock.json, and the generated docs tree (docs/version.json, docs/v0/**) that prepublishOnly's own build regenerated against the new tag.
 
           Merging this is what carries the version on to beta: the next push to main brings the branches level again."
 
