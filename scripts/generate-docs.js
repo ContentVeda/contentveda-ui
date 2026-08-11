@@ -254,6 +254,22 @@ function buildSidebar(activeSlug, isLandingPage) {
     </aside>`;
 }
 
+// ── Footer HTML (shared across every page) ──────────────────────────────────
+function buildFooter(prefix) {
+  return `
+      <footer class="docs-footer">
+        <div class="docs-footer-copy">
+          <span>© ${new Date().getFullYear()} ContentVeda. All rights reserved.</span>
+        </div>
+        <nav class="docs-footer-links">
+          <a href="${SITE_BASE}/cms/api/">Content API</a>
+          <a href="${SITE_BASE}/cms/graphql/">GraphQL</a>
+          <a href="${GITHUB_URL}" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener">npm</a>
+        </nav>
+      </footer>`;
+}
+
 // ── Prop lookup (from docs-props.json) ────────────────────────────────────
 function getProps(componentName) {
   const key = componentName.replace(/\s+/g, '');
@@ -652,6 +668,7 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
 
       <!-- Notes -->
       ${buildNotes(notes)}
+      ${buildFooter('../')}
     </div>
   </main>
 </div>
@@ -1048,6 +1065,7 @@ function buildLandingPage() {
       <div class="component-grid">
         ${cards}
       </div>
+      ${buildFooter('')}
     </main>
   </div>
 
