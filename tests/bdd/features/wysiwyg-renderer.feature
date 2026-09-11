@@ -11,7 +11,7 @@ Feature: WysiwygRenderer
     And the component text should include "Premium Editorial Layout"
     And it should contain 1 elements matching "strong"
     And it should contain 1 elements matching "em"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Renders a social embed placeholder without throwing
     Given I mount the "cv-wysiwyg-renderer" component as "WysiwygRenderer" with:

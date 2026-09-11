@@ -115,14 +115,14 @@ const A11Y_DISABLED = process.env.A11Y_SKIP_CONTRAST === '1'
   ? ['color-contrast', 'color-contrast-enhanced']
   : [];
 
-Then('the component should have no serious accessibility violations', async function () {
+Then('the component should have no accessibility violations', async function () {
   let builder = new AxeBuilder({ page: this.page })
     .include(this.mountTarget === 'webcomponent' ? '#subject' : '#mount')
     .withTags(A11Y_TAGS);
   if (A11Y_DISABLED.length) builder = builder.disableRules(A11Y_DISABLED);
   const results = await builder.analyze();
 
-  const serious = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
+  const violations = results.violations;
 
   // Attach the audit to the Cucumber report. Without this the Allure report
   // shows accessibility only as a step that passed -- no record of which
@@ -137,7 +137,7 @@ Then('the component should have no serious accessibility violations', async func
     mountTarget: this.mountTarget,
     rulesPassed: results.passes.length,
     rulesViolated: results.violations.length,
-    seriousOrCritical: serious.length,
+    seriousOrCritical: violations.filter((v) => v.impact === 'critical' || v.impact === 'serious').length,
     incomplete: results.incomplete.length,
     violations: results.violations.map((v) => ({
       id: v.id,
@@ -152,8 +152,8 @@ Then('the component should have no serious accessibility violations', async func
     }))
   };
   await this.attach(JSON.stringify(audit, null, 2), 'application/json');
-  if (serious.length) {
-    const details = serious
+  if (violations.length) {
+    const details = violations
       .map((v) => {
         // Include the per-node diagnostic data axe already computed. For the
         // contrast rules that means the actual fg/bg pair and the measured vs
@@ -171,6 +171,6 @@ Then('the component should have no serious accessibility violations', async func
         return `- [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} node(s))\n  ${v.helpUrl}\n${nodes}${more}`;
       })
       .join('\n');
-    assert.fail(`Found ${serious.length} serious/critical accessibility violation(s):\n${details}`);
+    assert.fail(`Found ${violations.length} accessibility violation(s):\n${details}`);
   }
 });

@@ -6,4 +6,4 @@ Feature: Angular target
     Given I mount the "Banner" Angular component with:
       | title  | Summer Collection 2026            |
     Then it should render without any page errors
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
