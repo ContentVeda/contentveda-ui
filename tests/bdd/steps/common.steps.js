@@ -99,12 +99,12 @@ Then('attribute {string} on the component should equal {string}', async function
   assert.equal(value, expected);
 });
 
-// Target conformance level. The project targets WCAG 2.1 AAA, so AAA rule tags
+// Target conformance level. The project targets WCAG 2.2 AAA, so AAA rule tags
 // are included alongside A and AA. Override with A11Y_LEVEL=aa to fall back to
 // the A+AA gate (useful when triaging AAA-only failures separately).
 const A11Y_TAGS = process.env.A11Y_LEVEL === 'aa'
-  ? ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
-  : ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag21aaa'];
+  ? ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
+  : ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag21aaa', 'wcag22aa', 'wcag22aaa'];
 
 // Contrast rules are the two that separate AA from AAA: `color-contrast` is the
 // 4.5:1 AA threshold, `color-contrast-enhanced` the 7:1 AAA one. Both are on by
@@ -129,7 +129,7 @@ Then('the component should have no serious accessibility violations', async func
   // conformance level was targeted, how many rules actually ran, or what the
   // measured contrast ratios were. A passing a11y check that carries no
   // evidence is indistinguishable from one that never ran.
-  const level = process.env.A11Y_LEVEL === 'aa' ? 'WCAG 2.1 AA' : 'WCAG 2.1 AAA';
+  const level = process.env.A11Y_LEVEL === 'aa' ? 'WCAG 2.2 AA' : 'WCAG 2.2 AAA';
   const audit = {
     target: level,
     ruleTags: A11Y_TAGS,
