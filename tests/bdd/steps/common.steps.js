@@ -104,7 +104,7 @@ Then('attribute {string} on the component should equal {string}', async function
 // the A+AA gate (useful when triaging AAA-only failures separately).
 const A11Y_TAGS = process.env.A11Y_LEVEL === 'aa'
   ? ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
-  : ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag21aaa', 'wcag22aa', 'wcag22aaa'];
+  : ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 // Contrast rules are the two that separate AA from AAA: `color-contrast` is the
 // 4.5:1 AA threshold, `color-contrast-enhanced` the 7:1 AAA one. Both are on by

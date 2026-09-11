@@ -465,7 +465,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           if (url) {
             state.restoreSelection();
             let html = '';
-            if (type === 'image') html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+            if (type === 'image') html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
             else if (type === 'video') html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
             else if (type === 'audio') html = `<audio src="${url}" controls></audio>`;
             document.execCommand('insertHTML', false, html);
@@ -477,7 +477,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         if (url) {
           state.restoreSelection();
           let html = '';
-          if (type === 'image') html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+          if (type === 'image') html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
           else if (type === 'video') html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
           else if (type === 'audio') html = `<audio src="${url}" controls></audio>`;
           document.execCommand('insertHTML', false, html);
@@ -667,13 +667,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             <Show when={state.showToolbarOption('foreColor')}>
               <label class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative" title="Text Color">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/></svg>
-                <input type="color" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" onMouseDown={() => state.saveSelection()} onChange={(e) => { state.restoreSelection(); document.execCommand('foreColor', false, (e.target as HTMLInputElement).value); state.syncContent(); }} />
+                <input type="color" aria-label="Text Color" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" onMouseDown={() => state.saveSelection()} onChange={(e) => { state.restoreSelection(); document.execCommand('foreColor', false, (e.target as HTMLInputElement).value); state.syncContent(); }} />
               </label>
             </Show>
             <Show when={state.showToolbarOption('backColor')}>
               <label class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative" title="Highlight Color">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-                <input type="color" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" onMouseDown={() => state.saveSelection()} onChange={(e) => { state.restoreSelection(); document.execCommand('hiliteColor', false, (e.target as HTMLInputElement).value); document.execCommand('backColor', false, (e.target as HTMLInputElement).value); state.syncContent(); }} />
+                <input type="color" aria-label="Background Color" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" onMouseDown={() => state.saveSelection()} onChange={(e) => { state.restoreSelection(); document.execCommand('hiliteColor', false, (e.target as HTMLInputElement).value); document.execCommand('backColor', false, (e.target as HTMLInputElement).value); state.syncContent(); }} />
               </label>
             </Show>
           </div>
@@ -814,6 +814,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             <span class="text-[10px] font-bold text-slate-500 tracking-wider mr-2">CLASS</span>
             <input 
               type="text" 
+              aria-label="Dynamic CSS Class"
               list="editor-class-list"
               placeholder="e.g. my-callout" 
               class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
@@ -875,11 +876,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Text</label>
-                    <input type="text" placeholder="Click Here" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnText} onInput={(e) => state.btnText = e.target.value} />
+                    <input type="text" aria-label="Button Text" placeholder="Click Here" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnText} onInput={(e) => state.btnText = e.target.value} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Link URL</label>
-                    <input type="url" placeholder="https://..." style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnUrl} onInput={(e) => state.btnUrl = e.target.value} />
+                    <input type="url" aria-label="Button URL" placeholder="https://..." style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none' }} value={state.btnUrl} onInput={(e) => state.btnUrl = e.target.value} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
@@ -898,11 +899,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.2))', padding: '12px', borderRadius: '8px', border: '1px solid var(--cv-color-hover, rgba(255,255,255,0.05))' }}>
                     <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--cv-color-text-secondary, #cbd5e1)' }}>Rows</label>
-                    <input type="number" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'var(--cv-color-text-main, #fff)', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableRows} onInput={(e) => state.tableRows = e.target.value} />
+                    <input type="number" aria-label="Table Rows" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'var(--cv-color-text-main, #fff)', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableRows} onInput={(e) => state.tableRows = e.target.value} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.2))', padding: '12px', borderRadius: '8px', border: '1px solid var(--cv-color-hover, rgba(255,255,255,0.05))' }}>
                     <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--cv-color-text-secondary, #cbd5e1)' }}>Columns</label>
-                    <input type="number" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'var(--cv-color-text-main, #fff)', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableCols} onInput={(e) => state.tableCols = e.target.value} />
+                    <input type="number" aria-label="Table Columns" min="1" max="20" style={{ background: 'transparent', border: 'none', textAlign: 'right', color: 'var(--cv-color-text-main, #fff)', fontWeight: 'bold', width: '64px', fontSize: '14px', outline: 'none' }} value={state.tableCols} onInput={(e) => state.tableCols = e.target.value} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
@@ -920,7 +921,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destination URL</label>
-                  <input type="url" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://example.com" value={state.linkUrl} onInput={(e) => state.linkUrl = e.target.value} />
+                  <input type="url" aria-label="Hyperlink URL" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://example.com" value={state.linkUrl} onInput={(e) => state.linkUrl = e.target.value} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
                   <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeLinkModal()}>Cancel</button>
@@ -969,7 +970,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Post URL</label>
-                    <input type="url" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://..." value={state.socialUrl} onInput={(e) => state.socialUrl = e.target.value} />
+                    <input type="url" aria-label="Social Link URL" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://..." value={state.socialUrl} onInput={(e) => state.socialUrl = e.target.value} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
