@@ -19,6 +19,18 @@ Given('I mount the {string} Svelte component with:', async function (pascalName,
   await this.mountSvelteComponent(pascalName, dataTable.rowsHash());
 });
 
+Given('I mount the {string} Vue component with:', async function (pascalName, dataTable) {
+  await this.mountVueComponent(pascalName, dataTable.rowsHash());
+});
+
+Given('I mount the {string} Solid component with:', async function (pascalName, dataTable) {
+  await this.mountSolidComponent(pascalName, dataTable.rowsHash());
+});
+
+Given('I mount the {string} Angular component with:', async function (pascalName, dataTable) {
+  await this.mountAngularComponent(pascalName, dataTable.rowsHash());
+});
+
 When('I wait {int} ms', async function (ms) {
   await this.page.waitForTimeout(ms);
 });

@@ -1,0 +1,219 @@
+import { NgModule } from "@angular/core";
+import { CommonModule } from "@angular/common";
+
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  Input,
+  SimpleChanges,
+} from "@angular/core";
+import { DomSanitizer } from "@angular/platform-browser";
+
+export interface WysiwygRendererProps {
+  htmlContent: string;
+  className?: string;
+  widgetData?: any;
+  lazyLoad?: boolean;
+  lazyThreshold?: number;
+  lazyRootMargin?: string;
+}
+
+import { observeLazyMount } from "../utils/lazyObserver";
+
+@Component({
+  selector: "wysiwyg-renderer",
+  template: `
+    <div
+      #containerRef
+      [class]="\`cv-wysiwyg-content \${!shouldMount ? 'cv-image-shimmer' : ''} \${className || ''}\`"
+      [ngStyle]="{
+          minHeight: !shouldMount ? '120px' : ''
+        }"
+      [innerHTML]="sanitizer.bypassSecurityTrustHtml(renderedHtml)"
+    ></div>
+  `,
+  styles: [
+    `
+      :host {
+        display: contents;
+      }
+    `,
+  ],
+})
+export default class WysiwygRenderer {
+  @Input() lazyLoad!: WysiwygRendererProps["lazyLoad"];
+  @Input() lazyThreshold!: WysiwygRendererProps["lazyThreshold"];
+  @Input() lazyRootMargin!: WysiwygRendererProps["lazyRootMargin"];
+  @Input() htmlContent!: WysiwygRendererProps["htmlContent"];
+  @Input() widgetData!: WysiwygRendererProps["widgetData"];
+  @Input() className!: WysiwygRendererProps["className"];
+
+  @ViewChild("containerRef") containerRef!: ElementRef;
+
+  isVisible = false;
+  get shouldMount() {
+    return this.lazyLoad === false || this.isVisible;
+  }
+  get renderedHtml() {
+    return this.shouldMount ? this.htmlContent : "";
+  }
+  processContent() {
+    setTimeout(() => {
+      if (!this.containerRef?.nativeElement) return;
+
+      // Process Social Embeds
+      const socialEmbeds =
+        this.containerRef?.nativeElement.querySelectorAll(".cv-social-embed");
+      socialEmbeds.forEach((el) => {
+        const platform = el.getAttribute("data-platform");
+        const url = el.getAttribute("data-url");
+        if (!platform || !url) return;
+
+        // Clear placeholder text and fix styling
+        el.innerHTML = "";
+        el.setAttribute(
+          "style",
+          "margin: 20px 0; display: flex; justify-content: center; background: transparent; border: none; padding: 0;"
+        );
+        if (platform === "youtube") {
+          let videoId = "";
+          const match = url.match(
+            /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/
+          );
+          if (match && match[1]) videoId = match[1];
+          if (videoId) {
+            el.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"></iframe>`;
+          } else {
+            el.innerHTML = `<a href="${url}" target="_blank" style="color: var(--cv-color-link, #7fc4de); text-decoration: underline;">View Video on YouTube</a>`;
+          }
+        } else if (platform === "facebook") {
+          el.innerHTML = `<div class="fb-post" data-href="${url}" data-width="500"></div>`;
+          if (!document.getElementById("facebook-jssdk")) {
+            const script = document.createElement("script");
+            script.id = "facebook-jssdk";
+            script.src =
+              "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v17.0";
+            script.async = true;
+            script.defer = true;
+            script.crossOrigin = "anonymous";
+            document.body.appendChild(script);
+          } else if ((window as any).FB) {
+            (window as any).FB.XFBML.parse(el);
+          }
+        } else if (platform === "x" || platform === "twitter") {
+          el.innerHTML = `<blockquote class="twitter-tweet" data-theme="dark"><a href="${url}"></a></blockquote>`;
+          if (!document.getElementById("twitter-wjs")) {
+            const script = document.createElement("script");
+            script.id = "twitter-wjs";
+            script.src = "https://platform.twitter.com/widgets";
+            script.async = true;
+            document.body.appendChild(script);
+          } else if ((window as any).twttr) {
+            (window as any).twttr.widgets.load(el);
+          }
+        } else if (platform === "instagram") {
+          el.innerHTML = `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);"></blockquote>`;
+          if (!document.getElementById("instagram-embed")) {
+            const script = document.createElement("script");
+            script.id = "instagram-embed";
+            script.src = "https://www.instagram.com/embed";
+            script.async = true;
+            document.body.appendChild(script);
+          } else if ((window as any).instgrm) {
+            (window as any).instgrm.Embeds.process();
+          }
+        } else if (platform === "linkedin") {
+          const embedUrl = url.includes("/embed/")
+            ? url
+            : url.replace("/post/", "/embed/feed/update/");
+          el.innerHTML = `<iframe src="${embedUrl}" height="600" width="504" frameborder="0" allowfullscreen="" title="Embedded post" style="border-radius: 12px;"></iframe>`;
+        }
+      });
+
+      // Process Widgets
+      const widgetPlaceholders =
+        this.containerRef?.nativeElement.querySelectorAll(
+          ".cv-widget-placeholder"
+        );
+      widgetPlaceholders.forEach((el) => {
+        const widgetType = el.getAttribute("data-widget");
+        if (!widgetType) return;
+
+        // Clear placeholder text and styling
+        el.innerHTML = "";
+        el.setAttribute("style", "margin: 24px 0;");
+
+        // Render Web Component
+        const tagName = `cv-${widgetType}`;
+        const wc = document.createElement(tagName);
+
+        // Apply provided widgetData if available
+        if (this.widgetData && this.widgetData[widgetType]) {
+          const data = this.widgetData[widgetType];
+          for (const key in data) {
+            // Mitosis WC props format requires JSON for objects/arrays
+            if (typeof data[key] === "object") {
+              wc.setAttribute(
+                key.replace(/([A-Z])/g, "-$1").toLowerCase(),
+                JSON.stringify(data[key])
+              );
+            } else {
+              wc.setAttribute(
+                key.replace(/([A-Z])/g, "-$1").toLowerCase(),
+                String(data[key])
+              );
+            }
+          }
+        }
+        el.appendChild(wc);
+      });
+    }, 0);
+  }
+
+  private _observerBox: {
+    disconnect: (() => void) | null;
+  } = {
+    disconnect: null,
+  };
+
+  constructor(protected sanitizer: DomSanitizer) {}
+
+  ngOnInit() {
+    if (typeof window !== "undefined") {
+      if (this.lazyLoad === false) {
+        this.isVisible = true;
+        this.processContent();
+        return;
+      }
+      if (this.containerRef?.nativeElement) {
+        this._observerBox.disconnect = observeLazyMount(
+          this.containerRef!.nativeElement,
+          () => {
+            this.isVisible = true;
+            this.processContent();
+          },
+          this.lazyThreshold ?? 0.1,
+          this.lazyRootMargin ?? "200px"
+        );
+      }
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (typeof window !== "undefined") {
+      if (this.shouldMount) this.processContent();
+    }
+  }
+
+  ngOnDestroy() {
+    if (this._observerBox.disconnect) this._observerBox.disconnect();
+  }
+}
+
+@NgModule({
+  declarations: [WysiwygRenderer],
+  imports: [CommonModule],
+  exports: [WysiwygRenderer],
+})
+export class WysiwygRendererModule {}

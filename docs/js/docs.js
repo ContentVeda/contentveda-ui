@@ -406,7 +406,7 @@ function generateLiveDemoCode() {
   // uniformly, rather than special-casing the optional "../".
   const rawCode = codeEl.innerText.replace(
     /(["'])((?:\.\.\/)?assets\/[^"'\s]+)\1/g,
-    (match, quote, relPath) => quote + new URL(relPath, document.baseURI).href + quote
+    (match, quote, relPath) => quote + new URL(relPath, 'https://docs.contentveda.com/ui/v0/').href + quote
   );
 
   // `theme.css` only carries shared CSS variables/resets — each component's
