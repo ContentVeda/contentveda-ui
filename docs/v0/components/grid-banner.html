@@ -712,10 +712,10 @@ import '@contentveda/ui/theme.css';
       return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
     });
 
-    const vueCode = `<script setup>
+    const vueCode = `<` + `script setup>
 import ${pascalName} from '@contentveda/ui/vue/${pascalName}.vue';
 import '@contentveda/ui/theme.css';
-</script>
+</` + `script>
 
 <template>
   <${pascalName}
@@ -732,9 +732,9 @@ import '@contentveda/ui/theme.css';
       return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
     });
 
-    const svelteCode = `<script lang="ts">
+    const svelteCode = `<` + `script lang="ts">
   import ${pascalName} from '@contentveda/ui/svelte/${pascalName}.svelte';
-<\/script>
+</` + `script>
 
 <${pascalName}
   ${svelteProps.join('\n  ')}
