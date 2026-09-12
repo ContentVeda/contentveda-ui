@@ -57,7 +57,7 @@
     "prepublishOnly": "npm run build",
     "postpublish": "node -e \"if (process.env.CI !== 'true' && process.env.GITHUB_ACTIONS !== 'true') require('./scripts/sync-beta-tag.js')\"",
     "release": "semantic-release",
-    "test": "npm run test:unit && npm run test:bdd",
+    "test": "npm run test:unit && npm run test:bdd && npm run test:e2e",
     "test:unit": "vitest run",
     "coverage": "vitest run --coverage",
     "test:bdd": "playwright install chromium && cucumber-js --config cucumber.cjs",
