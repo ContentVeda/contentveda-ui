@@ -93,9 +93,9 @@ import type {
   template: `
     <div
       #rootRef
-      [class]="\`cv-banner \${showSkeleton ? 'cv-image-shimmer' : ''} \${className || ''}\`"
+      [class]="'cv-banner ' + (showSkeleton ? 'cv-image-shimmer' : '') + ' ' + (className || '')"
       [ngStyle]="{
-          backgroundImage: shouldMount && !isLoading && !hasVideo && imageUrl && config?.height !== 'auto' ? \`url(\${imageUrl})\` : 'none',
+          backgroundImage: shouldMount && !isLoading && !hasVideo && imageUrl && config?.height !== 'auto' ? 'url(' + (imageUrl) + ')' : 'none',
           textAlign: alignment,
           backgroundPosition: backgroundPosition || 'center',
           minHeight: minHeightValue || '',
@@ -173,7 +173,7 @@ import type {
             <ng-container *ngFor="let h of hotspots; trackBy: trackByH0">
               <g>
                 <g
-                  [class]="\`cv-hotspot-visual cv-hotspot-visual-\${h.shape}\`"
+                  [class]="'cv-hotspot-visual cv-hotspot-visual-' + (h.shape)"
                 >
                   <ng-container *ngIf="h.shape === 'rect'">
                     <rect
@@ -242,13 +242,13 @@ import type {
                 <a
                   [attr.href]="hotspotHref(h)"
                   [attr.aria-label]="hotspotLabel(h)"
-                  [attr.aria-describedby]="h.showTooltip ? \`cv-hotspot-tip-\${h.id}\` : undefined"
-                  [class]="\`cv-hotspot cv-hotspot-\${h.shape}\`"
+                  [attr.aria-describedby]="h.showTooltip ? 'cv-hotspot-tip-' + (h.id) : undefined"
+                  [class]="'cv-hotspot cv-hotspot-' + (h.shape)"
                   ><ng-container *ngIf="!!h.showTooltip"
                     ><span
                       role="tooltip"
                       class="cv-hotspot-tooltip"
-                      [attr.id]="\`cv-hotspot-tip-\${h.id}\`"
+                      [attr.id]="'cv-hotspot-tip-' + (h.id)"
                       >{{h.label || h.altText}}</span
                     ></ng-container
                   ></a
@@ -465,6 +465,12 @@ export default class Banner {
   }
   trackByH1(_, h) {
     return h.id;
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
   }
 
   ngOnInit() {

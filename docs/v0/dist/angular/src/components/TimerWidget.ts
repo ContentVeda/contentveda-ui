@@ -40,11 +40,11 @@ import type {
   template: `
     <div
       #rootRef
-      [class]="\`cv-timer-widget cv-timer-variant-\${variant || 'dark'} \${hasBackgroundImage ? 'cv-timer-has-bg' : ''} \${className || ''}\`"
+      [class]="'cv-timer-widget cv-timer-variant-' + (variant || 'dark') + ' ' + (hasBackgroundImage ? 'cv-timer-has-bg' : '') + ' ' + (className || '')"
       [ngStyle]="{
           width: widthValue,
           height: fixedHeightValue || undefined,
-          backgroundImage: hasBackgroundImage && !useImageForHeight ? \`url(\${backgroundImageUrl})\` : undefined,
+          backgroundImage: hasBackgroundImage && !useImageForHeight ? 'url(' + (backgroundImageUrl) + ')' : undefined,
           backgroundPosition: backgroundPosition || 'center'
         }"
     >
@@ -102,7 +102,7 @@ import type {
             class="cv-timer-blocks"
             role="timer"
             aria-live="off"
-            [attr.aria-label]="\`Time remaining: \${timeLeft.days} days, \${timeLeft.hours} hours, \${timeLeft.minutes} minutes, \${timeLeft.seconds} seconds\`"
+            [attr.aria-label]="'Time remaining: ' + (timeLeft.days) + ' days, ' + (timeLeft.hours) + ' hours, ' + (timeLeft.minutes) + ' minutes, ' + (timeLeft.seconds) + ' seconds'"
           >
             <div class="cv-timer-block">
               <span
@@ -239,6 +239,12 @@ export default class TimerWidget {
   observerBox = {
     disconnect: null as (() => void) | null,
   };
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
+  }
 
   ngOnInit() {
     if (typeof window !== "undefined") {
