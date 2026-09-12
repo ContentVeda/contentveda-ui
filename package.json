@@ -61,7 +61,11 @@
     "test:unit": "vitest run",
     "coverage": "vitest run --coverage",
     "test:bdd": "playwright install chromium && cucumber-js --config cucumber.cjs",
-    "report:allure": "node scripts/generate-allure-report.js"
+    "report:allure": "node scripts/generate-allure-report.js",
+    "serve:docs": "node scripts/serve-docs.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "npm run test:unit && npm run test:bdd && npm run test:e2e"
   },
   "peerDependencies": {
     "@angular/core": ">=14",
