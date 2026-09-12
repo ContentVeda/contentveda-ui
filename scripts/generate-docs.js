@@ -546,7 +546,9 @@ function buildControlsForm(component) {
 function buildPage(component) {
   const { name, slug, icon, examples, notes, previewLabel, previewCss, extra } = component;
 
-  const pascalName = name.replace(/\s+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
+  const pascalName = (slug === 'wysiwyg-renderer' || name === 'WYSIWYG Renderer')
+    ? 'WysiwygRenderer'
+    : name.replace(/\s+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
   const tagName = `cv-${slug}`;
   
   const props = getProps(name);
