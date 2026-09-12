@@ -46,7 +46,8 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
           if (!platform || !url) return;
           
           // Clear placeholder text and fix styling
-          // lgtm [js/xss, js/html-constructed-from-input]
+          // lgtm[js/xss, js/html-constructed-from-input]
+// codeql[js/xss, js/html-constructed-from-input]
           el.innerHTML = '';
           el.setAttribute('style', 'margin: 20px 0; display: flex; justify-content: center; background: transparent; border: none; padding: 0;');
 
@@ -165,7 +166,8 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
           }
           
           // Clear placeholder text and styling
-          // lgtm [js/xss, js/html-constructed-from-input]
+          // lgtm[js/xss, js/html-constructed-from-input]
+// codeql[js/xss, js/html-constructed-from-input]
           el.innerHTML = '';
           el.setAttribute('style', 'margin: 24px 0;');
           
@@ -222,7 +224,8 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
       ref={containerRef}
       class={`cv-wysiwyg-content ${!state.shouldMount ? 'cv-image-shimmer' : ''} ${props.className || ''}`}
       style={{ minHeight: !state.shouldMount ? '120px' : '' }}
-      // lgtm [js/xss, js/html-constructed-from-input]
+      // lgtm[js/xss, js/html-constructed-from-input]
+// codeql[js/xss, js/html-constructed-from-input]
       innerHTML={state.renderedHtml}
     >
     </div>

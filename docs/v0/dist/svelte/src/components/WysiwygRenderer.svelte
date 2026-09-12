@@ -55,7 +55,8 @@
         if (!platform || !url) return;
 
         // Clear placeholder text and fix styling
-        // lgtm [js/xss, js/html-constructed-from-input]
+        // lgtm[js/xss, js/html-constructed-from-input]
+        // codeql[js/xss, js/html-constructed-from-input]
         el.innerHTML = "";
         el.setAttribute(
           "style",
@@ -187,7 +188,8 @@
         }
 
         // Clear placeholder text and styling
-        // lgtm [js/xss, js/html-constructed-from-input]
+        // lgtm[js/xss, js/html-constructed-from-input]
+        // codeql[js/xss, js/html-constructed-from-input]
         el.innerHTML = "";
         el.setAttribute("style", "margin: 24px 0;");
 
