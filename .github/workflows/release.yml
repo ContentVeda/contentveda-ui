@@ -55,6 +55,9 @@ jobs:
       - name: Run BDD suite
         run: npm run test:bdd
 
+      - name: Run E2E Playwright suite
+        run: npm run test:e2e
+
       # When the gate above trips, this is the only durable record of *why*.
       # The run log itself is not enough: downloading it via the API needs
       # repo-admin rights, so anyone triaging without them sees a failed step

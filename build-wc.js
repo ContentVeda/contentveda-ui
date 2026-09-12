@@ -347,11 +347,17 @@ for (const file of allFiles) {
             this.componentProps.forEach((prop) => {
                 if (regexp.test(prop)) {
                     let attrValue = newValue;
-                    try {
-                        if (attrValue && (attrValue.trim().startsWith('{') || attrValue.trim().startsWith('['))) {
-                            attrValue = JSON.parse(attrValue);
-                        }
-                    } catch(e) {}
+                    if (attrValue === 'true') {
+                        attrValue = true;
+                    } else if (attrValue === 'false') {
+                        attrValue = false;
+                    } else {
+                        try {
+                            if (attrValue && (attrValue.trim().startsWith('{') || attrValue.trim().startsWith('['))) {
+                                attrValue = JSON.parse(attrValue);
+                            }
+                        } catch(e) {}
+                    }
                     this.props[prop] = attrValue;
                 }
             });
@@ -369,6 +375,23 @@ for (const file of allFiles) {
       console.warn('Failed to inject observedAttributes for', file, e);
     }
   }
+
+  // Parse booleans in connectedCallback
+  finalCode = finalCode.replace(
+    /let attrValue\s*=\s*this\.getAttribute\(attr\);[\s\S]*?catch\s*\(e\)\s*\{\s*\}/g,
+    `let attrValue = this.getAttribute(attr);
+                    if (attrValue === 'true') {
+                        attrValue = true;
+                    } else if (attrValue === 'false') {
+                        attrValue = false;
+                    } else {
+                        try {
+                            if (attrValue && (attrValue.trim().startsWith('{') || attrValue.trim().startsWith('['))) {
+                                attrValue = JSON.parse(attrValue);
+                            }
+                        } catch (e) {}
+                    }`
+  );
 
   // Fix ReferenceError: self is not defined in class methods
   finalCode = finalCode.replace(/^[ ]{4}(?!constructor\b)([a-zA-Z0-9_]+)\((.*?)\)[ ]*\{/gm, (match, methodName, args) => {

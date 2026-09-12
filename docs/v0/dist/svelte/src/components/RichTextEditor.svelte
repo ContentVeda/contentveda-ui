@@ -940,9 +940,7 @@
               ><path d="M4 20h16" /><path d="m6 16 6-12 6 12" /><path
                 d="M8 12h8"
               /></svg
-            >
-            // lgtm[js/xss, js/html-constructed-from-input] // codeql[js/xss, js/html-constructed-from-input]
-            <input
+            ><input
               type="color"
               aria-label="Text Color"
               class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
@@ -978,9 +976,7 @@
                 cy="11"
                 r="2"
               /></svg
-            >
-            // lgtm[js/xss, js/html-constructed-from-input] // codeql[js/xss, js/html-constructed-from-input]
-            <input
+            ><input
               type="color"
               aria-label="Background Color"
               class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"

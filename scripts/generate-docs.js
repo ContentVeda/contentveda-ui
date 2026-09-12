@@ -83,23 +83,23 @@ function copyDir(src, dest) {
 
 // ── Default Interactive Web Component Elements ─────────────────────────────
 const DEFAULT_WC_ELEMENTS = {
-  'banner': `<cv-banner id="interactive-preview" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' hotspots='[{"id":"hs-jacket","altText":"Quilted jacket","label":"Quilted jacket · $189","shape":"rect","coords":{"x":9,"y":20,"width":16,"height":30},"action":{"type":"link","url":"/products/quilted-jacket"},"showTooltip":true,"pulse":true},{"id":"hs-tote","altText":"Leather tote","label":"Leather tote · $240","shape":"oval","coords":{"x":44,"y":28,"width":13,"height":18},"action":{"type":"link","url":"/products/leather-tote"},"showTooltip":true,"pulse":true},{"id":"hs-boots","altText":"Chelsea boots","label":"Chelsea boots · $150","shape":"polygon","coords":{"x":66,"y":55,"width":22,"height":26},"points":[{"x":66,"y":60},{"x":80,"y":55},{"x":88,"y":72},{"x":70,"y":81}],"action":{"type":"deeplink","url":"/products/chelsea-boots","deeplink":"contentveda://products/chelsea-boots"},"showTooltip":true,"pulse":true}]' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
+  'banner': `<cv-banner id="interactive-preview" lazy-load="false" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' hotspots='[{"id":"hs-jacket","altText":"Quilted jacket","label":"Quilted jacket · $189","shape":"rect","coords":{"x":9,"y":20,"width":16,"height":30},"action":{"type":"link","url":"/products/quilted-jacket"},"showTooltip":true,"pulse":true},{"id":"hs-tote","altText":"Leather tote","label":"Leather tote · $240","shape":"oval","coords":{"x":44,"y":28,"width":13,"height":18},"action":{"type":"link","url":"/products/leather-tote"},"showTooltip":true,"pulse":true},{"id":"hs-boots","altText":"Chelsea boots","label":"Chelsea boots · $150","shape":"polygon","coords":{"x":66,"y":55,"width":22,"height":26},"points":[{"x":66,"y":60},{"x":80,"y":55},{"x":88,"y":72},{"x":70,"y":81}],"action":{"type":"deeplink","url":"/products/chelsea-boots","deeplink":"contentveda://products/chelsea-boots"},"showTooltip":true,"pulse":true}]' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
   
   'announcement-bar': `<cv-announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#245066" text-color="#ffffff" map-links='[{"url":"#"}]'></cv-announcement-bar>`,
   
-  'grid-banner': `<cv-grid-banner id="interactive-preview" columns="3" items='[{"id":"1","title":"Women\\\'s Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Men\\\'s Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></cv-grid-banner>`,
+  'grid-banner': `<cv-grid-banner id="interactive-preview" lazy-load="false" columns="3" items='[{"id":"1","title":"Womens Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Mens Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></cv-grid-banner>`,
   
-  'media-grid': `<cv-media-grid id="interactive-preview" primary-media='{"id":"p1","media":{"type":"image","url":"../assets/img/placeholder-05.svg"},"altText":"Primary Accent Banner"}' secondary-media='[{"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]'></cv-media-grid>`,
+  'media-grid': `<cv-media-grid id="interactive-preview" lazy-load="false" primary-media='{"id":"p1","media":{"type":"image","url":"../assets/img/placeholder-05.svg"},"altText":"Primary Accent Banner"}' secondary-media='[{"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]'></cv-media-grid>`,
   
-  'row-scrollable': `<cv-row-scrollable id="interactive-preview" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>`,
+  'row-scrollable': `<cv-row-scrollable id="interactive-preview" lazy-load="false" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>`,
   
-  'sliding-banner': `<cv-sliding-banner id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-13.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-14.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-01.svg"}}]' config='{"autoStart":true,"rotateAgain":true,"showDots":true,"showArrows":true,"animationEffect":"fade","backgroundEffect":"waves"}'></cv-sliding-banner>`,
+  'sliding-banner': `<cv-sliding-banner id="interactive-preview" lazy-load="false" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-13.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-14.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-01.svg"}}]' config='{"autoStart":true,"rotateAgain":true,"showDots":true,"showArrows":true,"animationEffect":"fade","backgroundEffect":"waves"}'></cv-sliding-banner>`,
   
-  'alternating-slider': `<cv-alternating-slider id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>`,
+  'alternating-slider': `<cv-alternating-slider id="interactive-preview" lazy-load="false" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>`,
   
-  'timer-widget': `<cv-timer-widget id="interactive-preview" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></cv-timer-widget>`,
+  'timer-widget': `<cv-timer-widget id="interactive-preview" lazy-load="false" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></cv-timer-widget>`,
   
-  'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" html-content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
+  'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" lazy-load="false" html-content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
   
   'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
 };
@@ -546,7 +546,9 @@ function buildControlsForm(component) {
 function buildPage(component) {
   const { name, slug, icon, examples, notes, previewLabel, previewCss, extra } = component;
 
-  const pascalName = name.replace(/\s+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
+  const pascalName = (slug === 'wysiwyg-renderer' || name === 'WYSIWYG Renderer')
+    ? 'WysiwygRenderer'
+    : name.replace(/\s+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
   const tagName = `cv-${slug}`;
   
   const props = getProps(name);
@@ -648,14 +650,26 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
       <div class="tab-group">
         <div class="tabs-bar">
           <button class="tab-btn active" data-tab="react">React</button>
+          <button class="tab-btn" data-tab="vue">Vue</button>
           <button class="tab-btn" data-tab="svelte">Svelte</button>
+          <button class="tab-btn" data-tab="solid">Solid</button>
+          <button class="tab-btn" data-tab="angular">Angular</button>
           <button class="tab-btn" data-tab="wc">Web Component</button>
         </div>
         <div class="tab-panel active" data-panel="react">
           ${codeBlock(examples.react, 'tsx')}
         </div>
+        <div class="tab-panel" data-panel="vue">
+          ${codeBlock(examples.vue || '', 'html')}
+        </div>
         <div class="tab-panel" data-panel="svelte">
           ${codeBlock(examples.svelte, 'svelte')}
+        </div>
+        <div class="tab-panel" data-panel="solid">
+          ${codeBlock(examples.solid || '', 'tsx')}
+        </div>
+        <div class="tab-panel" data-panel="angular">
+          ${codeBlock(examples.angular || '', 'ts')}
         </div>
         <div class="tab-panel" data-panel="wc">
           ${codeBlock(examples.wc, 'html')}
@@ -778,43 +792,52 @@ document.addEventListener('DOMContentLoaded', () => {
       if (name.startsWith('config.')) return;
 
       if (input.type === 'checkbox') {
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
         if (input.checked) {
-          preview.setAttribute(name, 'true');
-          directProps[camelCase(name)] = true;
+          preview.setAttribute(kebab, 'true');
+          directProps[camel] = true;
         } else {
+          preview.removeAttribute(kebab);
           preview.removeAttribute(name);
-          directProps[camelCase(name)] = false;
+          directProps[camel] = false;
         }
       } else if (input.tagName === 'TEXTAREA' && input.classList.contains('json-textarea')) {
         try {
           const raw = input.value.trim();
+          const camel = camelCase(name);
+          const kebab = kebabCase(name);
           if (raw) {
             const parsed = JSON.parse(raw);
             input.classList.remove('invalid');
-            // Assign as property and setAttribute
-            preview[camelCase(name)] = parsed;
-            preview.setAttribute(name, raw);
+            preview[camel] = parsed;
+            preview.setAttribute(kebab, raw);
+            directProps[camel] = parsed;
           } else {
+            preview.removeAttribute(kebab);
             preview.removeAttribute(name);
+            delete directProps[camel];
           }
         } catch (e) {
           input.classList.add('invalid');
         }
       } else {
-        const val = input.value;
+        const val = (input.type === 'range' || input.type === 'number') ? Number(input.value) : input.value;
         const camel = camelCase(name);
         const kebab = kebabCase(name);
-        preview.setAttribute(name, val);
-        preview.setAttribute(camel, val);
-        preview.setAttribute(kebab, val);
-        if (preview.props) {
-          preview.props[camel] = val;
-          preview.props[kebab] = val;
-        }
-        if (typeof preview.forceUpdate === 'function') preview.forceUpdate();
-        if (typeof preview.update === 'function') preview.update();
+        preview.setAttribute(kebab, String(val));
+        directProps[camel] = val;
       }
     });
+
+    if (preview.props) {
+      Object.assign(preview.props, directProps);
+    }
+    if (typeof preview.forceUpdate === 'function') {
+      preview.forceUpdate(directProps);
+    } else if (typeof preview.update === 'function') {
+      preview.update();
+    }
 
     // Update code blocks
     updateCodeBlocks();
@@ -837,18 +860,23 @@ document.addEventListener('DOMContentLoaded', () => {
       attrs.push({ name: a.name, value: a.value });
     }
 
-    // React prop string generator
+    const pascalName = "${pascalName}";
+    const wcTagName = "${tagName}";
+    const componentSlug = "${slug}";
+
+    function escapePropValue(v) {
+      return v.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
+    }
+
+    // React & Solid prop string generator
     const reactProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return \`\${camelName}={\${a.value}}\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
-
-    const pascalName = "${pascalName}";
-    const wcTagName = "${tagName}";
 
     const reactCode = \`import \${pascalName} from '@contentveda/ui/react/\${pascalName}';
 import '@contentveda/ui/theme.css';
@@ -857,29 +885,82 @@ import '@contentveda/ui/theme.css';
   \${reactProps.join('\\n  ')}
 />\`;
 
+    // Vue prop string generator
+    const vueProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return \`:\${camelName}="true"\`;
+      if (isJson) return \`:\${camelName}='\${a.value}'\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
+    });
+
+    const vueCode = \`<\` + \`script setup>
+import \${pascalName} from '@contentveda/ui/vue/\${pascalName}.vue';
+import '@contentveda/ui/theme.css';
+</\` + \`script>
+
+<template>
+  <\${pascalName}
+    \${vueProps.join('\\n    ')}
+  />
+</template>\`;
+
     const svelteProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return \`\${camelName}={\${a.value}}\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
 
-    const svelteCode = \`<script lang="ts">
+    const svelteCode = \`<\` + \`script lang="ts">
   import \${pascalName} from '@contentveda/ui/svelte/\${pascalName}.svelte';
-<\\/script>
+</\` + \`script>
 
 <\${pascalName}
   \${svelteProps.join('\\n  ')}
 />\`;
+
+    const solidCode = \`import \${pascalName} from '@contentveda/ui/solid/\${pascalName}';
+import '@contentveda/ui/theme.css';
+
+<\${pascalName}
+  \${reactProps.join('\\n  ')}
+/>\`;
+
+    // Angular prop string generator
+    const angularProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return \`[\${camelName}]="true"\`;
+      if (isJson) return \`[\${camelName}]='\${a.value}'\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
+    });
+
+    const angularCode = \`import { Component } from '@angular/core';
+import { \${pascalName}Module } from '@contentveda/ui/angular/\${pascalName}';
+
+@Component({
+  selector: 'app-example',
+  standalone: true,
+  imports: [\${pascalName}Module],
+  template: \\\`
+    <\${componentSlug}
+      \${angularProps.join('\\n      ')}
+    ></\${componentSlug}>
+  \\\`,
+})
+export class ExampleComponent {}\`;
 
     const wcAttrs = attrs.map(a => {
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       if (isJson) {
         return \`\${a.name}='\${a.value}'\`;
       }
-      return \`\${a.name}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${a.name}="\${escapePropValue(a.value)}"\`;
     });
 
     const wcCode = \`<\` + \`script type="module" src="node_modules/@contentveda/ui/webcomponents/\${pascalName}.js"></\` + \`script>
@@ -892,8 +973,17 @@ import '@contentveda/ui/theme.css';
     const reactPanel = document.querySelector('[data-panel="react"] pre code');
     if (reactPanel) reactPanel.innerHTML = clientHighlight(reactCode, 'tsx');
 
+    const vuePanel = document.querySelector('[data-panel="vue"] pre code');
+    if (vuePanel) vuePanel.innerHTML = clientHighlight(vueCode, 'html');
+
     const sveltePanel = document.querySelector('[data-panel="svelte"] pre code');
     if (sveltePanel) sveltePanel.innerHTML = clientHighlight(svelteCode, 'svelte');
+
+    const solidPanel = document.querySelector('[data-panel="solid"] pre code');
+    if (solidPanel) solidPanel.innerHTML = clientHighlight(solidCode, 'tsx');
+
+    const angularPanel = document.querySelector('[data-panel="angular"] pre code');
+    if (angularPanel) angularPanel.innerHTML = clientHighlight(angularCode, 'ts');
 
     const wcPanel = document.querySelector('[data-panel="wc"] pre code');
     if (wcPanel) wcPanel.innerHTML = clientHighlight(wcCode, 'html');
@@ -924,7 +1014,10 @@ function buildLandingPage() {
           </div>
           <div class="card-footer">
             <span class="card-tag tag-react">React</span>
+            <span class="card-tag tag-vue">Vue</span>
             <span class="card-tag tag-svelte">Svelte</span>
+            <span class="card-tag tag-solid">Solid</span>
+            <span class="card-tag tag-angular">Angular</span>
             <span class="card-tag tag-wc">WC</span>
           </div>
         </a>`).join('\n');
@@ -943,7 +1036,7 @@ function buildLandingPage() {
       window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
     }
   </script>
-  <meta name="description" content="A universal, framework-agnostic UI component library. Write once in Mitosis and compile to React, Svelte, and Web Components." />
+  <meta name="description" content="A universal, framework-agnostic UI component library. Write once in Mitosis and compile to React, Vue, Svelte, Solid, Angular, and Web Components." />
   ${FAVICON_TAGS('')}
   ${PREFERENCES_SCRIPT}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -992,7 +1085,7 @@ function buildLandingPage() {
         </h1>
         <p class="hero-subtitle">
           A universal, premium component library to build stunning web experiences
-          natively in React, Svelte, and Web Components.
+          natively in React, Vue, Svelte, Solid, Angular, and Web Components.
         </p>
         <div class="hero-actions">
           <a href="components/banner.html" class="btn-primary">
@@ -1004,7 +1097,10 @@ function buildLandingPage() {
         </div>
         <div class="feature-pills">
           <span class="feature-pill"><span class="dot dot-react"></span> React / Next.js</span>
+          <span class="feature-pill"><span class="dot dot-vue"></span> Vue / Nuxt</span>
           <span class="feature-pill"><span class="dot dot-svelte"></span> Svelte / SvelteKit</span>
+          <span class="feature-pill"><span class="dot dot-solid"></span> SolidJS</span>
+          <span class="feature-pill"><span class="dot dot-angular"></span> Angular</span>
           <span class="feature-pill"><span class="dot dot-wc"></span> Web Components</span>
           <span class="feature-pill"><span class="dot dot-ts"></span> TypeScript</span>
           <span class="feature-pill"><span class="dot dot-css"></span> CSS Variables</span>
@@ -1017,22 +1113,40 @@ function buildLandingPage() {
         </div>
 
         <!-- Runnable example apps, one per compiled target -->
-        <div class="example-apps" style="max-width:640px;margin:0 auto 3rem;">
+        <div class="example-apps" style="max-width:680px;margin:0 auto 3rem;">
           <p style="font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);margin:0 0 0.75rem;">
             Runnable example apps
           </p>
           <div style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
             <a href="${GITHUB_URL}/tree/main/examples/react-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              <span class="dot dot-react"></span> React demo
+              <span class="dot dot-react"></span> React
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/next-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-react"></span> Next.js
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/vue-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-vue"></span> Vue 3
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/nuxt-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-vue"></span> Nuxt 3
             </a>
             <a href="${GITHUB_URL}/tree/main/examples/svelte-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              <span class="dot dot-svelte"></span> Svelte demo
+              <span class="dot dot-svelte"></span> Svelte
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/sveltekit-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-svelte"></span> SvelteKit
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/solid-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-solid"></span> SolidJS
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/angular-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-angular"></span> Angular
             </a>
             <a href="${GITHUB_URL}/tree/main/examples/wc-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              <span class="dot dot-wc"></span> Web Component demo
+              <span class="dot dot-wc"></span> Web Component
             </a>
             <a href="${GITHUB_URL}/tree/main/examples" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              📁 All examples
+              📁 All 9 examples
             </a>
           </div>
         </div>
@@ -1045,7 +1159,7 @@ function buildLandingPage() {
           <div class="stat-label">Components</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value">3</div>
+          <div class="stat-value">6</div>
           <div class="stat-label">Frameworks</div>
         </div>
         <div class="stat-item">
