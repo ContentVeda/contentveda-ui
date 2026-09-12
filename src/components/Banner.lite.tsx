@@ -70,7 +70,6 @@ export default function Banner(props: BannerProps) {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null, resizeObserver: null });
 
   const state = useStore({
     isVisible: false,
@@ -159,23 +158,23 @@ export default function Banner(props: BannerProps) {
         minHeight: `${state.hotspotMinTarget}px`,
         transform: 'translate(-50%, -50%)'
       };
-    }
+    },
+    animContext: { animationFrameId: null, resizeHandler: null, resizeObserver: null } as BackgroundEffectContext,
+    observerBox: { disconnect: null as (() => void) | null }
   });
-
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
 
   onMount(() => {
     if (props.lazyLoad === false) {
       state.isVisible = true;
-      if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, animContext);
+      if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, state.animContext);
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         rootRef,
         () => {
           state.isVisible = true;
-          if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, animContext);
+          if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, state.animContext);
         },
         props.lazyThreshold ?? 0.1,
         props.lazyRootMargin ?? '200px'
@@ -187,12 +186,12 @@ export default function Banner(props: BannerProps) {
   // stable derived string), not on every unrelated re-render — e.g. toggling
   // isLoading or hotspot state shouldn't tear down and restart the animation.
   onUpdate(() => {
-    if (state.isVisible && canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, animContext);
+    if (state.isVisible && canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, state.animContext);
   }, [state.backgroundEffectClass, canvasRef]);
 
   onUnMount(() => {
-    if (observerBox.disconnect) observerBox.disconnect();
-    state.plugin.stop(animContext);
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
+    state.plugin.stop(state.animContext);
   });
 
   return (

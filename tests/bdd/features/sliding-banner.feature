@@ -11,7 +11,7 @@ Feature: SlidingBanner
     And it should contain 3 elements matching "button.cv-sliding-dot"
     And it should contain 1 elements matching "button.cv-sliding-arrow.prev"
     And it should contain 1 elements matching "button.cv-sliding-arrow.next"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario Outline: Renders every transition effect without error
     Given I mount the "cv-sliding-banner" component as "SlidingBanner" with:

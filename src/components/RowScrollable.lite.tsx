@@ -59,20 +59,12 @@ export default function RowScrollable(props: RowScrollableProps) {
           behavior: 'smooth'
         });
       }
-    }
+    },
+    
+    observerBox: { disconnect: null as (() => void) | null, row: null as any }
   });
 
-  /*
-    Both observers live in one ref, and the row observer is typed structurally
-    rather than as `ResizeObserver`.
 
-    A second `useRef` typed `useRef<{ observer: ResizeObserver | null }>(...)`
-    generated *no declaration at all* in the Svelte target while its usages were
-    still emitted, so the component died with `rowObserverBox is not defined` the
-    moment it rendered. The other three refs here survive because none of them
-    names a DOM lib type in type position. Keep it that way.
-  */
-  const observerBox = useRef<any>({ disconnect: null, row: null });
 
   onMount(() => {
     const el = rowRef;
@@ -83,8 +75,8 @@ export default function RowScrollable(props: RowScrollableProps) {
         state.checkScroll();
       }, 150);
       if (typeof ResizeObserver !== 'undefined') {
-        observerBox.row = new ResizeObserver(() => state.checkScroll());
-        observerBox.row.observe(el);
+        state.observerBox.row = new ResizeObserver(() => state.checkScroll());
+        state.observerBox.row.observe(el);
       }
     }
     window.addEventListener('resize', state.checkScroll);
@@ -94,7 +86,7 @@ export default function RowScrollable(props: RowScrollableProps) {
       return;
     }
     if (containerRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         containerRef,
         () => { state.isVisible = true; },
         props.lazyThreshold ?? 0.1,
@@ -115,10 +107,10 @@ export default function RowScrollable(props: RowScrollableProps) {
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', state.checkScroll);
     }
-    if (observerBox.disconnect) observerBox.disconnect();
-    if (observerBox.row) {
-      observerBox.row.disconnect();
-      observerBox.row = null;
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
+    if (state.observerBox.row) {
+      state.observerBox.row.disconnect();
+      state.observerBox.row = null;
     }
   });
 

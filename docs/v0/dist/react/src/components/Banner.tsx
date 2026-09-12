@@ -84,16 +84,6 @@ import type {
 function Banner(props: BannerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animContext = useRef<BackgroundEffectContext>({
-    animationFrameId: null,
-    resizeHandler: null,
-    resizeObserver: null,
-  });
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
   const [isVisible, setIsVisible] = useState(() => false);
 
   function shouldMount() {
@@ -206,6 +196,16 @@ function Banner(props: BannerProps) {
     };
   }
 
+  const [animContext, setAnimContext] = useState(() => ({
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  }));
+
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       setIsVisible(true);
@@ -213,12 +213,12 @@ function Banner(props: BannerProps) {
         plugin().start(
           canvasRef.current,
           backgroundEffectClass() as BackgroundEffectName,
-          animContext.current
+          animContext
         );
       return;
     }
     if (rootRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         rootRef.current,
         () => {
           setIsVisible(true);
@@ -226,7 +226,7 @@ function Banner(props: BannerProps) {
             plugin().start(
               canvasRef.current,
               backgroundEffectClass() as BackgroundEffectName,
-              animContext.current
+              animContext
             );
         },
         props.lazyThreshold ?? 0.1,
@@ -239,13 +239,13 @@ function Banner(props: BannerProps) {
       plugin().start(
         canvasRef.current,
         backgroundEffectClass() as BackgroundEffectName,
-        animContext.current
+        animContext
       );
   }, [backgroundEffectClass(), canvasRef.current]);
   useEffect(() => {
     return () => {
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
-      plugin().stop(animContext.current);
+      if (observerBox.disconnect) observerBox.disconnect();
+      plugin().stop(animContext);
     };
   }, []);
 

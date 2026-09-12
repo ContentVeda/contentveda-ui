@@ -45,11 +45,6 @@ import { observeLazyMount } from "../utils/lazyObserver";
 
 function AlternatingSlider(props: AlternatingSliderProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
   const [currentIndex, setCurrentIndex] = useState(() => 0);
 
   const [intervalId, setIntervalId] = useState(() => null);
@@ -112,6 +107,10 @@ function AlternatingSlider(props: AlternatingSliderProps) {
     }
   }
 
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       setIsVisible(true);
@@ -119,7 +118,7 @@ function AlternatingSlider(props: AlternatingSliderProps) {
       return;
     }
     if (rootRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         rootRef.current,
         () => {
           setIsVisible(true);
@@ -134,7 +133,7 @@ function AlternatingSlider(props: AlternatingSliderProps) {
   useEffect(() => {
     return () => {
       stopAutoPlay();
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
+      if (observerBox.disconnect) observerBox.disconnect();
     };
   }, []);
 

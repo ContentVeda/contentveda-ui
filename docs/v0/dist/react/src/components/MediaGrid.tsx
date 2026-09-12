@@ -28,11 +28,6 @@ import { observeLazyMount } from "../utils/lazyObserver";
 
 function MediaGrid(props: MediaGridProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
   const [isVisible, setIsVisible] = useState(() => false);
 
   function shouldMount() {
@@ -43,13 +38,17 @@ function MediaGrid(props: MediaGridProps) {
     return !!props.isLoading || !shouldMount();
   }
 
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       setIsVisible(true);
       return;
     }
     if (rootRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         rootRef.current,
         () => {
           setIsVisible(true);
@@ -62,7 +61,7 @@ function MediaGrid(props: MediaGridProps) {
 
   useEffect(() => {
     return () => {
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
+      if (observerBox.disconnect) observerBox.disconnect();
     };
   }, []);
 
@@ -83,6 +82,13 @@ function MediaGrid(props: MediaGridProps) {
             <a
               className="cv-media-primary"
               href={props.primaryMedia.mapLinks?.[0]?.url || undefined}
+              aria-label={
+                props.primaryMedia.mapLinks?.[0]?.url
+                  ? props.primaryMedia.altText ||
+                    props.primaryMedia.title ||
+                    "Media content"
+                  : undefined
+              }
             >
               {props.primaryMedia.media?.type === "video" ? (
                 <video
@@ -112,6 +118,11 @@ function MediaGrid(props: MediaGridProps) {
                   className="cv-media-secondary-item"
                   href={item.mapLinks?.[0]?.url || undefined}
                   key={item.id}
+                  aria-label={
+                    item.mapLinks?.[0]?.url
+                      ? item.altText || item.title || "Media content"
+                      : undefined
+                  }
                 >
                   {item.media?.type === "video" ? (
                     <video
