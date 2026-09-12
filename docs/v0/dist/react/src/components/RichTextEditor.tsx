@@ -968,8 +968,6 @@ function RichTextEditor(props: RichTextEditorProps) {
                   <path d="m6 16 6-12 6 12" />
                   <path d="M8 12h8" />
                 </svg>
-                // lgtm[js/xss, js/html-constructed-from-input] //
-                codeql[js/xss, js/html-constructed-from-input]
                 <input
                   type="color"
                   aria-label="Text Color"
@@ -1008,8 +1006,6 @@ function RichTextEditor(props: RichTextEditorProps) {
                   <path d="m2 2 7.586 7.586" />
                   <circle cx="11" cy="11" r="2" />
                 </svg>
-                // lgtm[js/xss, js/html-constructed-from-input] //
-                codeql[js/xss, js/html-constructed-from-input]
                 <input
                   type="color"
                   aria-label="Background Color"

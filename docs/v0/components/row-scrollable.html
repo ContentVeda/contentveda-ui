@@ -251,7 +251,7 @@ z"/>
               <span class="preview-url">&lt;cv-row-scrollable&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <cv-row-scrollable id="interactive-preview" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>
+              <cv-row-scrollable id="interactive-preview" lazy-load="false" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>
             </div>
           </div>
         </div>
@@ -359,7 +359,10 @@ z"/>
       <div class="tab-group">
         <div class="tabs-bar">
           <button class="tab-btn active" data-tab="react">React</button>
+          <button class="tab-btn" data-tab="vue">Vue</button>
           <button class="tab-btn" data-tab="svelte">Svelte</button>
+          <button class="tab-btn" data-tab="solid">Solid</button>
+          <button class="tab-btn" data-tab="angular">Angular</button>
           <button class="tab-btn" data-tab="wc">Web Component</button>
         </div>
         <div class="tab-panel active" data-panel="react">
@@ -377,6 +380,25 @@ z"/>
 &lt;<span class="tag">RowScrollable</span> title=<span class="str">"Featured Products"</span> items={items} /&gt;</code></pre>
     </div>
         </div>
+        <div class="tab-panel" data-panel="vue">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code>&lt;<span class="tag">script</span> setup&gt;
+<span class="kw">import</span> RowScrollable <span class="kw">from</span> <span class="str">'@contentveda/ui/vue/RowScrollable.vue'</span>;
+<span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
+
+<span class="kw">const</span> items = [
+  { id: <span class="str">'1'</span>, title: <span class="str">'Linen Dress'</span>,  subtitle: <span class="str">'$89.00'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/p1.jpg'</span> }, mapLinks: [{ url: <span class="str">'/p/1'</span> }] },
+  { id: <span class="str">'2'</span>, title: <span class="str">'Oxford Shirt'</span>, subtitle: <span class="str">'$55.00'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/p2.jpg'</span> }, mapLinks: [{ url: <span class="str">'/p/2'</span> }] },
+];
+&lt;/<span class="tag">script</span>&gt;
+
+&lt;<span class="tag">template</span>&gt;
+  &lt;<span class="tag">RowScrollable</span> title=<span class="str">"Featured Products"</span> :items=<span class="str">"items"</span> /&gt;
+&lt;/<span class="tag">template</span>&gt;</code></pre>
+    </div>
+        </div>
         <div class="tab-panel" data-panel="svelte">
           
     <div class="code-block">
@@ -389,6 +411,44 @@ z"/>
 &lt;/<span class="tag">script</span>&gt;
 
 &lt;<span class="tag">RowScrollable</span> title=<span class="str">"Featured"</span> {items} /&gt;</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="solid">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code><span class="kw">import</span> RowScrollable <span class="kw">from</span> <span class="str">'@contentveda/ui/solid/RowScrollable'</span>;
+<span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
+
+<span class="kw">const</span> items = [
+  { id: <span class="str">'1'</span>, title: <span class="str">'Linen Dress'</span>,  subtitle: <span class="str">'$89.00'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/p1.jpg'</span> }, mapLinks: [{ url: <span class="str">'/p/1'</span> }] },
+  { id: <span class="str">'2'</span>, title: <span class="str">'Oxford Shirt'</span>, subtitle: <span class="str">'$55.00'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/p2.jpg'</span> }, mapLinks: [{ url: <span class="str">'/p/2'</span> }] },
+];
+
+&lt;<span class="tag">RowScrollable</span> title=<span class="str">"Featured Products"</span> items={items} /&gt;</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="angular">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code><span class="kw">import</span> { Component } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { RowScrollableModule } <span class="kw">from</span> <span class="str">'@contentveda/ui/angular/RowScrollable'</span>;
+
+@Component({
+  selector: <span class="str">'app-example'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [RowScrollableModule],
+  template: <span class="str">`
+    &lt;<span class="tag">row-scrollable</span> title="Featured Products" [items]="items"&gt;&lt;/<span class="tag">row-scrollable</span>&gt;
+  `</span>
+})
+<span class="kw">export</span> class ExampleComponent {
+  items = [
+    { id: <span class="str">'1'</span>, title: <span class="str">'Linen Dress'</span>,  subtitle: <span class="str">'$89.00'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/p1.jpg'</span> }, mapLinks: [{ url: <span class="str">'/p/1'</span> }] },
+    { id: <span class="str">'2'</span>, title: <span class="str">'Oxford Shirt'</span>, subtitle: <span class="str">'$55.00'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/p2.jpg'</span> }, mapLinks: [{ url: <span class="str">'/p/2'</span> }] },
+  ];
+}</code></pre>
     </div>
         </div>
         <div class="tab-panel" data-panel="wc">
@@ -601,43 +661,52 @@ document.addEventListener('DOMContentLoaded', () => {
       if (name.startsWith('config.')) return;
 
       if (input.type === 'checkbox') {
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
         if (input.checked) {
-          preview.setAttribute(name, 'true');
-          directProps[camelCase(name)] = true;
+          preview.setAttribute(kebab, 'true');
+          directProps[camel] = true;
         } else {
+          preview.removeAttribute(kebab);
           preview.removeAttribute(name);
-          directProps[camelCase(name)] = false;
+          directProps[camel] = false;
         }
       } else if (input.tagName === 'TEXTAREA' && input.classList.contains('json-textarea')) {
         try {
           const raw = input.value.trim();
+          const camel = camelCase(name);
+          const kebab = kebabCase(name);
           if (raw) {
             const parsed = JSON.parse(raw);
             input.classList.remove('invalid');
-            // Assign as property and setAttribute
-            preview[camelCase(name)] = parsed;
-            preview.setAttribute(name, raw);
+            preview[camel] = parsed;
+            preview.setAttribute(kebab, raw);
+            directProps[camel] = parsed;
           } else {
+            preview.removeAttribute(kebab);
             preview.removeAttribute(name);
+            delete directProps[camel];
           }
         } catch (e) {
           input.classList.add('invalid');
         }
       } else {
-        const val = input.value;
+        const val = (input.type === 'range' || input.type === 'number') ? Number(input.value) : input.value;
         const camel = camelCase(name);
         const kebab = kebabCase(name);
-        preview.setAttribute(name, val);
-        preview.setAttribute(camel, val);
-        preview.setAttribute(kebab, val);
-        if (preview.props) {
-          preview.props[camel] = val;
-          preview.props[kebab] = val;
-        }
-        if (typeof preview.forceUpdate === 'function') preview.forceUpdate();
-        if (typeof preview.update === 'function') preview.update();
+        preview.setAttribute(kebab, String(val));
+        directProps[camel] = val;
       }
     });
+
+    if (preview.props) {
+      Object.assign(preview.props, directProps);
+    }
+    if (typeof preview.forceUpdate === 'function') {
+      preview.forceUpdate(directProps);
+    } else if (typeof preview.update === 'function') {
+      preview.update();
+    }
 
     // Update code blocks
     updateCodeBlocks();
@@ -660,18 +729,23 @@ document.addEventListener('DOMContentLoaded', () => {
       attrs.push({ name: a.name, value: a.value });
     }
 
-    // React prop string generator
+    const pascalName = "RowScrollable";
+    const wcTagName = "cv-row-scrollable";
+    const componentSlug = "row-scrollable";
+
+    function escapePropValue(v) {
+      return v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    // React & Solid prop string generator
     const reactProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return `${camelName}={${a.value}}`;
-      return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
     });
-
-    const pascalName = "RowScrollable";
-    const wcTagName = "cv-row-scrollable";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';
@@ -680,29 +754,82 @@ import '@contentveda/ui/theme.css';
   ${reactProps.join('\n  ')}
 />`;
 
+    // Vue prop string generator
+    const vueProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return `:${camelName}="true"`;
+      if (isJson) return `:${camelName}='${a.value}'`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
+    });
+
+    const vueCode = `<` + `script setup>
+import ${pascalName} from '@contentveda/ui/vue/${pascalName}.vue';
+import '@contentveda/ui/theme.css';
+</` + `script>
+
+<template>
+  <${pascalName}
+    ${vueProps.join('\n    ')}
+  />
+</template>`;
+
     const svelteProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return `${camelName}={${a.value}}`;
-      return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
     });
 
-    const svelteCode = `<script lang="ts">
+    const svelteCode = `<` + `script lang="ts">
   import ${pascalName} from '@contentveda/ui/svelte/${pascalName}.svelte';
-<\/script>
+</` + `script>
 
 <${pascalName}
   ${svelteProps.join('\n  ')}
 />`;
+
+    const solidCode = `import ${pascalName} from '@contentveda/ui/solid/${pascalName}';
+import '@contentveda/ui/theme.css';
+
+<${pascalName}
+  ${reactProps.join('\n  ')}
+/>`;
+
+    // Angular prop string generator
+    const angularProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return `[${camelName}]="true"`;
+      if (isJson) return `[${camelName}]='${a.value}'`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
+    });
+
+    const angularCode = `import { Component } from '@angular/core';
+import { ${pascalName}Module } from '@contentveda/ui/angular/${pascalName}';
+
+@Component({
+  selector: 'app-example',
+  standalone: true,
+  imports: [${pascalName}Module],
+  template: \`
+    <${componentSlug}
+      ${angularProps.join('\n      ')}
+    ></${componentSlug}>
+  \`,
+})
+export class ExampleComponent {}`;
 
     const wcAttrs = attrs.map(a => {
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       if (isJson) {
         return `${a.name}='${a.value}'`;
       }
-      return `${a.name}="${a.value.replace(/"/g, '\\"')}"`;
+      return `${a.name}="${escapePropValue(a.value)}"`;
     });
 
     const wcCode = `<` + `script type="module" src="node_modules/@contentveda/ui/webcomponents/${pascalName}.js"></` + `script>
@@ -715,8 +842,17 @@ import '@contentveda/ui/theme.css';
     const reactPanel = document.querySelector('[data-panel="react"] pre code');
     if (reactPanel) reactPanel.innerHTML = clientHighlight(reactCode, 'tsx');
 
+    const vuePanel = document.querySelector('[data-panel="vue"] pre code');
+    if (vuePanel) vuePanel.innerHTML = clientHighlight(vueCode, 'html');
+
     const sveltePanel = document.querySelector('[data-panel="svelte"] pre code');
     if (sveltePanel) sveltePanel.innerHTML = clientHighlight(svelteCode, 'svelte');
+
+    const solidPanel = document.querySelector('[data-panel="solid"] pre code');
+    if (solidPanel) solidPanel.innerHTML = clientHighlight(solidCode, 'tsx');
+
+    const angularPanel = document.querySelector('[data-panel="angular"] pre code');
+    if (angularPanel) angularPanel.innerHTML = clientHighlight(angularCode, 'ts');
 
     const wcPanel = document.querySelector('[data-panel="wc"] pre code');
     if (wcPanel) wcPanel.innerHTML = clientHighlight(wcCode, 'html');
