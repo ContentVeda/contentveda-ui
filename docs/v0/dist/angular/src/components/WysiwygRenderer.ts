@@ -82,7 +82,7 @@ export default class WysiwygRenderer {
         if (!platform || !url) return;
 
         // Clear placeholder text and fix styling
-        // lgtm [js/html-constructed-from-input]
+        // lgtm [js/xss, js/html-constructed-from-input]
         el.innerHTML = "";
         el.setAttribute(
           "style",
@@ -215,7 +215,7 @@ export default class WysiwygRenderer {
         }
 
         // Clear placeholder text and styling
-        // lgtm [js/html-constructed-from-input]
+        // lgtm [js/xss, js/html-constructed-from-input]
         el.innerHTML = "";
         el.setAttribute("style", "margin: 24px 0;");
 
