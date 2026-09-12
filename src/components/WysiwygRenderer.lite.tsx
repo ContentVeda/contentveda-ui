@@ -23,6 +23,17 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
     get renderedHtml() {
       return state.shouldMount ? props.htmlContent : '';
     },
+    getTrustedHttpUrl(rawUrl: string): string | null {
+      try {
+        const parsed = new URL(rawUrl, window.location.origin);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return null;
+        }
+        return parsed.toString();
+      } catch {
+        return null;
+      }
+    },
     processContent() {
       setTimeout(() => {
         if (!containerRef) return;
@@ -55,27 +66,21 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
               iframe.style.cssText = "border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);";
               el.appendChild(iframe);
             } else {
+              const trustedUrl = state.getTrustedHttpUrl(url);
+              if (!trustedUrl) return;
               const link = document.createElement('a');
-              try {
-                const parsedUrl = new URL(url, window.location.origin);
-                link.href = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank";
-              } catch {
-                link.href = "about:blank";
-              }
+              link.href = trustedUrl;
               link.target = "_blank";
               link.style.cssText = "color: var(--cv-color-link, #7fc4de); text-decoration: underline;";
               link.textContent = "View Video on YouTube";
               el.appendChild(link);
             }
           } else if (platform === 'facebook') {
+            const trustedUrl = state.getTrustedHttpUrl(url);
+            if (!trustedUrl) return;
             const fbDiv = document.createElement('div');
             fbDiv.className = 'fb-post';
-            try {
-              const parsedUrl = new URL(url, window.location.origin);
-              fbDiv.setAttribute('data-href', parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank");
-            } catch {
-              fbDiv.setAttribute('data-href', "about:blank");
-            }
+            fbDiv.setAttribute('data-href', trustedUrl);
             fbDiv.setAttribute('data-width', '500');
             el.appendChild(fbDiv);
             if (!document.getElementById('facebook-jssdk')) {
@@ -93,13 +98,10 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
             const bq = document.createElement('blockquote');
             bq.className = 'twitter-tweet';
             bq.setAttribute('data-theme', 'dark');
+            const trustedUrl = state.getTrustedHttpUrl(url);
+            if (!trustedUrl) return;
             const a = document.createElement('a');
-            try {
-              const parsedUrl = new URL(url, window.location.origin);
-              a.href = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank";
-            } catch {
-              a.href = "about:blank";
-            }
+            a.href = trustedUrl;
             bq.appendChild(a);
             el.appendChild(bq);
             if (!document.getElementById('twitter-wjs')) {
@@ -112,14 +114,11 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
               (window as any).twttr.widgets.load(el);
             }
           } else if (platform === 'instagram') {
+            const trustedUrl = state.getTrustedHttpUrl(url);
+            if (!trustedUrl) return;
             const igBq = document.createElement('blockquote');
             igBq.className = 'instagram-media';
-            try {
-              const parsedUrl = new URL(url, window.location.origin);
-              igBq.setAttribute('data-instgrm-permalink', parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank");
-            } catch {
-              igBq.setAttribute('data-instgrm-permalink', "about:blank");
-            }
+            igBq.setAttribute('data-instgrm-permalink', trustedUrl);
             igBq.setAttribute('data-instgrm-version', '14');
             igBq.style.cssText = "background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);";
             el.appendChild(igBq);
@@ -134,13 +133,10 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
             }
           } else if (platform === 'linkedin') {
              const embedUrl = url.includes('/embed/') ? url : url.replace('/post/', '/embed/feed/update/');
+             const trustedUrl = state.getTrustedHttpUrl(embedUrl);
+             if (!trustedUrl) return;
              const liIframe = document.createElement('iframe');
-             try {
-               const parsedUrl = new URL(embedUrl, window.location.origin);
-               liIframe.src = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank";
-             } catch {
-               liIframe.src = "about:blank";
-             }
+             liIframe.src = trustedUrl;
              liIframe.height = "600";
              liIframe.width = "504";
              liIframe.setAttribute('frameborder', '0');
