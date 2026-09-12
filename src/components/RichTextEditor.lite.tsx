@@ -722,16 +722,12 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             <Show when={state.showToolbarOption('foreColor')}>
               <label class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative" title="Text Color">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/></svg>
-                // lgtm[js/xss, js/html-constructed-from-input]
-// codeql[js/xss, js/html-constructed-from-input]
                 <input type="color" aria-label="Text Color" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" onMouseDown={() => state.saveSelection()} onChange={(e) => { state.restoreSelection(); document.execCommand('foreColor', false, (e.target as HTMLInputElement).value); state.syncContent(); }} />
               </label>
             </Show>
             <Show when={state.showToolbarOption('backColor')}>
               <label class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative" title="Highlight Color">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-                // lgtm[js/xss, js/html-constructed-from-input]
-// codeql[js/xss, js/html-constructed-from-input]
                 <input type="color" aria-label="Background Color" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" onMouseDown={() => state.saveSelection()} onChange={(e) => { state.restoreSelection(); document.execCommand('hiliteColor', false, (e.target as HTMLInputElement).value); document.execCommand('backColor', false, (e.target as HTMLInputElement).value); state.syncContent(); }} />
               </label>
             </Show>

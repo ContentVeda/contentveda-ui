@@ -355,11 +355,8 @@
               >
                 <path d="M4 20h16"></path>
                 <path d="m6 16 6-12 6 12"></path>
-                <path d="M8 12h8"></path>
-              </svg>
-              // lgtm[js/xss, js/html-constructed-from-input] // codeql[js/xss,
-              js/html-constructed-from-input]
-              <input
+                <path d="M8 12h8"></path></svg
+              ><input
                 type="color"
                 aria-label="Text Color"
                 class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
@@ -392,11 +389,8 @@
                 <path d="m12 19 7-7 3 3-7 7-3-3z"></path>
                 <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
                 <path d="m2 2 7.586 7.586"></path>
-                <circle cx="11" cy="11" r="2"></circle>
-              </svg>
-              // lgtm[js/xss, js/html-constructed-from-input] // codeql[js/xss,
-              js/html-constructed-from-input]
-              <input
+                <circle cx="11" cy="11" r="2"></circle></svg
+              ><input
                 type="color"
                 aria-label="Background Color"
                 class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"

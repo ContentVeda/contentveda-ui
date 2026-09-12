@@ -478,8 +478,9 @@ root.render(${jsxComponent || '<div />'});
 </script>`;
 
     jsCode = ''; // Leave JS pane empty because all logic is in the module script
-  } else if (framework === 'svelte') {
-    return { framework, unsupported: true };
+  } else if (['svelte', 'vue', 'solid', 'angular'].includes(framework)) {
+    const frameworkName = framework.charAt(0).toUpperCase() + framework.slice(1);
+    return { framework, unsupported: true, frameworkName };
   } else {
     // Web Component
     htmlCode = `<!-- Load Theme -->
@@ -503,7 +504,7 @@ function initJsfiddle() {
     const generated = generateLiveDemoCode();
     if (!generated) return;
     if (generated.unsupported) {
-      alert("Svelte components require a compiler/bundler environment (like Vite or Rollup) to run. They cannot be executed natively in JSFiddle.\\n\\nPlease check out the Web Component or React tabs for live JSFiddle demos!");
+      alert(`${generated.frameworkName || 'Framework'} components require a compiler/bundler environment (like Vite, Angular CLI, or Nuxt) to run. They cannot be executed natively in JSFiddle.\n\nPlease check out the Web Component or React tabs for live JSFiddle demos!`);
       return;
     }
     const { htmlCode, jsCode } = generated;
@@ -550,7 +551,7 @@ function initCodesandbox() {
     const generated = generateLiveDemoCode();
     if (!generated) return;
     if (generated.unsupported) {
-      alert("Svelte components require a compiler/bundler environment (like Vite or Rollup) to run. They cannot be executed natively in this static CodeSandbox template.\\n\\nPlease check out the Web Component or React tabs for live demos!");
+      alert(`${generated.frameworkName || 'Framework'} components require a compiler/bundler environment (like Vite, Angular CLI, or Nuxt) to run. They cannot be executed natively in this static CodeSandbox template.\n\nPlease check out the Web Component or React tabs for live demos!`);
       return;
     }
     const { htmlCode } = generated;
