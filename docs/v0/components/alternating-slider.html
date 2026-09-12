@@ -251,7 +251,7 @@ z"/>
               <span class="preview-url">&lt;cv-alternating-slider&gt; Playground</span>
             </div>
             <div class="preview-body-flush" id="preview-container">
-              <cv-alternating-slider id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>
+              <cv-alternating-slider id="interactive-preview" lazy-load="false" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>
             </div>
           </div>
         </div>
@@ -387,7 +387,10 @@ z"/>
       <div class="tab-group">
         <div class="tabs-bar">
           <button class="tab-btn active" data-tab="react">React</button>
+          <button class="tab-btn" data-tab="vue">Vue</button>
           <button class="tab-btn" data-tab="svelte">Svelte</button>
+          <button class="tab-btn" data-tab="solid">Solid</button>
+          <button class="tab-btn" data-tab="angular">Angular</button>
           <button class="tab-btn" data-tab="wc">Web Component</button>
         </div>
         <div class="tab-panel active" data-panel="react">
@@ -410,6 +413,28 @@ z"/>
 /&gt;</code></pre>
     </div>
         </div>
+        <div class="tab-panel" data-panel="vue">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code>&lt;<span class="tag">script</span> setup&gt;
+<span class="kw">import</span> AlternatingSlider <span class="kw">from</span> <span class="str">'@contentveda/ui/vue/AlternatingSlider.vue'</span>;
+<span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
+
+<span class="kw">const</span> items = [
+  { id: <span class="str">'a'</span>, title: <span class="str">'Women'</span>,    subtitle: <span class="str">'New season'</span>, ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/w.jpg'</span> } },
+  { id: <span class="str">'b'</span>, title: <span class="str">'Men'</span>,      subtitle: <span class="str">'Essentials'</span>, ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/m.jpg'</span> } },
+  { id: <span class="str">'c'</span>, title: <span class="str">'Kids'</span>,     subtitle: <span class="str">'Play more'</span>,  ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/k1.jpg'</span> } },
+  { id: <span class="str">'d'</span>, title: <span class="str">'Footwear'</span>, subtitle: <span class="str">'Step up'</span>,    ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/k2.jpg'</span> } },
+];
+<span class="kw">const</span> config = { columns: 2, autoStart: <span class="kw">true</span>, delayMs: 4000, showArrows: <span class="kw">true</span>, showDots: <span class="kw">true</span> };
+&lt;/<span class="tag">script</span>&gt;
+
+&lt;<span class="tag">template</span>&gt;
+  &lt;<span class="tag">AlternatingSlider</span> :items=<span class="str">"items"</span> :config=<span class="str">"config"</span> /&gt;
+&lt;/<span class="tag">template</span>&gt;</code></pre>
+    </div>
+        </div>
         <div class="tab-panel" data-panel="svelte">
           
     <div class="code-block">
@@ -422,6 +447,52 @@ z"/>
   {items}
   config={{ columns: 2, autoStart: <span class="kw">true</span>, showDots: <span class="kw">true</span> }}
 /&gt;</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="solid">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code><span class="kw">import</span> AlternatingSlider <span class="kw">from</span> <span class="str">'@contentveda/ui/solid/AlternatingSlider'</span>;
+<span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
+
+<span class="kw">const</span> items = [
+  { id: <span class="str">'a'</span>, title: <span class="str">'Women'</span>,    subtitle: <span class="str">'New season'</span>, ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/w.jpg'</span> } },
+  { id: <span class="str">'b'</span>, title: <span class="str">'Men'</span>,      subtitle: <span class="str">'Essentials'</span>, ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/m.jpg'</span> } },
+  { id: <span class="str">'c'</span>, title: <span class="str">'Kids'</span>,     subtitle: <span class="str">'Play more'</span>,  ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/k1.jpg'</span> } },
+  { id: <span class="str">'d'</span>, title: <span class="str">'Footwear'</span>, subtitle: <span class="str">'Step up'</span>,    ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/k2.jpg'</span> } },
+];
+
+&lt;<span class="tag">AlternatingSlider</span>
+  items={items}
+  config={{ columns: 2, autoStart: <span class="kw">true</span>, delayMs: 4000, showArrows: <span class="kw">true</span>, showDots: <span class="kw">true</span> }}
+/&gt;</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="angular">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code><span class="kw">import</span> { Component } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { AlternatingSliderModule } <span class="kw">from</span> <span class="str">'@contentveda/ui/angular/AlternatingSlider'</span>;
+
+@Component({
+  selector: <span class="str">'app-example'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [AlternatingSliderModule],
+  template: <span class="str">`
+    &lt;<span class="tag">alternating-slider</span> [items]="items" [config]="config"&gt;&lt;/<span class="tag">alternating-slider</span>&gt;
+  `</span>
+})
+<span class="kw">export</span> class ExampleComponent {
+  items = [
+    { id: <span class="str">'a'</span>, title: <span class="str">'Women'</span>,    subtitle: <span class="str">'New season'</span>, ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/w.jpg'</span> } },
+    { id: <span class="str">'b'</span>, title: <span class="str">'Men'</span>,      subtitle: <span class="str">'Essentials'</span>, ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/m.jpg'</span> } },
+    { id: <span class="str">'c'</span>, title: <span class="str">'Kids'</span>,     subtitle: <span class="str">'Play more'</span>,  ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/k1.jpg'</span> } },
+    { id: <span class="str">'d'</span>, title: <span class="str">'Footwear'</span>, subtitle: <span class="str">'Step up'</span>,    ctaText: <span class="str">'Shop'</span>, media: { type: <span class="str">'image'</span>, url: <span class="str">'/k2.jpg'</span> } },
+  ];
+  config = { columns: 2, autoStart: <span class="kw">true</span>, delayMs: 4000, showArrows: <span class="kw">true</span>, showDots: <span class="kw">true</span> };
+}</code></pre>
     </div>
         </div>
         <div class="tab-panel" data-panel="wc">
@@ -646,43 +717,52 @@ document.addEventListener('DOMContentLoaded', () => {
       if (name.startsWith('config.')) return;
 
       if (input.type === 'checkbox') {
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
         if (input.checked) {
-          preview.setAttribute(name, 'true');
-          directProps[camelCase(name)] = true;
+          preview.setAttribute(kebab, 'true');
+          directProps[camel] = true;
         } else {
+          preview.removeAttribute(kebab);
           preview.removeAttribute(name);
-          directProps[camelCase(name)] = false;
+          directProps[camel] = false;
         }
       } else if (input.tagName === 'TEXTAREA' && input.classList.contains('json-textarea')) {
         try {
           const raw = input.value.trim();
+          const camel = camelCase(name);
+          const kebab = kebabCase(name);
           if (raw) {
             const parsed = JSON.parse(raw);
             input.classList.remove('invalid');
-            // Assign as property and setAttribute
-            preview[camelCase(name)] = parsed;
-            preview.setAttribute(name, raw);
+            preview[camel] = parsed;
+            preview.setAttribute(kebab, raw);
+            directProps[camel] = parsed;
           } else {
+            preview.removeAttribute(kebab);
             preview.removeAttribute(name);
+            delete directProps[camel];
           }
         } catch (e) {
           input.classList.add('invalid');
         }
       } else {
-        const val = input.value;
+        const val = (input.type === 'range' || input.type === 'number') ? Number(input.value) : input.value;
         const camel = camelCase(name);
         const kebab = kebabCase(name);
-        preview.setAttribute(name, val);
-        preview.setAttribute(camel, val);
-        preview.setAttribute(kebab, val);
-        if (preview.props) {
-          preview.props[camel] = val;
-          preview.props[kebab] = val;
-        }
-        if (typeof preview.forceUpdate === 'function') preview.forceUpdate();
-        if (typeof preview.update === 'function') preview.update();
+        preview.setAttribute(kebab, String(val));
+        directProps[camel] = val;
       }
     });
+
+    if (preview.props) {
+      Object.assign(preview.props, directProps);
+    }
+    if (typeof preview.forceUpdate === 'function') {
+      preview.forceUpdate(directProps);
+    } else if (typeof preview.update === 'function') {
+      preview.update();
+    }
 
     // Update code blocks
     updateCodeBlocks();
@@ -705,7 +785,11 @@ document.addEventListener('DOMContentLoaded', () => {
       attrs.push({ name: a.name, value: a.value });
     }
 
-    // React prop string generator
+    const pascalName = "AlternatingSlider";
+    const wcTagName = "cv-alternating-slider";
+    const componentSlug = "alternating-slider";
+
+    // React & Solid prop string generator
     const reactProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
@@ -715,15 +799,33 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
     });
 
-    const pascalName = "AlternatingSlider";
-    const wcTagName = "cv-alternating-slider";
-
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';
 
 <${pascalName}
   ${reactProps.join('\n  ')}
 />`;
+
+    // Vue prop string generator
+    const vueProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return `:${camelName}="true"`;
+      if (isJson) return `:${camelName}='${a.value}'`;
+      return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
+    });
+
+    const vueCode = `<script setup>
+import ${pascalName} from '@contentveda/ui/vue/${pascalName}.vue';
+import '@contentveda/ui/theme.css';
+</script>
+
+<template>
+  <${pascalName}
+    ${vueProps.join('\n    ')}
+  />
+</template>`;
 
     const svelteProps = attrs.map(a => {
       const camelName = camelCase(a.name);
@@ -741,6 +843,38 @@ import '@contentveda/ui/theme.css';
 <${pascalName}
   ${svelteProps.join('\n  ')}
 />`;
+
+    const solidCode = `import ${pascalName} from '@contentveda/ui/solid/${pascalName}';
+import '@contentveda/ui/theme.css';
+
+<${pascalName}
+  ${reactProps.join('\n  ')}
+/>`;
+
+    // Angular prop string generator
+    const angularProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return `[${camelName}]="true"`;
+      if (isJson) return `[${camelName}]='${a.value}'`;
+      return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
+    });
+
+    const angularCode = `import { Component } from '@angular/core';
+import { ${pascalName}Module } from '@contentveda/ui/angular/${pascalName}';
+
+@Component({
+  selector: 'app-example',
+  standalone: true,
+  imports: [${pascalName}Module],
+  template: \`
+    <${componentSlug}
+      ${angularProps.join('\n      ')}
+    ></${componentSlug}>
+  \`,
+})
+export class ExampleComponent {}`;
 
     const wcAttrs = attrs.map(a => {
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
@@ -760,8 +894,17 @@ import '@contentveda/ui/theme.css';
     const reactPanel = document.querySelector('[data-panel="react"] pre code');
     if (reactPanel) reactPanel.innerHTML = clientHighlight(reactCode, 'tsx');
 
+    const vuePanel = document.querySelector('[data-panel="vue"] pre code');
+    if (vuePanel) vuePanel.innerHTML = clientHighlight(vueCode, 'html');
+
     const sveltePanel = document.querySelector('[data-panel="svelte"] pre code');
     if (sveltePanel) sveltePanel.innerHTML = clientHighlight(svelteCode, 'svelte');
+
+    const solidPanel = document.querySelector('[data-panel="solid"] pre code');
+    if (solidPanel) solidPanel.innerHTML = clientHighlight(solidCode, 'tsx');
+
+    const angularPanel = document.querySelector('[data-panel="angular"] pre code');
+    if (angularPanel) angularPanel.innerHTML = clientHighlight(angularCode, 'ts');
 
     const wcPanel = document.querySelector('[data-panel="wc"] pre code');
     if (wcPanel) wcPanel.innerHTML = clientHighlight(wcCode, 'html');

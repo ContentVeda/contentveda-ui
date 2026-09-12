@@ -60,7 +60,10 @@
   --ty:       #047857;  /* prop types, in the props table rather than a code block */
   --required: #be123c;
   --react:    #0e7490;
+  --vue:      #16a34a;
   --svelte:   #c2410c;
+  --solid:    #2563eb;
+  --angular:  #dc2626;
   --wc:       #15803d;
 
   --sidebar-w:      260px;
@@ -113,7 +116,10 @@
   --ty:       #34d399;
   --required: #fda4af;
   --react:    #61dafb;
+  --vue:      #42b883;
   --svelte:   #ff7750;
+  --solid:    #4f88c6;
+  --angular:  #f43f5e;
   --wc:       #4ade80;
 
   --shadow-md:      0 4px 24px rgba(0,0,0,0.4);
@@ -572,13 +578,15 @@ img, video { max-width: 100%; }
 /* ── Framework Tabs ─────────────────────────────────────── */
 .tabs-bar {
   display: flex;
-  gap: 0;
+  flex-wrap: wrap;
+  gap: 2px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 4px;
   margin-bottom: 1rem;
   width: fit-content;
+  max-width: 100%;
 }
 
 .tab-btn {
@@ -882,11 +890,14 @@ img, video { max-width: 100%; }
 }
 
 .feature-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot-react  { background: #61dafb; }
-.dot-svelte { background: #ff3e00; }
-.dot-wc     { background: #4ade80; }
-.dot-ts     { background: #3b82f6; }
-.dot-css    { background: #7fc4de; }
+.dot-react   { background: #61dafb; }
+.dot-vue     { background: #42b883; }
+.dot-svelte  { background: #ff3e00; }
+.dot-solid   { background: #4f88c6; }
+.dot-angular { background: #dd0031; }
+.dot-wc      { background: #4ade80; }
+.dot-ts      { background: #3b82f6; }
+.dot-css     { background: #7fc4de; }
 
 /* ── Component Grid ─────────────────────────────────────── */
 .component-grid {
@@ -962,7 +973,8 @@ img, video { max-width: 100%; }
 
 .card-footer {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -977,9 +989,12 @@ img, video { max-width: 100%; }
   border-radius: 4px;
 }
 
-.tag-react  { background: rgba(97,218,251,0.12); color: var(--react); }
-.tag-svelte { background: rgba(255,62,0,0.12);   color: var(--svelte); }
-.tag-wc     { background: rgba(74,222,128,0.12); color: var(--wc); }
+.tag-react   { background: rgba(97,218,251,0.12); color: var(--react); }
+.tag-vue     { background: rgba(66,184,131,0.12); color: var(--vue); }
+.tag-svelte  { background: rgba(255,62,0,0.12);   color: var(--svelte); }
+.tag-solid   { background: rgba(79,136,198,0.12); color: var(--solid); }
+.tag-angular { background: rgba(221,0,49,0.12);   color: var(--angular); }
+.tag-wc      { background: rgba(74,222,128,0.12); color: var(--wc); }
 
 /* ── Stats Bar ──────────────────────────────────────────── */
 .stats-bar {
