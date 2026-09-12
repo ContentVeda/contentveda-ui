@@ -153,8 +153,19 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
         // Process Widgets
         const widgetPlaceholders = containerRef.querySelectorAll('.cv-widget-placeholder');
         widgetPlaceholders.forEach((el) => {
-          const widgetType = el.getAttribute('data-widget');
-          if (!widgetType) return;
+          const widgetTypeRaw = el.getAttribute('data-widget');
+          if (!widgetTypeRaw) return;
+          
+          const widgetType = widgetTypeRaw.trim().toLowerCase();
+          if (!/^[a-z0-9-]+$/.test(widgetType)) return;
+          
+          if (
+            props.widgetData && 
+            typeof props.widgetData === 'object' && 
+            !Object.prototype.hasOwnProperty.call(props.widgetData, widgetType)
+          ) {
+            return;
+          }
           
           // Clear placeholder text and styling
           el.innerHTML = '';
