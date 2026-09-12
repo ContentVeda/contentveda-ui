@@ -10,7 +10,7 @@ Feature: RowScrollable
     Then it should render without any page errors
     And the component text should include "Trending Items"
     And the component text should include "Smart Watch v2"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Hides arrows when hideArrowsIfNoScroll is set and content fits
     Given I mount the "cv-row-scrollable" component as "RowScrollable" with:

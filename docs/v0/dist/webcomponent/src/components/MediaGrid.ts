@@ -49,6 +49,9 @@ class MediaGrid extends HTMLElement {
       get showSkeleton() {
         return !!self.props.isLoading || !self.state.shouldMount;
       },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -69,10 +72,6 @@ class MediaGrid extends HTMLElement {
     // batch updates
     this.pendingUpdate = false;
 
-    this._observerBox = {
-      disconnect: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -80,7 +79,7 @@ class MediaGrid extends HTMLElement {
 
   disconnectedCallback() {
     // onUnMount
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -184,7 +183,7 @@ class MediaGrid extends HTMLElement {
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.isVisible = true;
@@ -251,6 +250,14 @@ class MediaGrid extends HTMLElement {
         "href",
         this.props.primaryMedia.mapLinks?.[0]?.url || undefined
       );
+      el.setAttribute(
+        "aria-label",
+        this.props.primaryMedia.mapLinks?.[0]?.url
+          ? this.props.primaryMedia.altText ||
+              this.props.primaryMedia.title ||
+              "Media content"
+          : undefined
+      );
     });
 
     this._root
@@ -310,6 +317,12 @@ class MediaGrid extends HTMLElement {
       const item = this.getScope(el, "item");
       el.setAttribute("href", item.mapLinks?.[0]?.url || undefined);
       el.key = item.id;
+      el.setAttribute(
+        "aria-label",
+        item.mapLinks?.[0]?.url
+          ? item.altText || item.title || "Media content"
+          : undefined
+      );
     });
 
     this._root

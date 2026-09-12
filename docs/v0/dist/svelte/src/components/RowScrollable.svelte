@@ -32,7 +32,6 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -86,6 +85,10 @@
   let canScrollLeft = false;
   let canScrollRight = false;
   let isVisible = false;
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+    row: null as any,
+  };
 
   onMount(() => {
     const el = rowRef;
@@ -173,7 +176,8 @@
                     autoPlay={true}
                     loop={true}
                     muted={true}
-                    playsInline={true}></video>
+                    playsInline={true}
+                  />
                 {/if}
                 {#if item.media?.type !== "video"}
                   <img

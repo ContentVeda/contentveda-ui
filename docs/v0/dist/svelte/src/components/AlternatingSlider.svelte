@@ -45,7 +45,6 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -118,6 +117,9 @@
   let currentIndex = 0;
   let intervalId = null;
   let isVisible = false;
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
 
   onMount(() => {
     if (lazyLoad === false) {
@@ -232,7 +234,8 @@
                         playsInline={true}
                         class={`cv-alt-bg-video ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}></video>
+                        }`}
+                      />
                     {/if}
                     {#if shouldMount() && slideRow[colIndex].media?.type !== "video"}
                       <div
@@ -244,9 +247,10 @@
                         })}
                         class={`cv-alt-bg ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}></div>
+                        }`}
+                      />
                     {/if}
-                    <div class="cv-alt-overlay"></div>
+                    <div class="cv-alt-overlay" />
                     <div
                       style={stringifyStyles({
                         textAlign: slideRow[colIndex].textAlignment || "left",
@@ -270,27 +274,31 @@
                             height: "24px",
                             marginBottom: "12px",
                           })}
-                          class="cv-skeleton-title cv-image-shimmer"></div>
+                          class="cv-skeleton-title cv-image-shimmer"
+                        />
                         <div
                           style={stringifyStyles({
                             width: "80%",
                             height: "14px",
                             marginBottom: "8px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"></div>
+                          class="cv-skeleton-text cv-image-shimmer"
+                        />
                         <div
                           style={stringifyStyles({
                             width: "50%",
                             height: "14px",
                             marginBottom: "16px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"></div>
+                          class="cv-skeleton-text cv-image-shimmer"
+                        />
                         <div
                           style={stringifyStyles({
                             width: "110px",
                             height: "36px",
                           })}
-                          class="cv-skeleton-button cv-image-shimmer"></div>
+                          class="cv-skeleton-button cv-image-shimmer"
+                        />
                       {/if}
                       {#if !showSkeleton()}
                         <h2 class="cv-alt-title">{slideRow[colIndex].title}</h2>
@@ -330,7 +338,8 @@
                         playsInline={true}
                         class={`cv-alt-bg-video ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}></video>
+                        }`}
+                      />
                     {/if}
                     {#if shouldMount() && slideRow[colIndex].media?.type !== "video"}
                       <div
@@ -342,9 +351,10 @@
                         })}
                         class={`cv-alt-bg ${
                           showSkeleton() ? "cv-image-shimmer" : ""
-                        }`}></div>
+                        }`}
+                      />
                     {/if}
-                    <div class="cv-alt-overlay"></div>
+                    <div class="cv-alt-overlay" />
                     <div
                       style={stringifyStyles({
                         textAlign: slideRow[colIndex].textAlignment || "left",
@@ -368,27 +378,31 @@
                             height: "24px",
                             marginBottom: "12px",
                           })}
-                          class="cv-skeleton-title cv-image-shimmer"></div>
+                          class="cv-skeleton-title cv-image-shimmer"
+                        />
                         <div
                           style={stringifyStyles({
                             width: "80%",
                             height: "14px",
                             marginBottom: "8px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"></div>
+                          class="cv-skeleton-text cv-image-shimmer"
+                        />
                         <div
                           style={stringifyStyles({
                             width: "50%",
                             height: "14px",
                             marginBottom: "16px",
                           })}
-                          class="cv-skeleton-text cv-image-shimmer"></div>
+                          class="cv-skeleton-text cv-image-shimmer"
+                        />
                         <div
                           style={stringifyStyles({
                             width: "110px",
                             height: "36px",
                           })}
-                          class="cv-skeleton-button cv-image-shimmer"></div>
+                          class="cv-skeleton-button cv-image-shimmer"
+                        />
                       {/if}
                       {#if !showSkeleton()}
                         <h2 class="cv-alt-title">{slideRow[colIndex].title}</h2>

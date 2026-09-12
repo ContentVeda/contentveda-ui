@@ -13,7 +13,7 @@ Feature: RichTextEditor
     And the component should contain a visible "button[title='Bold']" element
     And the component should contain a visible "button[title='Image']" element
     And the component should contain a visible "button[title='Video']" element
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Inserting an image via the prompt fallback lands in the content
     Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:

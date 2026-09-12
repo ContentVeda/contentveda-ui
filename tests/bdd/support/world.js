@@ -1,5 +1,6 @@
 const { setWorldConstructor, World } = require('@cucumber/cucumber');
-const { bundleReactHarness, bundleSvelteHarness } = require('./bundle');
+const { bundleReactHarness, bundleSvelteHarness, bundleVueHarness, bundleSolidHarness, bundleAngularHarness } = require('./bundle');
+const { renderSsrString } = require('./ssr');
 
 // Converts Gherkin's kebab-case attribute table (image-url, is-loading, ...)
 // into camelCase JS prop values for the React/Svelte targets, parsing
@@ -79,25 +80,17 @@ class ContentVedaWorld extends World {
     await this.page.waitForTimeout(300);
   }
 
-  // Mounts the compiled dist/react component for pascalName with the given
-  // attrs (converted to real React props), using an esbuild-bundled harness
-  // built with the project's own React/ReactDOM devDependencies.
-  async mountReactComponent(pascalName, attrs) {
-    this.mountTarget = 'react';
+  async _mountFrameworkHarness(frameworkName, pascalName, attrs, bundlerFn) {
+    this.mountTarget = frameworkName;
     const baseUrl = this.parameters.baseUrl;
     const props = attrsToProps(attrs);
 
     await this.page.goto(`${baseUrl}/tests/bdd/harness.html`, { waitUntil: 'load' });
 
-    const bundlePath = await bundleReactHarness(pascalName, props);
+    const bundlePath = await bundlerFn(pascalName, props);
 
     await this.page.evaluate(
       ({ bundlePath, baseUrl, pascalName }) => {
-        // The component's visual styles live in its own stylesheet, exposed via
-        // the package's "./styles/*" export — theme.css alone only provides the
-        // custom properties. Without this the component renders structurally
-        // correct but entirely unstyled, so colour-dependent assertions (and
-        // axe's contrast rules) would measure browser defaults, not the design.
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = `${baseUrl}/dist/styles/components/${pascalName}.css`;
@@ -105,12 +98,12 @@ class ContentVedaWorld extends World {
 
         const script = document.createElement('script');
         script.type = 'module';
-        script.src = `${baseUrl}${bundlePath}`;
+        script.src = bundlePath;
         document.head.appendChild(script);
+
         return new Promise((resolve, reject) => {
-          link.onload = () => {};
           script.onload = resolve;
-          script.onerror = () => reject(new Error('Failed to load React bundle'));
+          script.onerror = () => reject(new Error(`Failed to load harness module for ${pascalName}`));
         });
       },
       { bundlePath, baseUrl, pascalName }
@@ -119,44 +112,51 @@ class ContentVedaWorld extends World {
     await this.page.waitForTimeout(300);
   }
 
-  // Mounts the compiled dist/svelte component for pascalName with the given
-  // attrs (converted to real Svelte props), compiling the raw .svelte source
-  // with svelte/compiler and bundling it with esbuild.
+  async mountReactComponent(pascalName, attrs) {
+    await this._mountFrameworkHarness('react', pascalName, attrs, bundleReactHarness);
+  }
+
   async mountSvelteComponent(pascalName, attrs) {
-    this.mountTarget = 'svelte';
-    const baseUrl = this.parameters.baseUrl;
+    await this._mountFrameworkHarness('svelte', pascalName, attrs, bundleSvelteHarness);
+  }
+
+  async mountVueComponent(pascalName, attrs) {
+    await this._mountFrameworkHarness('vue', pascalName, attrs, bundleVueHarness);
+  }
+
+  async mountSolidComponent(pascalName, attrs) {
+    await this._mountFrameworkHarness('solid', pascalName, attrs, bundleSolidHarness);
+  }
+
+  async mountAngularComponent(pascalName, attrs) {
+    await this._mountFrameworkHarness('angular', pascalName, attrs, bundleAngularHarness);
+  }
+
+  async ssrMount(pascalName, frameworkName, attrs) {
+    this.mountTarget = frameworkName;
     const props = attrsToProps(attrs);
-
+    
+    // We navigate to harness.html first to give Playwright a real DOM environment
+    const baseUrl = this.parameters.baseUrl;
     await this.page.goto(`${baseUrl}/tests/bdd/harness.html`, { waitUntil: 'load' });
-
-    const bundlePath = await bundleSvelteHarness(pascalName, props);
-
+    
+    const htmlString = await renderSsrString(frameworkName, pascalName, props);
+    
     await this.page.evaluate(
-      ({ bundlePath, baseUrl, pascalName }) => {
-        // Same as the React mount: pull in the component-scoped stylesheet, or
-        // every colour assertion is made against unstyled browser defaults.
+      ({ htmlString, baseUrl, pascalName }) => {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = `${baseUrl}/dist/styles/components/${pascalName}.css`;
         document.head.appendChild(link);
-
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = `${baseUrl}${bundlePath}`;
-        document.head.appendChild(script);
-        return new Promise((resolve, reject) => {
-          script.onload = resolve;
-          script.onerror = () => reject(new Error('Failed to load Svelte bundle'));
-        });
+        
+        document.getElementById('mount').innerHTML = htmlString;
       },
-      { bundlePath, baseUrl, pascalName }
+      { htmlString, baseUrl, pascalName }
     );
-
-    await this.page.waitForTimeout(300);
   }
 
   subject() {
-    return this.page.locator(this.mountTarget === 'webcomponent' ? '#subject' : '#mount');
+    return this.mountTarget === 'webcomponent' ? this.page.locator('#subject') : this.page.locator('#mount > *').first();
   }
 }
 

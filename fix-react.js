@@ -81,5 +81,8 @@ if (fs.existsSync(srcDir)) {
     .map((name) => `export { default as ${name} } from './${name}.js';`)
     .join('\n') + '\n';
   fs.writeFileSync(path.join(srcDir, 'index.js'), indexJs);
-  console.log('Compiled React components to plain ESM .js and generated index.js barrel.');
+
+  const reactPkgJsonPath = path.join(__dirname, 'dist', 'react', 'package.json');
+  fs.writeFileSync(reactPkgJsonPath, JSON.stringify({ type: 'module' }, null, 2) + '\n');
+  console.log('Compiled React components to plain ESM .js, generated index.js barrel, and wrote dist/react/package.json.');
 }

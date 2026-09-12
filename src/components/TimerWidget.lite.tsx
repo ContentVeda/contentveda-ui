@@ -25,7 +25,6 @@ export default function TimerWidget(props: TimerWidgetProps) {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null, resizeObserver: null });
 
   const state = useStore({
     timeLeft: { days: 0, hours: 0, minutes: 0, seconds: 0 },
@@ -82,23 +81,23 @@ export default function TimerWidget(props: TimerWidgetProps) {
     },
     get plugin() {
       return props.backgroundEffectPlugin || defaultBackgroundEffectPlugin;
-    }
+    },
+    animContext: { animationFrameId: null, resizeHandler: null, resizeObserver: null } as BackgroundEffectContext,
+    observerBox: { disconnect: null as (() => void) | null }
   });
-
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
 
   onMount(() => {
     if (props.lazyLoad === false) {
       state.startTicking();
-      if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, animContext);
+      if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, state.animContext);
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         rootRef,
         () => {
           state.startTicking();
-          if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, animContext);
+          if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, state.animContext);
         },
         props.lazyThreshold ?? 0.1,
         props.lazyRootMargin ?? '200px'
@@ -112,13 +111,13 @@ export default function TimerWidget(props: TimerWidgetProps) {
   // otherwise it was tearing down and restarting every second, which made
   // the animation look like it was stuttering/never settling.
   onUpdate(() => {
-    if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, animContext);
+    if (canvasRef) state.plugin.start(canvasRef, state.backgroundEffectClass as BackgroundEffectName, state.animContext);
   }, [state.backgroundEffectClass, canvasRef]);
 
   onUnMount(() => {
     if (state.timerId) clearInterval(state.timerId);
-    if (observerBox.disconnect) observerBox.disconnect();
-    state.plugin.stop(animContext);
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
+    state.plugin.stop(state.animContext);
   });
   return (
     <div

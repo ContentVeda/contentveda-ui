@@ -118,6 +118,14 @@ class TimerWidget extends HTMLElement {
           self.props.backgroundEffectPlugin || defaultBackgroundEffectPlugin
         );
       },
+      animContext: {
+        animationFrameId: null,
+        resizeHandler: null,
+        resizeObserver: null,
+      },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -148,15 +156,6 @@ class TimerWidget extends HTMLElement {
     // batch updates
     this.pendingUpdate = false;
 
-    this._animContext = {
-      animationFrameId: null,
-      resizeHandler: null,
-      resizeObserver: null,
-    };
-    this._observerBox = {
-      disconnect: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -165,8 +164,8 @@ class TimerWidget extends HTMLElement {
   disconnectedCallback() {
     // onUnMount
     if (this.state.timerId) clearInterval(this.state.timerId);
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
-    this.state.plugin.stop(self._animContext);
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
+    this.state.plugin.stop(this.state.animContext);
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -303,12 +302,12 @@ class TimerWidget extends HTMLElement {
         this.state.plugin.start(
           self._canvasRef,
           this.state.backgroundEffectClass as BackgroundEffectName,
-          self._animContext
+          this.state.animContext
         );
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.startTicking();
@@ -316,7 +315,7 @@ class TimerWidget extends HTMLElement {
             this.state.plugin.start(
               self._canvasRef,
               this.state.backgroundEffectClass as BackgroundEffectName,
-              self._animContext
+              this.state.animContext
             );
         },
         this.props.lazyThreshold ?? 0.1,
@@ -335,7 +334,7 @@ class TimerWidget extends HTMLElement {
           self.state.plugin.start(
             self._canvasRef,
             self.state.backgroundEffectClass as BackgroundEffectName,
-            self._animContext
+            self.state.animContext
           );
         self.updateDeps[0] = __next;
       }

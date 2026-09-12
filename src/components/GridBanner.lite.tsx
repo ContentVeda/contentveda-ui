@@ -89,10 +89,9 @@ export default function GridBanner(props: GridBannerProps) {
     },
     get columnsMobileVar() {
       return `${props.columnsMobile || props.columnsTablet || 2}`;
-    }
+    },
+    observerBox: { disconnect: null as (() => void) | null }
   });
-
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
 
   onMount(() => {
     if (props.lazyLoad === false) {
@@ -100,7 +99,7 @@ export default function GridBanner(props: GridBannerProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         rootRef,
         () => { state.isVisible = true; },
         props.lazyThreshold ?? 0.1,
@@ -110,7 +109,7 @@ export default function GridBanner(props: GridBannerProps) {
   });
 
   onUnMount(() => {
-    if (observerBox.disconnect) observerBox.disconnect();
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
   });
 
   return (

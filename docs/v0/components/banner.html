@@ -696,6 +696,18 @@ z"/>
 <div class="alert alert-info"><strong>Background effects:</strong> Set <code>config.backgroundEffect</code> to <code>'particles'</code>, <code>'waves'</code>, <code>'rain'</code>, <code>'thunderstorm'</code>, <code>'sunrise'</code>, <code>'sunset'</code>, <code>'fog'</code>, <code>'autumn'</code>, <code>'festival'</code>, <code>'santa'</code>, or <code>'sea'</code> to render an animated canvas layer behind the banner's media/overlay. This is powered by a standalone plugin engine at <code>src/utils/backgroundEffects.ts</code> (also used by SlidingBanner) — it's a plain registry of canvas renderers, so new effects can be added there once and become available to every component that uses it, without any per-component changes.</div>
 <div class="alert alert-info"><strong>Custom animation engine:</strong> Pass <code>config.backgroundEffectPlugin={{ start, stop }}</code> to inject your own animation implementation per-instance instead of the built-in canvas renderers — useful when a consumer (e.g. the CMS page editor) wants to control the effect engine itself. Omit it and the component falls back to <code>defaultBackgroundEffectPlugin</code>, exported alongside the built-in effects.</div>
 <div class="alert alert-tip"><strong>Lazy loading:</strong> By default the banner defers mounting its media/hotspots until it scrolls near the viewport (shared <code>IntersectionObserver</code> per threshold across all widgets on the page). Pass <code>lazyLoad={false}</code> to disable, or tune <code>lazyThreshold</code> / <code>lazyRootMargin</code>.</div>
+      
+      <footer class="docs-footer">
+        <div class="docs-footer-copy">
+          <span>© 2026 ContentVeda. All rights reserved.</span>
+        </div>
+        <nav class="docs-footer-links">
+          <a href="https://docs.contentveda.com/cms/api/">Content API</a>
+          <a href="https://docs.contentveda.com/cms/graphql/">GraphQL</a>
+          <a href="https://github.com/ContentVeda/contentveda-ui" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener">npm</a>
+        </nav>
+      </footer>
     </div>
   </main>
 </div>

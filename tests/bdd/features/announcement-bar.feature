@@ -11,7 +11,7 @@ Feature: AnnouncementBar
     Then it should render without any page errors
     And the component text should include "Free shipping on orders over $75"
     And the component should not contain a "a" element
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Renders as a link when mapLinks is provided
     Given I mount the "cv-announcement-bar" component as "AnnouncementBar" with:

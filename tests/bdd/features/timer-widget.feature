@@ -26,7 +26,7 @@ Feature: TimerWidget
     Then it should render without any page errors
     And the component text should include "This sale has ended"
     And it should contain 0 elements matching ".cv-timer-block"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Renders a background image with overlay scrim
     Given I mount the "cv-timer-widget" component as "TimerWidget" with:

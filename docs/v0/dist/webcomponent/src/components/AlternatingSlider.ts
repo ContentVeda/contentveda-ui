@@ -116,6 +116,9 @@ class AlternatingSlider extends HTMLElement {
           clearInterval(self.state.intervalId);
         }
       },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -162,10 +165,6 @@ class AlternatingSlider extends HTMLElement {
       this.state.goTo(index);
     };
 
-    this._observerBox = {
-      disconnect: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -174,7 +173,7 @@ class AlternatingSlider extends HTMLElement {
   disconnectedCallback() {
     // onUnMount
     this.state.stopAutoPlay();
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -416,7 +415,7 @@ class AlternatingSlider extends HTMLElement {
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.isVisible = true;

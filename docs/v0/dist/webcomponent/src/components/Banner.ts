@@ -197,6 +197,14 @@ class Banner extends HTMLElement {
           transform: "translate(-50%, -50%)",
         };
       },
+      animContext: {
+        animationFrameId: null,
+        resizeHandler: null,
+        resizeObserver: null,
+      },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -230,15 +238,6 @@ class Banner extends HTMLElement {
     // batch updates
     this.pendingUpdate = false;
 
-    this._animContext = {
-      animationFrameId: null,
-      resizeHandler: null,
-      resizeObserver: null,
-    };
-    this._observerBox = {
-      disconnect: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -246,8 +245,8 @@ class Banner extends HTMLElement {
 
   disconnectedCallback() {
     // onUnMount
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
-    this.state.plugin.stop(self._animContext);
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
+    this.state.plugin.stop(this.state.animContext);
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -452,12 +451,12 @@ class Banner extends HTMLElement {
         this.state.plugin.start(
           self._canvasRef,
           this.state.backgroundEffectClass as BackgroundEffectName,
-          self._animContext
+          this.state.animContext
         );
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.isVisible = true;
@@ -466,7 +465,7 @@ class Banner extends HTMLElement {
             this.state.plugin.start(
               self._canvasRef,
               this.state.backgroundEffectClass as BackgroundEffectName,
-              self._animContext
+              this.state.animContext
             );
         },
         this.props.lazyThreshold ?? 0.1,
@@ -485,7 +484,7 @@ class Banner extends HTMLElement {
           self.state.plugin.start(
             self._canvasRef,
             self.state.backgroundEffectClass as BackgroundEffectName,
-            self._animContext
+            self.state.animContext
           );
         self.updateDeps[0] = __next;
       }

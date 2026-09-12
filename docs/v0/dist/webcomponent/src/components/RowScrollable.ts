@@ -81,6 +81,10 @@ class RowScrollable extends HTMLElement {
           });
         }
       },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+        row: null as any,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -112,11 +116,6 @@ class RowScrollable extends HTMLElement {
       this.state.scroll("right");
     };
 
-    this._observerBox = {
-      disconnect: null,
-      row: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -135,10 +134,10 @@ class RowScrollable extends HTMLElement {
     if (typeof window !== "undefined") {
       window.removeEventListener("resize", this.state.checkScroll);
     }
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
-    if (self._observerBox.row) {
-      self._observerBox.row.disconnect();
-      self._observerBox.row = null;
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
+    if (this.state.observerBox.row) {
+      this.state.observerBox.row.disconnect();
+      this.state.observerBox.row = null;
     }
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
@@ -292,10 +291,10 @@ class RowScrollable extends HTMLElement {
         this.state.checkScroll();
       }, 150);
       if (typeof ResizeObserver !== "undefined") {
-        self._observerBox.row = new ResizeObserver(() =>
+        this.state.observerBox.row = new ResizeObserver(() =>
           this.state.checkScroll()
         );
-        self._observerBox.row.observe(el);
+        this.state.observerBox.row.observe(el);
       }
     }
     window.addEventListener("resize", this.state.checkScroll);
@@ -305,7 +304,7 @@ class RowScrollable extends HTMLElement {
       return;
     }
     if (self._containerRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._containerRef,
         () => {
           this.state.isVisible = true;
