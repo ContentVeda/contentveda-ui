@@ -25,7 +25,6 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -48,6 +47,9 @@
   let rootRef;
 
   let isVisible = false;
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
 
   onMount(() => {
     if (lazyLoad === false) {
@@ -73,10 +75,10 @@
 
 <div bind:this={rootRef} class={`cv-media-grid ${className || ""}`}>
   {#if showSkeleton()}
-    <div class="cv-media-primary cv-image-shimmer"></div>
+    <div class="cv-media-primary cv-image-shimmer" />
     <div class="cv-media-secondary-col">
-      <div class="cv-media-secondary-item cv-image-shimmer"></div>
-      <div class="cv-media-secondary-item cv-image-shimmer"></div>
+      <div class="cv-media-secondary-item cv-image-shimmer" />
+      <div class="cv-media-secondary-item cv-image-shimmer" />
     </div>
   {/if}
   {#if !showSkeleton()}
@@ -84,6 +86,9 @@
       <a
         class="cv-media-primary"
         href={primaryMedia.mapLinks?.[0]?.url || undefined}
+        aria-label={primaryMedia.mapLinks?.[0]?.url
+          ? primaryMedia.altText || primaryMedia.title || "Media content"
+          : undefined}
       >
         {#if primaryMedia.media?.type === "video"}
           <video
@@ -92,7 +97,8 @@
             autoPlay={true}
             loop={true}
             muted={true}
-            playsInline={true}></video>
+            playsInline={true}
+          />
         {/if}
         {#if primaryMedia.media?.type !== "video"}
           <img
@@ -110,6 +116,9 @@
           <a
             class="cv-media-secondary-item"
             href={item.mapLinks?.[0]?.url || undefined}
+            aria-label={item.mapLinks?.[0]?.url
+              ? item.altText || item.title || "Media content"
+              : undefined}
           >
             {#if item.media?.type === "video"}
               <video
@@ -118,7 +127,8 @@
                 autoPlay={true}
                 loop={true}
                 muted={true}
-                playsInline={true}></video>
+                playsInline={true}
+              />
             {/if}
             {#if item.media?.type !== "video"}
               <img

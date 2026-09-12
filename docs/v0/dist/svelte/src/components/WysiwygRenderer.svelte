@@ -11,7 +11,6 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -153,6 +152,9 @@
   let containerRef;
 
   let isVisible = false;
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
 
   onMount(() => {
     if (lazyLoad === false) {

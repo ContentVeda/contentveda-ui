@@ -358,6 +358,7 @@
                 <path d="M8 12h8"></path></svg
               ><input
                 type="color"
+                aria-label="Text Color"
                 class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                 @mousedown="async (event) => saveSelection()"
                 @change="
@@ -391,6 +392,7 @@
                 <circle cx="11" cy="11" r="2"></circle></svg
               ><input
                 type="color"
+                aria-label="Background Color"
                 class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                 @mousedown="async (event) => saveSelection()"
                 @change="
@@ -963,6 +965,7 @@
             >CLASS</span
           ><input
             type="text"
+            aria-label="Dynamic CSS Class"
             list="editor-class-list"
             placeholder="e.g. my-callout"
             class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
@@ -1154,6 +1157,7 @@
                     >Button Text</label
                   ><input
                     type="text"
+                    aria-label="Button Text"
                     placeholder="Click Here"
                     :style="{
                       background:
@@ -1189,6 +1193,7 @@
                     >Link URL</label
                   ><input
                     type="url"
+                    aria-label="Button URL"
                     placeholder="https://..."
                     :style="{
                       background:
@@ -1326,6 +1331,7 @@
                     >Rows</label
                   ><input
                     type="number"
+                    aria-label="Table Rows"
                     min="1"
                     max="20"
                     :style="{
@@ -1364,6 +1370,7 @@
                     >Columns</label
                   ><input
                     type="number"
+                    aria-label="Table Columns"
                     min="1"
                     max="20"
                     :style="{
@@ -1489,6 +1496,7 @@
                   >Destination URL</label
                 ><input
                   type="url"
+                  aria-label="Hyperlink URL"
                   placeholder="https://example.com"
                   :style="{
                     background:
@@ -1840,6 +1848,7 @@
                     >Post URL</label
                   ><input
                     type="url"
+                    aria-label="Social Link URL"
                     placeholder="https://..."
                     :style="{
                       background:
@@ -2129,7 +2138,7 @@ export default defineComponent({
             this.restoreSelection();
             let html = "";
             if (type === "image")
-              html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+              html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
             else if (type === "video")
               html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
             else if (type === "audio")
@@ -2144,7 +2153,7 @@ export default defineComponent({
           this.restoreSelection();
           let html = "";
           if (type === "image")
-            html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+            html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
           else if (type === "video")
             html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
           else if (type === "audio")

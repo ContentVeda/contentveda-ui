@@ -27,6 +27,10 @@ import { observeLazyMount } from "../utils/lazyObserver";
 function MediaGrid(props: MediaGridProps) {
   const [isVisible, setIsVisible] = createSignal(false);
 
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -43,7 +47,7 @@ function MediaGrid(props: MediaGridProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         rootRef,
         () => {
           setIsVisible(true);
@@ -69,6 +73,13 @@ function MediaGrid(props: MediaGridProps) {
             <a
               class="cv-media-primary"
               href={props.primaryMedia.mapLinks?.[0]?.url || undefined}
+              aria-label={
+                props.primaryMedia.mapLinks?.[0]?.url
+                  ? props.primaryMedia.altText ||
+                    props.primaryMedia.title ||
+                    "Media content"
+                  : undefined
+              }
             >
               <Show when={props.primaryMedia.media?.type === "video"}>
                 <video
@@ -101,6 +112,11 @@ function MediaGrid(props: MediaGridProps) {
                       class="cv-media-secondary-item"
                       href={item.mapLinks?.[0]?.url || undefined}
                       key={item.id}
+                      aria-label={
+                        item.mapLinks?.[0]?.url
+                          ? item.altText || item.title || "Media content"
+                          : undefined
+                      }
                     >
                       <Show when={item.media?.type === "video"}>
                         <video

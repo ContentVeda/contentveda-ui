@@ -48,6 +48,10 @@ function AlternatingSlider(props: AlternatingSliderProps) {
 
   const [isVisible, setIsVisible] = createSignal(false);
 
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -113,7 +117,7 @@ function AlternatingSlider(props: AlternatingSliderProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         rootRef,
         () => {
           setIsVisible(true);

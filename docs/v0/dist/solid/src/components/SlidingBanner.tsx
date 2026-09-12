@@ -85,6 +85,25 @@ function SlidingBanner(props: SlidingBannerProps) {
 
   const [wrapping, setWrapping] = createSignal(false);
 
+  const [animContext, setAnimContext] = createSignal({
+    intervalId: null as any,
+    dimResizeHandler: null as any,
+  });
+
+  const [bgEffectContext, setBgEffectContext] = createSignal({
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  });
+
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
+  const [latestNext, setLatestNext] = createSignal({
+    fn: () => {},
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -148,18 +167,18 @@ function SlidingBanner(props: SlidingBannerProps) {
   }
 
   function startAutoPlay() {
-    if (animContext.intervalId) return;
+    if (animContext().intervalId) return;
     if (props.config?.autoStart !== false && props.items?.length > 1) {
-      animContext.intervalId = setInterval(() => {
-        latestNext.fn();
+      animContext().intervalId = setInterval(() => {
+        latestNext().fn();
       }, props.config?.delayMs || 5000);
     }
   }
 
   function stopAutoPlay() {
-    if (animContext.intervalId) {
-      clearInterval(animContext.intervalId);
-      animContext.intervalId = null;
+    if (animContext().intervalId) {
+      clearInterval(animContext().intervalId);
+      animContext().intervalId = null;
     }
   }
 
@@ -175,13 +194,13 @@ function SlidingBanner(props: SlidingBannerProps) {
   function mountHeavyContent() {
     startAutoPlay();
     setupDimensions();
-    animContext.dimResizeHandler = () => setupDimensions();
-    window.addEventListener("resize", animContext.dimResizeHandler);
+    animContext().dimResizeHandler = () => setupDimensions();
+    window.addEventListener("resize", animContext().dimResizeHandler);
     if (canvasRef) {
       plugin().start(
         canvasRef,
         backgroundClass() as BackgroundEffectName,
-        bgEffectContext
+        bgEffectContext()
       );
     }
   }
@@ -196,7 +215,7 @@ function SlidingBanner(props: SlidingBannerProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         rootRef,
         () => {
           setIsVisible(true);
@@ -227,7 +246,7 @@ function SlidingBanner(props: SlidingBannerProps) {
       plugin().start(
         canvasRef,
         backgroundClass() as BackgroundEffectName,
-        bgEffectContext
+        bgEffectContext()
       );
     }
   }

@@ -64,9 +64,6 @@
 </script>
 
 <script lang="ts">
-  let latestNext = { fn: () => {} };
-  let bgEffectContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null, row: null };
   import { afterUpdate, onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -191,6 +188,17 @@
   let direction = "next";
   let isVisible = false;
   let wrapping = false;
+  let bgEffectContext = {
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  };
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
+  let latestNext = {
+    fn: () => {},
+  };
 
   onMount(() => {
     if (lazyLoad === false) {
@@ -273,7 +281,7 @@
   }}
 >
   {#if backgroundClass() !== "none"}
-    <canvas class="cv-sliding-banner-canvas" bind:this={canvasRef}></canvas>
+    <canvas class="cv-sliding-banner-canvas" bind:this={canvasRef} />
   {/if}
   {#if config?.height === "auto" && items?.[0]?.media?.url}
     <img
@@ -324,7 +332,8 @@
             playsInline={true}
             class={`cv-sliding-bg-video ${
               showSkeleton() ? "cv-image-shimmer" : ""
-            }`}></video>
+            }`}
+          />
         {/if}
         {#if shouldMount() && item.media?.type !== "video"}
           <div
@@ -334,7 +343,8 @@
                 : "none",
               backgroundPosition: config?.bgPosition || "center",
             })}
-            class={`cv-sliding-bg ${showSkeleton() ? "cv-image-shimmer" : ""}`}></div>
+            class={`cv-sliding-bg ${showSkeleton() ? "cv-image-shimmer" : ""}`}
+          />
         {/if}
         {#if animationClass() === "curtain" && item.media?.type !== "video"}
           <div
@@ -344,7 +354,8 @@
                 : "none",
               backgroundPosition: config?.bgPosition || "center",
             })}
-            class="cv-curtain-panel cv-curtain-panel-left"></div>
+            class="cv-curtain-panel cv-curtain-panel-left"
+          />
           <div
             style={stringifyStyles({
               backgroundImage: item.media?.url
@@ -352,12 +363,13 @@
                 : "none",
               backgroundPosition: config?.bgPosition || "center",
             })}
-            class="cv-curtain-panel cv-curtain-panel-right"></div>
+            class="cv-curtain-panel cv-curtain-panel-right"
+          />
         {/if}
         {#if animationClass() === "cube"}
-          <div class="cv-cube-side"></div>
+          <div class="cv-cube-side" />
         {/if}
-        <div class="cv-sliding-overlay"></div>
+        <div class="cv-sliding-overlay" />
         <div
           style={stringifyStyles({
             textAlign: item.textAlignment || config?.align || "center",
@@ -379,27 +391,31 @@
                 height: "32px",
                 marginBottom: "16px",
               })}
-              class="cv-skeleton-title cv-image-shimmer"></div>
+              class="cv-skeleton-title cv-image-shimmer"
+            />
             <div
               style={stringifyStyles({
                 width: "70%",
                 height: "16px",
                 marginBottom: "10px",
               })}
-              class="cv-skeleton-text cv-image-shimmer"></div>
+              class="cv-skeleton-text cv-image-shimmer"
+            />
             <div
               style={stringifyStyles({
                 width: "40%",
                 height: "16px",
                 marginBottom: "24px",
               })}
-              class="cv-skeleton-text cv-image-shimmer"></div>
+              class="cv-skeleton-text cv-image-shimmer"
+            />
             <div
               style={stringifyStyles({
                 width: "130px",
                 height: "40px",
               })}
-              class="cv-skeleton-button cv-image-shimmer"></div>
+              class="cv-skeleton-button cv-image-shimmer"
+            />
           {/if}
           {#if !showSkeleton()}
             <h2 class="cv-sliding-title">{item.title}</h2>

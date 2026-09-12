@@ -146,7 +146,7 @@
           restoreSelection();
           let html = "";
           if (type === "image")
-            html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+            html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
           else if (type === "video")
             html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
           else if (type === "audio")
@@ -161,7 +161,7 @@
         restoreSelection();
         let html = "";
         if (type === "image")
-          html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+          html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
         else if (type === "video")
           html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
         else if (type === "audio")
@@ -727,7 +727,7 @@
       </div>
     {/if}
     {#if showSeparator(0)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("code") || showToolbarOption("quote") || showToolbarOption("clear")}
       <div class="flex items-center gap-2 text-slate-300">
@@ -825,7 +825,7 @@
       </div>
     {/if}
     {#if showSeparator(1)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("headings")}
       <select
@@ -871,7 +871,7 @@
       >
     {/if}
     {#if showSeparator(2)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("foreColor") || showToolbarOption("backColor")}
       <div class="flex items-center gap-1 text-slate-300">
@@ -894,6 +894,7 @@
               /></svg
             ><input
               type="color"
+              aria-label="Text Color"
               class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
               on:mousedown={(event) => {
                 saveSelection();
@@ -929,6 +930,7 @@
               /></svg
             ><input
               type="color"
+              aria-label="Background Color"
               class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
               on:mousedown={(event) => {
                 saveSelection();
@@ -945,7 +947,7 @@
       </div>
     {/if}
     {#if showSeparator(3)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("justifyLeft") || showToolbarOption("justifyCenter") || showToolbarOption("justifyRight")}
       <div class="flex items-center gap-2 text-slate-300">
@@ -1054,7 +1056,7 @@
       </div>
     {/if}
     {#if showSeparator(4)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("image") || showToolbarOption("link") || showToolbarOption("table") || showToolbarOption("unorderedList") || showToolbarOption("orderedList") || showToolbarOption("horizontalRule") || showToolbarOption("video") || showToolbarOption("social")}
       <div class="flex items-center gap-2 text-slate-300">
@@ -1198,7 +1200,7 @@
                 stroke-linejoin="round"><path d="M5 12h14" /></svg
               ><span class="text-[10px] font-bold ml-0.5">R</span></button
             >
-            <div class="w-px h-4 cv-rte-tint-strong mx-0.5"></div>
+            <div class="w-px h-4 cv-rte-tint-strong mx-0.5" />
             <button
               type="button"
               class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
@@ -1428,7 +1430,7 @@
       </div>
     {/if}
     {#if showSeparator(5)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("insertButton") || showToolbarOption("addWidget")}
       <div class="flex items-center gap-2">
@@ -1500,7 +1502,7 @@
       </div>
     {/if}
     {#if showSeparator(6)}
-      <div class="w-px h-6 bg-white/10"></div>
+      <div class="w-px h-6 bg-white/10" />
     {/if}
     {#if showToolbarOption("save")}
       <div class="flex items-center gap-1 text-slate-400">
@@ -1541,6 +1543,7 @@
           >CLASS</span
         ><input
           type="text"
+          aria-label="Dynamic CSS Class"
           list="editor-class-list"
           placeholder="e.g. my-callout"
           class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
@@ -1727,6 +1730,7 @@
                     outline: "none",
                   })}
                   type="text"
+                  aria-label="Button Text"
                   placeholder="Click Here"
                   value={btnText}
                   on:input={(e) => {
@@ -1763,6 +1767,7 @@
                     outline: "none",
                   })}
                   type="url"
+                  aria-label="Button URL"
                   placeholder="https://..."
                   value={btnUrl}
                   on:input={(e) => {
@@ -1901,6 +1906,7 @@
                     outline: "none",
                   })}
                   type="number"
+                  aria-label="Table Rows"
                   min="1"
                   max="20"
                   value={tableRows}
@@ -1939,6 +1945,7 @@
                     outline: "none",
                   })}
                   type="number"
+                  aria-label="Table Columns"
                   min="1"
                   max="20"
                   value={tableCols}
@@ -2063,6 +2070,7 @@
                   boxSizing: "border-box",
                 })}
                 type="url"
+                aria-label="Hyperlink URL"
                 placeholder="https://example.com"
                 value={linkUrl}
                 on:input={(e) => {
@@ -2387,6 +2395,7 @@
                     boxSizing: "border-box",
                   })}
                   type="url"
+                  aria-label="Social Link URL"
                   placeholder="https://..."
                   value={socialUrl}
                   on:input={(e) => {

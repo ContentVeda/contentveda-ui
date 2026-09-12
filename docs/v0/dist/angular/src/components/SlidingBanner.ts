@@ -353,17 +353,17 @@ export default class SlidingBanner {
     }
   }
   startAutoPlay() {
-    if (this._animContext.intervalId) return;
+    if (this.animContext.intervalId) return;
     if (this.config?.autoStart !== false && this.items?.length > 1) {
-      this._animContext.intervalId = setInterval(() => {
-        this._latestNext.fn();
+      this.animContext.intervalId = setInterval(() => {
+        this.latestNext.fn();
       }, this.config?.delayMs || 5000);
     }
   }
   stopAutoPlay() {
-    if (this._animContext.intervalId) {
-      clearInterval(this._animContext.intervalId);
-      this._animContext.intervalId = null;
+    if (this.animContext.intervalId) {
+      clearInterval(this.animContext.intervalId);
+      this.animContext.intervalId = null;
     }
   }
   setupDimensions() {
@@ -374,16 +374,31 @@ export default class SlidingBanner {
       );
     }
   }
+  animContext = {
+    intervalId: null as any,
+    dimResizeHandler: null as any,
+  };
+  bgEffectContext = {
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  };
+  observerBox = {
+    disconnect: null as (() => void) | null,
+  };
+  latestNext = {
+    fn: () => {},
+  };
   mountHeavyContent = function mountHeavyContent() {
     this.startAutoPlay();
     this.setupDimensions();
-    this._animContext.dimResizeHandler = () => this.setupDimensions();
-    window.addEventListener("resize", this._animContext.dimResizeHandler);
+    this.animContext.dimResizeHandler = () => this.setupDimensions();
+    window.addEventListener("resize", this.animContext.dimResizeHandler);
     if (this.canvasRef?.nativeElement) {
       this.plugin.start(
         this.canvasRef?.nativeElement,
         this.backgroundClass as BackgroundEffectName,
-        this._bgEffectContext
+        this.bgEffectContext
       );
     }
   };
@@ -394,26 +409,6 @@ export default class SlidingBanner {
     return index;
   }
 
-  private _animContext = {
-    intervalId: null as any,
-    dimResizeHandler: null as any,
-  };
-  private _bgEffectContext: BackgroundEffectContext = {
-    animationFrameId: null,
-    resizeHandler: null,
-    resizeObserver: null,
-  };
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
-  };
-  private _latestNext: {
-    fn: () => void;
-  } = {
-    fn: () => {},
-  };
-
   ngOnInit() {
     if (typeof window !== "undefined") {
       if (this.lazyLoad === false) {
@@ -422,7 +417,7 @@ export default class SlidingBanner {
         return;
       }
       if (this.rootRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.rootRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -437,7 +432,7 @@ export default class SlidingBanner {
 
   ngOnChanges(changes: SimpleChanges) {
     if (typeof window !== "undefined") {
-      this._latestNext.fn = this.next;
+      this.latestNext.fn = this.next;
       if (this.wrapping) {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -449,7 +444,7 @@ export default class SlidingBanner {
         this.plugin.start(
           this.canvasRef?.nativeElement,
           this.backgroundClass as BackgroundEffectName,
-          this._bgEffectContext
+          this.bgEffectContext
         );
       }
     }
@@ -457,15 +452,15 @@ export default class SlidingBanner {
 
   ngOnDestroy() {
     this.stopAutoPlay();
-    this.plugin.stop(this._bgEffectContext);
+    this.plugin.stop(this.bgEffectContext);
     // Same guard as RowScrollable: onDestroy also runs on the server. The
     // handler is only assigned in onMount so this branch is normally skipped
     // there, but the typeof check makes that safe by construction rather than
     // by coincidence.
-    if (typeof window !== "undefined" && this._animContext.dimResizeHandler) {
-      window.removeEventListener("resize", this._animContext.dimResizeHandler);
+    if (typeof window !== "undefined" && this.animContext.dimResizeHandler) {
+      window.removeEventListener("resize", this.animContext.dimResizeHandler);
     }
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   }
 }
 

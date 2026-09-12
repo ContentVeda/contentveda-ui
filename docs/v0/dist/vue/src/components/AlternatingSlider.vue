@@ -428,7 +428,14 @@ export default defineComponent({
   ],
 
   data() {
-    return { currentIndex: 0, intervalId: null, isVisible: false };
+    return {
+      currentIndex: 0,
+      intervalId: null,
+      isVisible: false,
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
+    };
   },
 
   mounted() {
@@ -438,7 +445,7 @@ export default defineComponent({
       return;
     }
     if (this.$refs.rootRef) {
-      this.$refs.observerBox.disconnect = observeLazyMount(
+      this.observerBox.disconnect = observeLazyMount(
         this.$refs.rootRef,
         () => {
           this.isVisible = true;
@@ -452,7 +459,7 @@ export default defineComponent({
 
   unmounted() {
     this.stopAutoPlay();
-    if (this.$refs.observerBox.disconnect) this.$refs.observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   },
 
   computed: {

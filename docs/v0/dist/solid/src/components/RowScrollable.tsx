@@ -37,6 +37,11 @@ function RowScrollable(props: RowScrollableProps) {
 
   const [isVisible, setIsVisible] = createSignal(false);
 
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+    row: null as any,
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -76,8 +81,8 @@ function RowScrollable(props: RowScrollableProps) {
         checkScroll();
       }, 150);
       if (typeof ResizeObserver !== "undefined") {
-        observerBox.row = new ResizeObserver(() => checkScroll());
-        observerBox.row.observe(el);
+        observerBox().row = new ResizeObserver(() => checkScroll());
+        observerBox().row.observe(el);
       }
     }
     window.addEventListener("resize", checkScroll);
@@ -86,7 +91,7 @@ function RowScrollable(props: RowScrollableProps) {
       return;
     }
     if (containerRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         containerRef,
         () => {
           setIsVisible(true);

@@ -38,7 +38,12 @@ export default defineComponent({
   ],
 
   data() {
-    return { isVisible: false };
+    return {
+      isVisible: false,
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
+    };
   },
 
   mounted() {
@@ -48,7 +53,7 @@ export default defineComponent({
       return;
     }
     if (this.$refs.containerRef) {
-      this.$refs.observerBox.disconnect = observeLazyMount(
+      this.observerBox.disconnect = observeLazyMount(
         this.$refs.containerRef,
         () => {
           this.isVisible = true;
@@ -69,7 +74,7 @@ export default defineComponent({
     },
   },
   unmounted() {
-    if (this.$refs.observerBox.disconnect) this.$refs.observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   },
 
   computed: {

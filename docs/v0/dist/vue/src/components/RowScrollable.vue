@@ -161,7 +161,15 @@ export default defineComponent({
   ],
 
   data() {
-    return { canScrollLeft: false, canScrollRight: false, isVisible: false };
+    return {
+      canScrollLeft: false,
+      canScrollRight: false,
+      isVisible: false,
+      observerBox: {
+        disconnect: null as (() => void) | null,
+        row: null as any,
+      },
+    };
   },
 
   mounted() {
@@ -173,10 +181,8 @@ export default defineComponent({
         this.checkScroll();
       }, 150);
       if (typeof ResizeObserver !== "undefined") {
-        this.$refs.observerBox.row = new ResizeObserver(() =>
-          this.checkScroll()
-        );
-        this.$refs.observerBox.row.observe(el);
+        this.observerBox.row = new ResizeObserver(() => this.checkScroll());
+        this.observerBox.row.observe(el);
       }
     }
     window.addEventListener("resize", this.checkScroll);
@@ -185,7 +191,7 @@ export default defineComponent({
       return;
     }
     if (this.$refs.containerRef) {
-      this.$refs.observerBox.disconnect = observeLazyMount(
+      this.observerBox.disconnect = observeLazyMount(
         this.$refs.containerRef,
         () => {
           this.isVisible = true;
@@ -208,10 +214,10 @@ export default defineComponent({
     if (typeof window !== "undefined") {
       window.removeEventListener("resize", this.checkScroll);
     }
-    if (this.$refs.observerBox.disconnect) this.$refs.observerBox.disconnect();
-    if (this.$refs.observerBox.row) {
-      this.$refs.observerBox.row.disconnect();
-      this.$refs.observerBox.row = null;
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
+    if (this.observerBox.row) {
+      this.observerBox.row.disconnect();
+      this.observerBox.row = null;
     }
   },
 

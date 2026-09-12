@@ -45,6 +45,16 @@ function TimerWidget(props: TimerWidgetProps) {
 
   const [isExpired, setIsExpired] = createSignal(false);
 
+  const [animContext, setAnimContext] = createSignal({
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  });
+
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
   function calculateTimeLeft() {
     const difference =
       new Date(props.targetDate).getTime() - new Date().getTime();
@@ -118,12 +128,12 @@ function TimerWidget(props: TimerWidgetProps) {
         plugin().start(
           canvasRef,
           backgroundEffectClass() as BackgroundEffectName,
-          animContext
+          animContext()
         );
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         rootRef,
         () => {
           startTicking();
@@ -131,7 +141,7 @@ function TimerWidget(props: TimerWidgetProps) {
             plugin().start(
               canvasRef,
               backgroundEffectClass() as BackgroundEffectName,
-              animContext
+              animContext()
             );
         },
         props.lazyThreshold ?? 0.1,
@@ -149,7 +159,7 @@ function TimerWidget(props: TimerWidgetProps) {
       plugin().start(
         canvasRef,
         backgroundEffectClass() as BackgroundEffectName,
-        animContext
+        animContext()
       );
   }
   createEffect(

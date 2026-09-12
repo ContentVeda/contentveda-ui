@@ -86,3 +86,9 @@ Feature: Svelte target
     And the component text should include "Hello editor"
     And the component should contain a visible "button[title='Bold']" element
     And the component should have no accessibility violations
+
+
+  Scenario: Banner renders without errors in SSR mode
+    Given I SSR mount the "Banner" "Svelte" component with:
+      | title | SSR Test |
+    Then it should render without any page errors

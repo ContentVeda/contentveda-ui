@@ -51,6 +51,10 @@ import { observeLazyMount } from "../utils/lazyObserver";
 function GridBanner(props: GridBannerProps) {
   const [isVisible, setIsVisible] = createSignal(false);
 
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -80,7 +84,7 @@ function GridBanner(props: GridBannerProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         rootRef,
         () => {
           setIsVisible(true);

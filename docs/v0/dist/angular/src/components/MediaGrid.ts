@@ -42,6 +42,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
           ><a
             class="cv-media-primary"
             [attr.href]="primaryMedia.mapLinks?.[0]?.url || undefined"
+            [attr.aria-label]='primaryMedia.mapLinks?.[0]?.url ? primaryMedia.altText || primaryMedia.title || "Media content" : undefined'
             ><ng-container *ngIf="primaryMedia.media?.type === 'video'"
               ><video
                 class="cv-media-asset"
@@ -65,6 +66,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
               ><a
                 class="cv-media-secondary-item"
                 [attr.href]="item.mapLinks?.[0]?.url || undefined"
+                [attr.aria-label]='item.mapLinks?.[0]?.url ? item.altText || item.title || "Media content" : undefined'
                 ><ng-container *ngIf="item.media?.type === 'video'"
                   ><video
                     class="cv-media-asset"
@@ -110,15 +112,12 @@ export default class MediaGrid {
   get showSkeleton() {
     return !!this.isLoading || !this.shouldMount;
   }
+  observerBox = {
+    disconnect: null as (() => void) | null,
+  };
   trackByItem0(_, item) {
     return item.id;
   }
-
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
-  };
 
   ngOnInit() {
     if (typeof window !== "undefined") {
@@ -127,7 +126,7 @@ export default class MediaGrid {
         return;
       }
       if (this.rootRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.rootRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -140,7 +139,7 @@ export default class MediaGrid {
   }
 
   ngOnDestroy() {
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   }
 }
 

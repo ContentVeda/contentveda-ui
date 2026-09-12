@@ -13,6 +13,11 @@
         <a
           class="cv-media-primary"
           :href="primaryMedia.mapLinks?.[0]?.url || undefined"
+          :aria-label="
+            primaryMedia.mapLinks?.[0]?.url
+              ? primaryMedia.altText || primaryMedia.title || 'Media content'
+              : undefined
+          "
         >
           <template v-if="primaryMedia.media?.type === 'video'">
             <video
@@ -41,6 +46,11 @@
             <a
               class="cv-media-secondary-item"
               :href="item.mapLinks?.[0]?.url || undefined"
+              :aria-label="
+                item.mapLinks?.[0]?.url
+                  ? item.altText || item.title || 'Media content'
+                  : undefined
+              "
             >
               <template v-if="item.media?.type === 'video'">
                 <video
@@ -109,7 +119,12 @@ export default defineComponent({
   ],
 
   data() {
-    return { isVisible: false };
+    return {
+      isVisible: false,
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
+    };
   },
 
   mounted() {
@@ -118,7 +133,7 @@ export default defineComponent({
       return;
     }
     if (this.$refs.rootRef) {
-      this.$refs.observerBox.disconnect = observeLazyMount(
+      this.observerBox.disconnect = observeLazyMount(
         this.$refs.rootRef,
         () => {
           this.isVisible = true;
@@ -130,7 +145,7 @@ export default defineComponent({
   },
 
   unmounted() {
-    if (this.$refs.observerBox.disconnect) this.$refs.observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   },
 
   computed: {

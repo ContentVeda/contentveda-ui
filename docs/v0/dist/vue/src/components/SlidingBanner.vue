@@ -322,6 +322,21 @@ export default defineComponent({
       direction: "next",
       isVisible: false,
       wrapping: false,
+      animContext: {
+        intervalId: null as any,
+        dimResizeHandler: null as any,
+      },
+      bgEffectContext: {
+        animationFrameId: null,
+        resizeHandler: null,
+        resizeObserver: null,
+      },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
+      latestNext: {
+        fn: () => {},
+      },
     };
   },
 
@@ -332,7 +347,7 @@ export default defineComponent({
       return;
     }
     if (this.$refs.rootRef) {
-      this.$refs.observerBox.disconnect = observeLazyMount(
+      this.observerBox.disconnect = observeLazyMount(
         this.$refs.rootRef,
         () => {
           this.isVisible = true;
@@ -344,7 +359,7 @@ export default defineComponent({
     }
   },
   updated() {
-    this.$refs.latestNext.fn = this.next;
+    this.latestNext.fn = this.next;
   },
   watch: {
     onUpdateHook0: {
@@ -365,7 +380,7 @@ export default defineComponent({
           this.plugin.start(
             this.$refs.canvasRef,
             this.backgroundClass as BackgroundEffectName,
-            this.$refs.bgEffectContext
+            this.bgEffectContext
           );
         }
       },
@@ -374,21 +389,15 @@ export default defineComponent({
   },
   unmounted() {
     this.stopAutoPlay();
-    this.plugin.stop(this.$refs.bgEffectContext);
+    this.plugin.stop(this.bgEffectContext);
     // Same guard as RowScrollable: onDestroy also runs on the server. The
     // handler is only assigned in onMount so this branch is normally skipped
     // there, but the typeof check makes that safe by construction rather than
     // by coincidence.
-    if (
-      typeof window !== "undefined" &&
-      this.$refs.animContext.dimResizeHandler
-    ) {
-      window.removeEventListener(
-        "resize",
-        this.$refs.animContext.dimResizeHandler
-      );
+    if (typeof window !== "undefined" && this.animContext.dimResizeHandler) {
+      window.removeEventListener("resize", this.animContext.dimResizeHandler);
     }
-    if (this.$refs.observerBox.disconnect) this.$refs.observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   },
 
   computed: {
@@ -460,17 +469,17 @@ export default defineComponent({
       }
     },
     startAutoPlay() {
-      if (this.$refs.animContext.intervalId) return;
+      if (this.animContext.intervalId) return;
       if (this.config?.autoStart !== false && this.items?.length > 1) {
-        this.$refs.animContext.intervalId = setInterval(() => {
-          this.$refs.latestNext.fn();
+        this.animContext.intervalId = setInterval(() => {
+          this.latestNext.fn();
         }, this.config?.delayMs || 5000);
       }
     },
     stopAutoPlay() {
-      if (this.$refs.animContext.intervalId) {
-        clearInterval(this.$refs.animContext.intervalId);
-        this.$refs.animContext.intervalId = null;
+      if (this.animContext.intervalId) {
+        clearInterval(this.animContext.intervalId);
+        this.animContext.intervalId = null;
       }
     },
     setupDimensions() {
@@ -484,16 +493,13 @@ export default defineComponent({
     mountHeavyContent: function mountHeavyContent() {
       this.startAutoPlay();
       this.setupDimensions();
-      this.$refs.animContext.dimResizeHandler = () => this.setupDimensions();
-      window.addEventListener(
-        "resize",
-        this.$refs.animContext.dimResizeHandler
-      );
+      this.animContext.dimResizeHandler = () => this.setupDimensions();
+      window.addEventListener("resize", this.animContext.dimResizeHandler);
       if (this.$refs.canvasRef) {
         this.plugin.start(
           this.$refs.canvasRef,
           this.backgroundClass as BackgroundEffectName,
-          this.$refs.bgEffectContext
+          this.bgEffectContext
         );
       }
     },

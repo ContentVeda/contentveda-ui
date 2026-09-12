@@ -169,6 +169,14 @@ export default defineComponent({
       },
       timerId: null,
       isExpired: false,
+      animContext: {
+        animationFrameId: null,
+        resizeHandler: null,
+        resizeObserver: null,
+      },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
   },
 
@@ -179,12 +187,12 @@ export default defineComponent({
         this.plugin.start(
           this.$refs.canvasRef,
           this.backgroundEffectClass as BackgroundEffectName,
-          this.$refs.animContext
+          this.animContext
         );
       return;
     }
     if (this.$refs.rootRef) {
-      this.$refs.observerBox.disconnect = observeLazyMount(
+      this.observerBox.disconnect = observeLazyMount(
         this.$refs.rootRef,
         () => {
           this.startTicking();
@@ -192,7 +200,7 @@ export default defineComponent({
             this.plugin.start(
               this.$refs.canvasRef,
               this.backgroundEffectClass as BackgroundEffectName,
-              this.$refs.animContext
+              this.animContext
             );
         },
         this.lazyThreshold ?? 0.1,
@@ -208,7 +216,7 @@ export default defineComponent({
           this.plugin.start(
             this.$refs.canvasRef,
             this.backgroundEffectClass as BackgroundEffectName,
-            this.$refs.animContext
+            this.animContext
           );
       },
       immediate: true,
@@ -216,8 +224,8 @@ export default defineComponent({
   },
   unmounted() {
     if (this.timerId) clearInterval(this.timerId);
-    if (this.$refs.observerBox.disconnect) this.$refs.observerBox.disconnect();
-    this.plugin.stop(this.$refs.animContext);
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
+    this.plugin.stop(this.animContext);
   },
 
   computed: {

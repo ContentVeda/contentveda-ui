@@ -415,6 +415,9 @@ export default class AlternatingSlider {
       clearInterval(this.intervalId);
     }
   }
+  observerBox = {
+    disconnect: null as (() => void) | null,
+  };
   trackBy_0(colIndex, _) {
     return `col-${colIndex}`;
   }
@@ -425,12 +428,6 @@ export default class AlternatingSlider {
     return `dot-${index}`;
   }
 
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
-  };
-
   ngOnInit() {
     if (typeof window !== "undefined") {
       if (this.lazyLoad === false) {
@@ -439,7 +436,7 @@ export default class AlternatingSlider {
         return;
       }
       if (this.rootRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.rootRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -454,7 +451,7 @@ export default class AlternatingSlider {
 
   ngOnDestroy() {
     this.stopAutoPlay();
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   }
 }
 

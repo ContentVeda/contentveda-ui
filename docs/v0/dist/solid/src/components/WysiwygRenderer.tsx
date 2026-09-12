@@ -14,6 +14,10 @@ import { observeLazyMount } from "../utils/lazyObserver";
 function WysiwygRenderer(props: WysiwygRendererProps) {
   const [isVisible, setIsVisible] = createSignal(false);
 
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -142,7 +146,7 @@ function WysiwygRenderer(props: WysiwygRendererProps) {
       return;
     }
     if (containerRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         containerRef,
         () => {
           setIsVisible(true);

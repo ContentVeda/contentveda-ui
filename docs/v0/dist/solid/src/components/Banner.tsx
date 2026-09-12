@@ -90,6 +90,16 @@ import type {
 function Banner(props: BannerProps) {
   const [isVisible, setIsVisible] = createSignal(false);
 
+  const [animContext, setAnimContext] = createSignal({
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  });
+
+  const [observerBox, setObserverBox] = createSignal({
+    disconnect: null as (() => void) | null,
+  });
+
   const shouldMount = createMemo(() => {
     return props.lazyLoad === false || isVisible();
   });
@@ -210,12 +220,12 @@ function Banner(props: BannerProps) {
         plugin().start(
           canvasRef,
           backgroundEffectClass() as BackgroundEffectName,
-          animContext
+          animContext()
         );
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      observerBox().disconnect = observeLazyMount(
         rootRef,
         () => {
           setIsVisible(true);
@@ -223,7 +233,7 @@ function Banner(props: BannerProps) {
             plugin().start(
               canvasRef,
               backgroundEffectClass() as BackgroundEffectName,
-              animContext
+              animContext()
             );
         },
         props.lazyThreshold ?? 0.1,
@@ -241,7 +251,7 @@ function Banner(props: BannerProps) {
       plugin().start(
         canvasRef,
         backgroundEffectClass() as BackgroundEffectName,
-        animContext
+        animContext()
       );
   }
   createEffect(

@@ -452,23 +452,20 @@ export default class Banner {
       transform: "translate(-50%, -50%)",
     };
   }
+  animContext = {
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  };
+  observerBox = {
+    disconnect: null as (() => void) | null,
+  };
   trackByH0(_, h) {
     return `${h.id}-visual`;
   }
   trackByH1(_, h) {
     return h.id;
   }
-
-  private _animContext: BackgroundEffectContext = {
-    animationFrameId: null,
-    resizeHandler: null,
-    resizeObserver: null,
-  };
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
-  };
 
   ngOnInit() {
     if (typeof window !== "undefined") {
@@ -478,12 +475,12 @@ export default class Banner {
           this.plugin.start(
             this.canvasRef?.nativeElement,
             this.backgroundEffectClass as BackgroundEffectName,
-            this._animContext
+            this.animContext
           );
         return;
       }
       if (this.rootRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.rootRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -491,7 +488,7 @@ export default class Banner {
               this.plugin.start(
                 this.canvasRef?.nativeElement,
                 this.backgroundEffectClass as BackgroundEffectName,
-                this._animContext
+                this.animContext
               );
           },
           this.lazyThreshold ?? 0.1,
@@ -507,14 +504,14 @@ export default class Banner {
         this.plugin.start(
           this.canvasRef?.nativeElement,
           this.backgroundEffectClass as BackgroundEffectName,
-          this._animContext
+          this.animContext
         );
     }
   }
 
   ngOnDestroy() {
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
-    this.plugin.stop(this._animContext);
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
+    this.plugin.stop(this.animContext);
   }
 }
 

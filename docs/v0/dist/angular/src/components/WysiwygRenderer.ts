@@ -170,11 +170,8 @@ export default class WysiwygRenderer {
       });
     }, 0);
   }
-
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
+  observerBox = {
+    disconnect: null as (() => void) | null,
   };
 
   constructor(protected sanitizer: DomSanitizer) {}
@@ -187,7 +184,7 @@ export default class WysiwygRenderer {
         return;
       }
       if (this.containerRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.containerRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -207,7 +204,7 @@ export default class WysiwygRenderer {
   }
 
   ngOnDestroy() {
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   }
 }
 

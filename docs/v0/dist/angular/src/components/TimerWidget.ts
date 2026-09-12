@@ -231,16 +231,13 @@ export default class TimerWidget {
   get plugin() {
     return this.backgroundEffectPlugin || defaultBackgroundEffectPlugin;
   }
-
-  private _animContext: BackgroundEffectContext = {
+  animContext = {
     animationFrameId: null,
     resizeHandler: null,
     resizeObserver: null,
   };
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
+  observerBox = {
+    disconnect: null as (() => void) | null,
   };
 
   ngOnInit() {
@@ -251,12 +248,12 @@ export default class TimerWidget {
           this.plugin.start(
             this.canvasRef?.nativeElement,
             this.backgroundEffectClass as BackgroundEffectName,
-            this._animContext
+            this.animContext
           );
         return;
       }
       if (this.rootRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.rootRef!.nativeElement,
           () => {
             this.startTicking();
@@ -264,7 +261,7 @@ export default class TimerWidget {
               this.plugin.start(
                 this.canvasRef?.nativeElement,
                 this.backgroundEffectClass as BackgroundEffectName,
-                this._animContext
+                this.animContext
               );
           },
           this.lazyThreshold ?? 0.1,
@@ -280,15 +277,15 @@ export default class TimerWidget {
         this.plugin.start(
           this.canvasRef?.nativeElement,
           this.backgroundEffectClass as BackgroundEffectName,
-          this._animContext
+          this.animContext
         );
     }
   }
 
   ngOnDestroy() {
     if (this.timerId) clearInterval(this.timerId);
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
-    this.plugin.stop(this._animContext);
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
+    this.plugin.stop(this.animContext);
   }
 }
 

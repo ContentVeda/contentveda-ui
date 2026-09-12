@@ -188,15 +188,12 @@ export default class GridBanner {
   get columnsMobileVar() {
     return `${this.columnsMobile || this.columnsTablet || 2}`;
   }
+  observerBox = {
+    disconnect: null as (() => void) | null,
+  };
   trackByItem0(index, item) {
     return item.id || index;
   }
-
-  private _observerBox: {
-    disconnect: (() => void) | null;
-  } = {
-    disconnect: null,
-  };
 
   ngOnInit() {
     if (typeof window !== "undefined") {
@@ -205,7 +202,7 @@ export default class GridBanner {
         return;
       }
       if (this.rootRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.rootRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -218,7 +215,7 @@ export default class GridBanner {
   }
 
   ngOnDestroy() {
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
   }
 }
 

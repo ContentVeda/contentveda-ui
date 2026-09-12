@@ -31,7 +31,13 @@ async function bundleEntry(entryCode, plugins = []) {
     target: 'es2020',
     write: false,
     logLevel: 'silent',
-    plugins
+    plugins,
+    tsconfigRaw: {
+      compilerOptions: {
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true
+      }
+    }
   });
   const outFile = tmpFile('js');
   fs.writeFileSync(outFile, result.outputFiles[0].text);
@@ -151,13 +157,39 @@ window.__solidDispose = render(() => createComponent(Component, ${JSON.stringify
   return bundleEntry(entry, [solidPlugin()]);
 }
 
-// Pre-compiled fixture approach for Angular due to compiler complexity.
 async function bundleAngularHarness(pascalName, props) {
-  // Mock angular harness logic, just injecting a generic html snippet
-  // For true BDD, it requires AOT setup which is out of scope for esbuild dynamic harnessing.
+  const kebabName = pascalName.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase().replace(/^-/, '');
   const entry = `
+import 'core-js/proposals/reflect-metadata';
+import 'zone.js';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { BrowserModule } from '@angular/platform-browser';
+import { NgModule, Component } from '@angular/core';
+
+import ComponentTarget, { ${pascalName}Module } from '${path.join(ROOT, 'dist', 'angular', 'src', 'components', `${pascalName}.ts`).replace(/\\/g, '/')}';
+
+@Component({
+  selector: 'app-root',
+  template: \`<${kebabName} ` + Object.keys(props).map(k => `[${k}]="props['${k}']"`).join(' ') + `></${kebabName}>\`
+})
+class AppRoot {
+  constructor() {
+    this.props = ${JSON.stringify(props)};
+  }
+}
+
+@NgModule({
+  declarations: [AppRoot],
+  imports: [BrowserModule, ${pascalName}Module],
+  bootstrap: [AppRoot]
+})
+class AppModule {}
+
 const mount = document.getElementById('mount');
-mount.innerHTML = '<div style="color: #ffffff; background-color: #0b1120;">Angular component mock</div>';
+mount.innerHTML = '<app-root></app-root>';
+
+platformBrowserDynamic().bootstrapModule(AppModule)
+  .catch(err => console.error(err));
 `;
   return bundleEntry(entry);
 }

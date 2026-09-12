@@ -187,14 +187,13 @@ export default class RowScrollable {
       });
     }
   }
+  observerBox = {
+    disconnect: null as (() => void) | null,
+    row: null as any,
+  };
   trackByItem0(_, item) {
     return item.id;
   }
-
-  private _observerBox: any = {
-    disconnect: null,
-    row: null,
-  };
 
   ngOnInit() {
     if (typeof window !== "undefined") {
@@ -206,8 +205,8 @@ export default class RowScrollable {
           this.checkScroll();
         }, 150);
         if (typeof ResizeObserver !== "undefined") {
-          this._observerBox.row = new ResizeObserver(() => this.checkScroll());
-          this._observerBox.row.observe(el);
+          this.observerBox.row = new ResizeObserver(() => this.checkScroll());
+          this.observerBox.row.observe(el);
         }
       }
       window.addEventListener("resize", this.checkScroll);
@@ -216,7 +215,7 @@ export default class RowScrollable {
         return;
       }
       if (this.containerRef?.nativeElement) {
-        this._observerBox.disconnect = observeLazyMount(
+        this.observerBox.disconnect = observeLazyMount(
           this.containerRef!.nativeElement,
           () => {
             this.isVisible = true;
@@ -240,10 +239,10 @@ export default class RowScrollable {
     if (typeof window !== "undefined") {
       window.removeEventListener("resize", this.checkScroll);
     }
-    if (this._observerBox.disconnect) this._observerBox.disconnect();
-    if (this._observerBox.row) {
-      this._observerBox.row.disconnect();
-      this._observerBox.row = null;
+    if (this.observerBox.disconnect) this.observerBox.disconnect();
+    if (this.observerBox.row) {
+      this.observerBox.row.disconnect();
+      this.observerBox.row = null;
     }
   }
 }

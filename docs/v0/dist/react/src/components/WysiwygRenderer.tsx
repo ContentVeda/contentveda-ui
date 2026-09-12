@@ -15,11 +15,6 @@ import { observeLazyMount } from "../utils/lazyObserver";
 
 function WysiwygRenderer(props: WysiwygRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
   const [isVisible, setIsVisible] = useState(() => false);
 
   function shouldMount() {
@@ -142,6 +137,10 @@ function WysiwygRenderer(props: WysiwygRendererProps) {
     }, 0);
   }
 
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       setIsVisible(true);
@@ -149,7 +148,7 @@ function WysiwygRenderer(props: WysiwygRendererProps) {
       return;
     }
     if (containerRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         containerRef.current,
         () => {
           setIsVisible(true);
@@ -165,7 +164,7 @@ function WysiwygRenderer(props: WysiwygRendererProps) {
   }, [props.htmlContent, props.widgetData]);
   useEffect(() => {
     return () => {
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
+      if (observerBox.disconnect) observerBox.disconnect();
     };
   }, []);
 

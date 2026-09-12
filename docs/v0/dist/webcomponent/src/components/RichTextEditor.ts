@@ -201,7 +201,7 @@ class RichTextEditor extends HTMLElement {
               self.state.restoreSelection();
               let html = "";
               if (type === "image")
-                html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+                html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
               else if (type === "video")
                 html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
               else if (type === "audio")
@@ -216,7 +216,7 @@ class RichTextEditor extends HTMLElement {
             self.state.restoreSelection();
             let html = "";
             if (type === "image")
-              html = `<img src="${url}" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
+              html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
             else if (type === "video")
               html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
             else if (type === "audio")
@@ -1350,6 +1350,7 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                   <input
                     type="color"
+                    aria-label="Text Color"
                     class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                     data-el="input-rich-text-editor-1"
                     data-dom-state="RichTextEditor-input-rich-text-editor-1"
@@ -1379,6 +1380,7 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                   <input
                     type="color"
+                    aria-label="Background Color"
                     class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                     data-el="input-rich-text-editor-2"
                     data-dom-state="RichTextEditor-input-rich-text-editor-2"
@@ -1870,6 +1872,7 @@ class RichTextEditor extends HTMLElement {
               </span>
               <input
                 type="text"
+                aria-label="Dynamic CSS Class"
                 list="editor-class-list"
                 placeholder="e.g. my-callout"
                 class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
@@ -1952,6 +1955,7 @@ class RichTextEditor extends HTMLElement {
                       <label data-el="label-rich-text-editor-2">Button Text</label>
                       <input
                         type="text"
+                        aria-label="Button Text"
                         placeholder="Click Here"
                         data-el="input-rich-text-editor-4"
                         data-dom-state="RichTextEditor-input-rich-text-editor-4"
@@ -1961,6 +1965,7 @@ class RichTextEditor extends HTMLElement {
                       <label data-el="label-rich-text-editor-3">Link URL</label>
                       <input
                         type="url"
+                        aria-label="Button URL"
                         placeholder="https://..."
                         data-el="input-rich-text-editor-5"
                         data-dom-state="RichTextEditor-input-rich-text-editor-5"
@@ -2009,6 +2014,7 @@ class RichTextEditor extends HTMLElement {
                       <label data-el="label-rich-text-editor-4">Rows</label>
                       <input
                         type="number"
+                        aria-label="Table Rows"
                         min="1"
                         max="20"
                         data-el="input-rich-text-editor-6"
@@ -2019,6 +2025,7 @@ class RichTextEditor extends HTMLElement {
                       <label data-el="label-rich-text-editor-5">Columns</label>
                       <input
                         type="number"
+                        aria-label="Table Columns"
                         min="1"
                         max="20"
                         data-el="input-rich-text-editor-7"
@@ -2068,6 +2075,7 @@ class RichTextEditor extends HTMLElement {
                     <label data-el="label-rich-text-editor-6">Destination URL</label>
                     <input
                       type="url"
+                      aria-label="Hyperlink URL"
                       placeholder="https://example.com"
                       data-el="input-rich-text-editor-8"
                       data-dom-state="RichTextEditor-input-rich-text-editor-8"
@@ -2197,6 +2205,7 @@ class RichTextEditor extends HTMLElement {
                       <label data-el="label-rich-text-editor-9">Post URL</label>
                       <input
                         type="url"
+                        aria-label="Social Link URL"
                         placeholder="https://..."
                         data-el="input-rich-text-editor-9"
                         data-dom-state="RichTextEditor-input-rich-text-editor-9"

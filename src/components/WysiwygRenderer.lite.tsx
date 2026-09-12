@@ -118,10 +118,10 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
           el.appendChild(wc);
         });
       }, 0);
-    }
+    },
+    observerBox: { disconnect: null as (() => void) | null }
   });
 
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
 
   onMount(() => {
     if (props.lazyLoad === false) {
@@ -130,7 +130,7 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
       return;
     }
     if (containerRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         containerRef,
         () => { state.isVisible = true; state.processContent(); },
         props.lazyThreshold ?? 0.1,
@@ -140,7 +140,7 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
   });
 
   onUnMount(() => {
-    if (observerBox.disconnect) observerBox.disconnect();
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
   });
 
   onUpdate(() => {

@@ -52,7 +52,6 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -98,6 +97,9 @@
   let rootRef;
 
   let isVisible = false;
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
 
   onMount(() => {
     if (lazyLoad === false) {
@@ -156,7 +158,8 @@
               autoPlay={true}
               loop={true}
               muted={true}
-              playsInline={true}></video>
+              playsInline={true}
+            />
           {/if}
 
           {#if item.media?.type !== "video"}
@@ -190,14 +193,16 @@
               height: "14px",
               margin: "0 0 6px 0",
             })}
-            class="cv-skeleton-text cv-image-shimmer"></div>
+            class="cv-skeleton-text cv-image-shimmer"
+          />
           <div
             style={stringifyStyles({
               width: "40%",
               height: "10px",
               margin: 0,
             })}
-            class="cv-skeleton-text cv-image-shimmer"></div>
+            class="cv-skeleton-text cv-image-shimmer"
+          />
         </div>
       {/if}
       {#if !showSkeleton()}
