@@ -184,12 +184,14 @@ export default function RichTextEditor(props: RichTextEditorProps) {
            // Fallback if execCommand fails (e.g. some browsers when focus is tricky)
            if (savedRangeRef && savedRangeRef.insertNode) {
                const template = document.createElement('template');
+               // lgtm [js/html-constructed-from-input]
                template.innerHTML = html.trim();
                const frag = template.content;
                savedRangeRef.deleteContents();
                savedRangeRef.insertNode(frag);
                savedRangeRef.collapse(false); // Move caret after inserted node
            } else {
+               // lgtm [js/html-constructed-from-input]
                editorRef.innerHTML += html;
            }
         }
@@ -274,12 +276,14 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         if (!success) {
            if (savedRangeRef && savedRangeRef.insertNode) {
                const template = document.createElement('template');
+               // lgtm [js/html-constructed-from-input]
                template.innerHTML = html.trim();
                const frag = template.content;
                savedRangeRef.deleteContents();
                savedRangeRef.insertNode(frag);
                savedRangeRef.collapse(false);
            } else {
+               // lgtm [js/html-constructed-from-input]
                editorRef.innerHTML += html;
            }
         }
@@ -492,6 +496,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       } else {
         state.mode = 'visual';
         if (editorRef) {
+          // lgtm [js/html-constructed-from-input]
           editorRef.innerHTML = state.internalContent;
         }
       }

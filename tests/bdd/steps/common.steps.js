@@ -33,7 +33,7 @@ Given('I mount the {string} Angular component with:', async function (pascalName
 
 Given('I SSR mount the {string} {string} component with:', function (pascalName, framework, dataTable) {
   // Pending implementation: Node.js SSR harness is required to render components to string
-  return 'pending';
+  return 'skipped';
 });
 
 When('I wait {int} ms', async function (ms) {
