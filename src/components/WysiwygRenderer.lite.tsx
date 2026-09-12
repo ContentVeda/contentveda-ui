@@ -43,15 +43,40 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
             const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
             if (match && match[1]) videoId = match[1];
             if (videoId) {
-              // lgtm [js/html-constructed-from-input]
-              el.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"></iframe>`;
+              const iframe = document.createElement('iframe');
+              iframe.width = "560";
+              iframe.height = "315";
+              iframe.src = `https://www.youtube.com/embed/${videoId}`;
+              iframe.title = "YouTube video player";
+              iframe.setAttribute('frameborder', '0');
+              iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+              iframe.setAttribute('allowfullscreen', '');
+              iframe.style.cssText = "border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);";
+              el.appendChild(iframe);
             } else {
-              // lgtm [js/html-constructed-from-input]
-              el.innerHTML = `<a href="${url}" target="_blank" style="color: var(--cv-color-link, #7fc4de); text-decoration: underline;">View Video on YouTube</a>`;
+              const link = document.createElement('a');
+              try {
+                const parsedUrl = new URL(url, window.location.origin);
+                link.href = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank";
+              } catch {
+                link.href = "about:blank";
+              }
+              link.target = "_blank";
+              link.style.cssText = "color: var(--cv-color-link, #7fc4de); text-decoration: underline;";
+              link.textContent = "View Video on YouTube";
+              el.appendChild(link);
             }
           } else if (platform === 'facebook') {
-            // lgtm [js/html-constructed-from-input]
-            el.innerHTML = `<div class="fb-post" data-href="${url}" data-width="500"></div>`;
+            const fbDiv = document.createElement('div');
+            fbDiv.className = 'fb-post';
+            try {
+              const parsedUrl = new URL(url, window.location.origin);
+              fbDiv.setAttribute('data-href', parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank");
+            } catch {
+              fbDiv.setAttribute('data-href', "about:blank");
+            }
+            fbDiv.setAttribute('data-width', '500');
+            el.appendChild(fbDiv);
             if (!document.getElementById('facebook-jssdk')) {
               const script = document.createElement('script');
               script.id = 'facebook-jssdk';
@@ -64,8 +89,18 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
               (window as any).FB.XFBML.parse(el);
             }
           } else if (platform === 'x' || platform === 'twitter') {
-            // lgtm [js/html-constructed-from-input]
-            el.innerHTML = `<blockquote class="twitter-tweet" data-theme="dark"><a href="${url}"></a></blockquote>`;
+            const bq = document.createElement('blockquote');
+            bq.className = 'twitter-tweet';
+            bq.setAttribute('data-theme', 'dark');
+            const a = document.createElement('a');
+            try {
+              const parsedUrl = new URL(url, window.location.origin);
+              a.href = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank";
+            } catch {
+              a.href = "about:blank";
+            }
+            bq.appendChild(a);
+            el.appendChild(bq);
             if (!document.getElementById('twitter-wjs')) {
               const script = document.createElement('script');
               script.id = 'twitter-wjs';
@@ -76,8 +111,17 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
               (window as any).twttr.widgets.load(el);
             }
           } else if (platform === 'instagram') {
-            // lgtm [js/html-constructed-from-input]
-            el.innerHTML = `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);"></blockquote>`;
+            const igBq = document.createElement('blockquote');
+            igBq.className = 'instagram-media';
+            try {
+              const parsedUrl = new URL(url, window.location.origin);
+              igBq.setAttribute('data-instgrm-permalink', parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank");
+            } catch {
+              igBq.setAttribute('data-instgrm-permalink', "about:blank");
+            }
+            igBq.setAttribute('data-instgrm-version', '14');
+            igBq.style.cssText = "background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);";
+            el.appendChild(igBq);
             if (!document.getElementById('instagram-embed')) {
               const script = document.createElement('script');
               script.id = 'instagram-embed';
@@ -89,8 +133,20 @@ export default function WysiwygRenderer(props: WysiwygRendererProps) {
             }
           } else if (platform === 'linkedin') {
              const embedUrl = url.includes('/embed/') ? url : url.replace('/post/', '/embed/feed/update/');
-             // lgtm [js/html-constructed-from-input]
-             el.innerHTML = `<iframe src="${embedUrl}" height="600" width="504" frameborder="0" allowfullscreen="" title="Embedded post" style="border-radius: 12px;"></iframe>`;
+             const liIframe = document.createElement('iframe');
+             try {
+               const parsedUrl = new URL(embedUrl, window.location.origin);
+               liIframe.src = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "about:blank";
+             } catch {
+               liIframe.src = "about:blank";
+             }
+             liIframe.height = "600";
+             liIframe.width = "504";
+             liIframe.setAttribute('frameborder', '0');
+             liIframe.setAttribute('allowfullscreen', '');
+             liIframe.title = "Embedded post";
+             liIframe.style.cssText = "border-radius: 12px;";
+             el.appendChild(liIframe);
           }
         });
 
