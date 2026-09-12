@@ -27,27 +27,44 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  const urlPath = decodeURIComponent(req.url?.split('?')[0] || '/');
-  let filePath = path.join(DOCS_DIR, urlPath);
-
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
-    filePath = path.join(filePath, 'index.html');
+  const rawUrl = req.url ? req.url.split('?')[0] : '/';
+  let safeRelative = path.normalize(decodeURIComponent(rawUrl)).replace(/^(\.\.[\/\\])+/, '');
+  if (safeRelative.startsWith('/') || safeRelative.startsWith('\\')) {
+    safeRelative = safeRelative.slice(1);
   }
 
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  let filePath = path.resolve(DOCS_DIR, safeRelative);
 
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache',
-    });
-    fs.createReadStream(filePath).pipe(res);
-  } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end(`404 Not Found: ${urlPath}`);
+  // Strictly enforce that the resolved path stays within DOCS_DIR
+  if (!filePath.startsWith(DOCS_DIR)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('403 Forbidden');
+    return;
   }
+
+  try {
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+      filePath = path.resolve(filePath, 'index.html');
+    }
+
+    if (filePath.startsWith(DOCS_DIR) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-cache',
+      });
+      fs.createReadStream(filePath).pipe(res);
+      return;
+    }
+  } catch {
+    // Fall through to 404
+  }
+
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end(`404 Not Found: ${rawUrl}`);
 });
 
 server.listen(PORT, () => {

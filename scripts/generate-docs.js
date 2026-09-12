@@ -864,6 +864,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const wcTagName = "${tagName}";
     const componentSlug = "${slug}";
 
+    function escapePropValue(v) {
+      return v.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
+    }
+
     // React & Solid prop string generator
     const reactProps = attrs.map(a => {
       const camelName = camelCase(a.name);
@@ -871,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return \`\${camelName}={\${a.value}}\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
 
     const reactCode = \`import \${pascalName} from '@contentveda/ui/react/\${pascalName}';
@@ -888,7 +892,7 @@ import '@contentveda/ui/theme.css';
       const isBoolean = a.value === 'true';
       if (isBoolean) return \`:\${camelName}="true"\`;
       if (isJson) return \`:\${camelName}='\${a.value}'\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
 
     const vueCode = \`<\` + \`script setup>
@@ -908,7 +912,7 @@ import '@contentveda/ui/theme.css';
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return \`\${camelName}={\${a.value}}\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
 
     const svelteCode = \`<\` + \`script lang="ts">
@@ -933,7 +937,7 @@ import '@contentveda/ui/theme.css';
       const isBoolean = a.value === 'true';
       if (isBoolean) return \`[\${camelName}]="true"\`;
       if (isJson) return \`[\${camelName}]='\${a.value}'\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
 
     const angularCode = \`import { Component } from '@angular/core';
@@ -956,7 +960,7 @@ export class ExampleComponent {}\`;
       if (isJson) {
         return \`\${a.name}='\${a.value}'\`;
       }
-      return \`\${a.name}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${a.name}="\${escapePropValue(a.value)}"\`;
     });
 
     const wcCode = \`<\` + \`script type="module" src="node_modules/@contentveda/ui/webcomponents/\${pascalName}.js"></\` + \`script>
