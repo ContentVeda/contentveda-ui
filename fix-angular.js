@@ -25,7 +25,7 @@ function convertTemplateLiteralToConcat(raw) {
 
     if (isExprStart) {
       if (currentLiteral.length > 0) {
-        parts.push("'" + currentLiteral.replace(/'/g, "\\'") + "'");
+        parts.push("'" + currentLiteral.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'");
         currentLiteral = '';
       }
       i += skipCount;
@@ -56,7 +56,7 @@ function convertTemplateLiteralToConcat(raw) {
   }
 
   if (currentLiteral.length > 0) {
-    parts.push("'" + currentLiteral.replace(/'/g, "\\'") + "'");
+    parts.push("'" + currentLiteral.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'");
   }
 
   if (parts.length === 0) return "''";
