@@ -84,10 +84,15 @@ jobs:
           # client_payload.sha to pick the exact contentveda-ui commit to build,
           # falling back to main when it is absent — so sending it is all that
           # is needed for a beta release to publish beta's docs.
-          gh api /repos/ContentVeda/contentveda-docs/dispatches \
+          TARGET_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          if ! gh api /repos/ContentVeda/contentveda-docs/dispatches \
             --method POST \
             -f event_type=ui-docs-updated \
-            -f "client_payload[sha]=${{ github.event.workflow_run.head_sha }}" \
-            -F "client_payload[run_url]=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            -f "client_payload[sha]=$TARGET_SHA" \
+            -F "client_payload[run_url]=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; then
+            echo "::warning::Failed to dispatch event to contentveda-docs (HTTP 401 / bad credentials or expired DOCS_DISPATCH_TOKEN). "\
+                 "contentveda-docs will pick this commit up on its next scheduled poll."
+            exit 0
+          fi
 
-          echo "Notified contentveda-docs for ${GITHUB_SHA:0:7}."
+          echo "Notified contentveda-docs for ${TARGET_SHA:0:7}."
