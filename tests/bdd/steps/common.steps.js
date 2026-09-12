@@ -19,6 +19,23 @@ Given('I mount the {string} Svelte component with:', async function (pascalName,
   await this.mountSvelteComponent(pascalName, dataTable.rowsHash());
 });
 
+Given('I mount the {string} Vue component with:', async function (pascalName, dataTable) {
+  await this.mountVueComponent(pascalName, dataTable.rowsHash());
+});
+
+Given('I mount the {string} Solid component with:', async function (pascalName, dataTable) {
+  await this.mountSolidComponent(pascalName, dataTable.rowsHash());
+});
+
+Given('I mount the {string} Angular component with:', async function (pascalName, dataTable) {
+  await this.mountAngularComponent(pascalName, dataTable.rowsHash());
+});
+
+Given('I SSR mount the {string} {string} component with:', async function (pascalName, framework, dataTable) {
+  const attrs = Object.fromEntries(dataTable.raw());
+  await this.ssrMount(pascalName, framework, attrs);
+});
+
 When('I wait {int} ms', async function (ms) {
   await this.page.waitForTimeout(ms);
 });
@@ -87,12 +104,12 @@ Then('attribute {string} on the component should equal {string}', async function
   assert.equal(value, expected);
 });
 
-// Target conformance level. The project targets WCAG 2.1 AAA, so AAA rule tags
+// Target conformance level. The project targets WCAG 2.2 AAA, so AAA rule tags
 // are included alongside A and AA. Override with A11Y_LEVEL=aa to fall back to
 // the A+AA gate (useful when triaging AAA-only failures separately).
 const A11Y_TAGS = process.env.A11Y_LEVEL === 'aa'
-  ? ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
-  : ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag21aaa'];
+  ? ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
+  : ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 // Contrast rules are the two that separate AA from AAA: `color-contrast` is the
 // 4.5:1 AA threshold, `color-contrast-enhanced` the 7:1 AAA one. Both are on by
@@ -103,21 +120,21 @@ const A11Y_DISABLED = process.env.A11Y_SKIP_CONTRAST === '1'
   ? ['color-contrast', 'color-contrast-enhanced']
   : [];
 
-Then('the component should have no serious accessibility violations', async function () {
+Then('the component should have no accessibility violations', async function () {
   let builder = new AxeBuilder({ page: this.page })
     .include(this.mountTarget === 'webcomponent' ? '#subject' : '#mount')
     .withTags(A11Y_TAGS);
   if (A11Y_DISABLED.length) builder = builder.disableRules(A11Y_DISABLED);
   const results = await builder.analyze();
 
-  const serious = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
+  const violations = results.violations;
 
   // Attach the audit to the Cucumber report. Without this the Allure report
   // shows accessibility only as a step that passed -- no record of which
   // conformance level was targeted, how many rules actually ran, or what the
   // measured contrast ratios were. A passing a11y check that carries no
   // evidence is indistinguishable from one that never ran.
-  const level = process.env.A11Y_LEVEL === 'aa' ? 'WCAG 2.1 AA' : 'WCAG 2.1 AAA';
+  const level = process.env.A11Y_LEVEL === 'aa' ? 'WCAG 2.2 AA' : 'WCAG 2.2 AAA';
   const audit = {
     target: level,
     ruleTags: A11Y_TAGS,
@@ -125,7 +142,7 @@ Then('the component should have no serious accessibility violations', async func
     mountTarget: this.mountTarget,
     rulesPassed: results.passes.length,
     rulesViolated: results.violations.length,
-    seriousOrCritical: serious.length,
+    seriousOrCritical: violations.filter((v) => v.impact === 'critical' || v.impact === 'serious').length,
     incomplete: results.incomplete.length,
     violations: results.violations.map((v) => ({
       id: v.id,
@@ -140,8 +157,8 @@ Then('the component should have no serious accessibility violations', async func
     }))
   };
   await this.attach(JSON.stringify(audit, null, 2), 'application/json');
-  if (serious.length) {
-    const details = serious
+  if (violations.length) {
+    const details = violations
       .map((v) => {
         // Include the per-node diagnostic data axe already computed. For the
         // contrast rules that means the actual fg/bg pair and the measured vs
@@ -159,6 +176,6 @@ Then('the component should have no serious accessibility violations', async func
         return `- [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} node(s))\n  ${v.helpUrl}\n${nodes}${more}`;
       })
       .join('\n');
-    assert.fail(`Found ${serious.length} serious/critical accessibility violation(s):\n${details}`);
+    assert.fail(`Found ${violations.length} accessibility violation(s):\n${details}`);
   }
 });

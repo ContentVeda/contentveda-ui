@@ -10,7 +10,7 @@ Feature: MediaGrid
     Then it should render without any page errors
     And it should contain an element matching ".cv-media-primary img" with alt text "Premium Sound"
     And it should contain 3 elements matching ".cv-media-asset"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Renders a loading skeleton
     Given I mount the "cv-media-grid" component as "MediaGrid" with:

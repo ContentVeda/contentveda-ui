@@ -29,10 +29,9 @@ export default function MediaGrid(props: MediaGridProps) {
     },
     get showSkeleton() {
       return !!props.isLoading || !state.shouldMount;
-    }
+    },
+    observerBox: { disconnect: null as (() => void) | null }
   });
-
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
 
   onMount(() => {
     if (props.lazyLoad === false) {
@@ -40,7 +39,7 @@ export default function MediaGrid(props: MediaGridProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         rootRef,
         () => { state.isVisible = true; },
         props.lazyThreshold ?? 0.1,
@@ -50,7 +49,7 @@ export default function MediaGrid(props: MediaGridProps) {
   });
 
   onUnMount(() => {
-    if (observerBox.disconnect) observerBox.disconnect();
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
   });
 
   return (
@@ -65,7 +64,7 @@ export default function MediaGrid(props: MediaGridProps) {
 
       <Show when={!state.showSkeleton}>
         {props.primaryMedia && (
-          <a href={props.primaryMedia.mapLinks?.[0]?.url || undefined} class="cv-media-primary">
+          <a href={props.primaryMedia.mapLinks?.[0]?.url || undefined} class="cv-media-primary" aria-label={props.primaryMedia.mapLinks?.[0]?.url ? (props.primaryMedia.altText || props.primaryMedia.title || "Media content") : undefined}>
             <Show when={props.primaryMedia.media?.type === 'video'}>
               <video src={props.primaryMedia.media?.url} autoPlay loop muted playsInline class="cv-media-asset" />
             </Show>
@@ -78,7 +77,7 @@ export default function MediaGrid(props: MediaGridProps) {
         {props.secondaryMedia && props.secondaryMedia.length > 0 && (
           <div class="cv-media-secondary-col">
             {props.secondaryMedia.map((item) => (
-              <a href={item.mapLinks?.[0]?.url || undefined} class="cv-media-secondary-item" key={item.id}>
+              <a href={item.mapLinks?.[0]?.url || undefined} class="cv-media-secondary-item" key={item.id} aria-label={item.mapLinks?.[0]?.url ? (item.altText || item.title || "Media content") : undefined}>
                 <Show when={item.media?.type === 'video'}>
                   <video src={item.media?.url} autoPlay loop muted playsInline class="cv-media-asset" />
                 </Show>

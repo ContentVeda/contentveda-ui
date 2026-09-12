@@ -71,25 +71,6 @@ import type {
 function SlidingBanner(props: SlidingBannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const animContext = useRef({
-    intervalId: null as any,
-    dimResizeHandler: null as any,
-  });
-  const bgEffectContext = useRef<BackgroundEffectContext>({
-    animationFrameId: null,
-    resizeHandler: null,
-    resizeObserver: null,
-  });
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
-  const latestNext = useRef<{
-    fn: () => void;
-  }>({
-    fn: () => {},
-  });
   const [currentIndex, setCurrentIndex] = useState(() => 0);
 
   const [previousIndex, setPreviousIndex] = useState(() => 0);
@@ -163,18 +144,18 @@ function SlidingBanner(props: SlidingBannerProps) {
   }
 
   function startAutoPlay() {
-    if (animContext.current.intervalId) return;
+    if (animContext.intervalId) return;
     if (props.config?.autoStart !== false && props.items?.length > 1) {
-      animContext.current.intervalId = setInterval(() => {
-        latestNext.current.fn();
+      animContext.intervalId = setInterval(() => {
+        latestNext.fn();
       }, props.config?.delayMs || 5000);
     }
   }
 
   function stopAutoPlay() {
-    if (animContext.current.intervalId) {
-      clearInterval(animContext.current.intervalId);
-      animContext.current.intervalId = null;
+    if (animContext.intervalId) {
+      clearInterval(animContext.intervalId);
+      animContext.intervalId = null;
     }
   }
 
@@ -187,16 +168,35 @@ function SlidingBanner(props: SlidingBannerProps) {
     }
   }
 
+  const [animContext, setAnimContext] = useState(() => ({
+    intervalId: null as any,
+    dimResizeHandler: null as any,
+  }));
+
+  const [bgEffectContext, setBgEffectContext] = useState(() => ({
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  }));
+
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
+  const [latestNext, setLatestNext] = useState(() => ({
+    fn: () => {},
+  }));
+
   function mountHeavyContent() {
     startAutoPlay();
     setupDimensions();
-    animContext.current.dimResizeHandler = () => setupDimensions();
-    window.addEventListener("resize", animContext.current.dimResizeHandler);
+    animContext.dimResizeHandler = () => setupDimensions();
+    window.addEventListener("resize", animContext.dimResizeHandler);
     if (canvasRef.current) {
       plugin().start(
         canvasRef.current,
         backgroundClass() as BackgroundEffectName,
-        bgEffectContext.current
+        bgEffectContext
       );
     }
   }
@@ -208,7 +208,7 @@ function SlidingBanner(props: SlidingBannerProps) {
       return;
     }
     if (rootRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         rootRef.current,
         () => {
           setIsVisible(true);
@@ -220,7 +220,7 @@ function SlidingBanner(props: SlidingBannerProps) {
     }
   }, []);
   useEffect(() => {
-    latestNext.current.fn = next;
+    latestNext.fn = next;
   });
   useEffect(() => {
     if (wrapping) {
@@ -236,28 +236,22 @@ function SlidingBanner(props: SlidingBannerProps) {
       plugin().start(
         canvasRef.current,
         backgroundClass() as BackgroundEffectName,
-        bgEffectContext.current
+        bgEffectContext
       );
     }
   }, [backgroundClass(), canvasRef.current]);
   useEffect(() => {
     return () => {
       stopAutoPlay();
-      plugin().stop(bgEffectContext.current);
+      plugin().stop(bgEffectContext);
       // Same guard as RowScrollable: onDestroy also runs on the server. The
       // handler is only assigned in onMount so this branch is normally skipped
       // there, but the typeof check makes that safe by construction rather than
       // by coincidence.
-      if (
-        typeof window !== "undefined" &&
-        animContext.current.dimResizeHandler
-      ) {
-        window.removeEventListener(
-          "resize",
-          animContext.current.dimResizeHandler
-        );
+      if (typeof window !== "undefined" && animContext.dimResizeHandler) {
+        window.removeEventListener("resize", animContext.dimResizeHandler);
       }
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
+      if (observerBox.disconnect) observerBox.disconnect();
     };
   }, []);
 

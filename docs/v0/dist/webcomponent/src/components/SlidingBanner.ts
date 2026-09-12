@@ -162,20 +162,20 @@ class SlidingBanner extends HTMLElement {
         }
       },
       startAutoPlay() {
-        if (self._animContext.intervalId) return;
+        if (self.state.animContext.intervalId) return;
         if (
           self.props.config?.autoStart !== false &&
           self.props.items?.length > 1
         ) {
-          self._animContext.intervalId = setInterval(() => {
-            self._latestNext.fn();
+          self.state.animContext.intervalId = setInterval(() => {
+            self.state.latestNext.fn();
           }, self.props.config?.delayMs || 5000);
         }
       },
       stopAutoPlay() {
-        if (self._animContext.intervalId) {
-          clearInterval(self._animContext.intervalId);
-          self._animContext.intervalId = null;
+        if (self.state.animContext.intervalId) {
+          clearInterval(self.state.animContext.intervalId);
+          self.state.animContext.intervalId = null;
         }
       },
       setupDimensions() {
@@ -186,16 +186,35 @@ class SlidingBanner extends HTMLElement {
           );
         }
       },
+      animContext: {
+        intervalId: null as any,
+        dimResizeHandler: null as any,
+      },
+      bgEffectContext: {
+        animationFrameId: null,
+        resizeHandler: null,
+        resizeObserver: null,
+      },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
+      latestNext: {
+        fn: () => {},
+      },
       mountHeavyContent: function mountHeavyContent() {
         self.state.startAutoPlay();
         self.state.setupDimensions();
-        self._animContext.dimResizeHandler = () => self.state.setupDimensions();
-        window.addEventListener("resize", self._animContext.dimResizeHandler);
+        self.state.animContext.dimResizeHandler = () =>
+          self.state.setupDimensions();
+        window.addEventListener(
+          "resize",
+          self.state.animContext.dimResizeHandler
+        );
         if (self._canvasRef) {
           self.state.plugin.start(
             self._canvasRef,
             self.state.backgroundClass as BackgroundEffectName,
-            self._bgEffectContext
+            self.state.bgEffectContext
           );
         }
       },
@@ -251,22 +270,6 @@ class SlidingBanner extends HTMLElement {
       this.state.goTo(index);
     };
 
-    this._animContext = {
-      intervalId: null as any,
-      dimResizeHandler: null as any,
-    };
-    this._bgEffectContext = {
-      animationFrameId: null,
-      resizeHandler: null,
-      resizeObserver: null,
-    };
-    this._observerBox = {
-      disconnect: null,
-    };
-    this._latestNext = {
-      fn: () => {},
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -275,15 +278,21 @@ class SlidingBanner extends HTMLElement {
   disconnectedCallback() {
     // onUnMount
     this.state.stopAutoPlay();
-    this.state.plugin.stop(self._bgEffectContext);
+    this.state.plugin.stop(this.state.bgEffectContext);
     // Same guard as RowScrollable: onDestroy also runs on the server. The
     // handler is only assigned in onMount so this branch is normally skipped
     // there, but the typeof check makes that safe by construction rather than
     // by coincidence.
-    if (typeof window !== "undefined" && self._animContext.dimResizeHandler) {
-      window.removeEventListener("resize", self._animContext.dimResizeHandler);
+    if (
+      typeof window !== "undefined" &&
+      this.state.animContext.dimResizeHandler
+    ) {
+      window.removeEventListener(
+        "resize",
+        this.state.animContext.dimResizeHandler
+      );
     }
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -472,7 +481,7 @@ class SlidingBanner extends HTMLElement {
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.isVisible = true;
@@ -488,7 +497,7 @@ class SlidingBanner extends HTMLElement {
   onUpdate() {
     const self = this;
 
-    self._latestNext.fn = self.state.next;
+    self.state.latestNext.fn = self.state.next;
     (function (__prev, __next) {
       const __hasChange = __prev.find((val, index) => val !== __next[index]);
       if (__hasChange !== undefined) {
@@ -510,7 +519,7 @@ class SlidingBanner extends HTMLElement {
           self.state.plugin.start(
             self._canvasRef,
             self.state.backgroundClass as BackgroundEffectName,
-            self._bgEffectContext
+            self.state.bgEffectContext
           );
         }
         self.updateDeps[2] = __next;

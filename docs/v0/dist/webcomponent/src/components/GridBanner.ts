@@ -83,6 +83,9 @@ class GridBanner extends HTMLElement {
       get columnsMobileVar() {
         return `${self.props.columnsMobile || self.props.columnsTablet || 2}`;
       },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -106,10 +109,6 @@ class GridBanner extends HTMLElement {
     // batch updates
     this.pendingUpdate = false;
 
-    this._observerBox = {
-      disconnect: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -117,7 +116,7 @@ class GridBanner extends HTMLElement {
 
   disconnectedCallback() {
     // onUnMount
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -216,7 +215,7 @@ class GridBanner extends HTMLElement {
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.isVisible = true;

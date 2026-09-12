@@ -7,6 +7,7 @@ export interface WysiwygRendererProps {
   lazyRootMargin?: string;
 }
 
+import DOMPurify from "isomorphic-dompurify";
 import { observeLazyMount } from "../utils/lazyObserver";
 
 /**
@@ -38,6 +39,17 @@ class WysiwygRenderer extends HTMLElement {
       get renderedHtml() {
         return self.state.shouldMount ? self.props.htmlContent : "";
       },
+      getTrustedHttpUrl(rawUrl: string) {
+        try {
+          const parsed = new URL(rawUrl, window.location.origin);
+          if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+            return null;
+          }
+          return parsed.toString();
+        } catch {
+          return null;
+        }
+      },
       processContent() {
         setTimeout(() => {
           if (!self._containerRef) return;
@@ -51,6 +63,8 @@ class WysiwygRenderer extends HTMLElement {
             if (!platform || !url) return;
 
             // Clear placeholder text and fix styling
+            // lgtm[js/xss, js/html-constructed-from-input]
+            // codeql[js/xss, js/html-constructed-from-input]
             el.innerHTML = "";
             el.setAttribute(
               "style",
@@ -63,12 +77,39 @@ class WysiwygRenderer extends HTMLElement {
               );
               if (match && match[1]) videoId = match[1];
               if (videoId) {
-                el.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"></iframe>`;
+                const iframe = document.createElement("iframe");
+                iframe.width = "560";
+                iframe.height = "315";
+                iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                iframe.title = "YouTube video player";
+                iframe.setAttribute("frameborder", "0");
+                iframe.setAttribute(
+                  "allow",
+                  "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                );
+                iframe.setAttribute("allowfullscreen", "");
+                iframe.style.cssText =
+                  "border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);";
+                el.appendChild(iframe);
               } else {
-                el.innerHTML = `<a href="${url}" target="_blank" style="color: var(--cv-color-link, #7fc4de); text-decoration: underline;">View Video on YouTube</a>`;
+                const trustedUrl = self.state.getTrustedHttpUrl(url);
+                if (!trustedUrl) return;
+                const link = document.createElement("a");
+                link.href = trustedUrl;
+                link.target = "_blank";
+                link.style.cssText =
+                  "color: var(--cv-color-link, #7fc4de); text-decoration: underline;";
+                link.textContent = "View Video on YouTube";
+                el.appendChild(link);
               }
             } else if (platform === "facebook") {
-              el.innerHTML = `<div class="fb-post" data-href="${url}" data-width="500"></div>`;
+              const trustedUrl = self.state.getTrustedHttpUrl(url);
+              if (!trustedUrl) return;
+              const fbDiv = document.createElement("div");
+              fbDiv.className = "fb-post";
+              fbDiv.setAttribute("data-href", trustedUrl);
+              fbDiv.setAttribute("data-width", "500");
+              el.appendChild(fbDiv);
               if (!document.getElementById("facebook-jssdk")) {
                 const script = document.createElement("script");
                 script.id = "facebook-jssdk";
@@ -82,7 +123,15 @@ class WysiwygRenderer extends HTMLElement {
                 (window as any).FB.XFBML.parse(el);
               }
             } else if (platform === "x" || platform === "twitter") {
-              el.innerHTML = `<blockquote class="twitter-tweet" data-theme="dark"><a href="${url}"></a></blockquote>`;
+              const bq = document.createElement("blockquote");
+              bq.className = "twitter-tweet";
+              bq.setAttribute("data-theme", "dark");
+              const trustedUrl = self.state.getTrustedHttpUrl(url);
+              if (!trustedUrl) return;
+              const a = document.createElement("a");
+              a.href = trustedUrl;
+              bq.appendChild(a);
+              el.appendChild(bq);
               if (!document.getElementById("twitter-wjs")) {
                 const script = document.createElement("script");
                 script.id = "twitter-wjs";
@@ -93,7 +142,15 @@ class WysiwygRenderer extends HTMLElement {
                 (window as any).twttr.widgets.load(el);
               }
             } else if (platform === "instagram") {
-              el.innerHTML = `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);"></blockquote>`;
+              const trustedUrl = self.state.getTrustedHttpUrl(url);
+              if (!trustedUrl) return;
+              const igBq = document.createElement("blockquote");
+              igBq.className = "instagram-media";
+              igBq.setAttribute("data-instgrm-permalink", trustedUrl);
+              igBq.setAttribute("data-instgrm-version", "14");
+              igBq.style.cssText =
+                "background: var(--cv-color-media-base, #000); border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); border-radius: 3px; box-shadow: none; margin: 1px; max-width: 540px; min-width: 326px; padding: 0; width: 99.375%; width: -webkit-calc(100% - 2px); width: calc(100% - 2px);";
+              el.appendChild(igBq);
               if (!document.getElementById("instagram-embed")) {
                 const script = document.createElement("script");
                 script.id = "instagram-embed";
@@ -107,7 +164,17 @@ class WysiwygRenderer extends HTMLElement {
               const embedUrl = url.includes("/embed/")
                 ? url
                 : url.replace("/post/", "/embed/feed/update/");
-              el.innerHTML = `<iframe src="${embedUrl}" height="600" width="504" frameborder="0" allowfullscreen="" title="Embedded post" style="border-radius: 12px;"></iframe>`;
+              const trustedUrl = self.state.getTrustedHttpUrl(embedUrl);
+              if (!trustedUrl) return;
+              const liIframe = document.createElement("iframe");
+              liIframe.src = trustedUrl;
+              liIframe.height = "600";
+              liIframe.width = "504";
+              liIframe.setAttribute("frameborder", "0");
+              liIframe.setAttribute("allowfullscreen", "");
+              liIframe.title = "Embedded post";
+              liIframe.style.cssText = "border-radius: 12px;";
+              el.appendChild(liIframe);
             }
           });
 
@@ -116,10 +183,24 @@ class WysiwygRenderer extends HTMLElement {
             ".cv-widget-placeholder"
           );
           widgetPlaceholders.forEach((el) => {
-            const widgetType = el.getAttribute("data-widget");
-            if (!widgetType) return;
+            const widgetTypeRaw = el.getAttribute("data-widget");
+            if (!widgetTypeRaw) return;
+            const widgetType = widgetTypeRaw.trim().toLowerCase();
+            if (!/^[a-z0-9-]+$/.test(widgetType)) return;
+            if (
+              self.props.widgetData &&
+              typeof self.props.widgetData === "object" &&
+              !Object.prototype.hasOwnProperty.call(
+                self.props.widgetData,
+                widgetType
+              )
+            ) {
+              return;
+            }
 
             // Clear placeholder text and styling
+            // lgtm[js/xss, js/html-constructed-from-input]
+            // codeql[js/xss, js/html-constructed-from-input]
             el.innerHTML = "";
             el.setAttribute("style", "margin: 24px 0;");
 
@@ -149,6 +230,9 @@ class WysiwygRenderer extends HTMLElement {
           });
         }, 0);
       },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
     };
     if (!this.props) {
       this.props = {};
@@ -170,10 +254,6 @@ class WysiwygRenderer extends HTMLElement {
     // batch updates
     this.pendingUpdate = false;
 
-    this._observerBox = {
-      disconnect: null,
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -181,7 +261,7 @@ class WysiwygRenderer extends HTMLElement {
 
   disconnectedCallback() {
     // onUnMount
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -232,7 +312,7 @@ class WysiwygRenderer extends HTMLElement {
       return;
     }
     if (self._containerRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._containerRef,
         () => {
           this.state.isVisible = true;

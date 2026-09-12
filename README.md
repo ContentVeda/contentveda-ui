@@ -9,7 +9,7 @@
 
 <p align="center">
   A universal, framework-agnostic UI component library built with <a href="https://mitosis.builder.io/">Mitosis</a>.<br>
-  Write once — compile natively to <strong>React</strong>, <strong>Svelte</strong>, and <strong>Web Components</strong>.
+  Write once — compile natively to <strong>React</strong>, <strong>Vue</strong>, <strong>Solid</strong>, <strong>Angular</strong>, <strong>Svelte</strong>, and <strong>Web Components</strong>.
 </p>
 
 <p align="center">
@@ -78,6 +78,38 @@ export default function Page() {
         media={{ type: 'image', url: '/hero.jpg' }}
         mapLinks={[{ url: '/sale' }]}
       />
+      <TimerWidget title="Ends in:" targetDate="2026-12-31T23:59:59Z" />
+    </main>
+  );
+}
+```
+
+#### 🟢 Vue / Nuxt
+
+```vue
+<script setup>
+import Banner from '@contentveda/ui/vue/Banner.vue';
+import TimerWidget from '@contentveda/ui/vue/TimerWidget.vue';
+</script>
+
+<template>
+  <main>
+    <Banner title="Summer Sale" ctaText="Shop Now" />
+    <TimerWidget title="Ends in:" targetDate="2026-12-31T23:59:59Z" />
+  </main>
+</template>
+```
+
+#### 🧊 SolidJS
+
+```tsx
+import Banner from '@contentveda/ui/solid/Banner';
+import TimerWidget from '@contentveda/ui/solid/TimerWidget';
+
+export default function Page() {
+  return (
+    <main>
+      <Banner title="Summer Sale" ctaText="Shop Now" />
       <TimerWidget title="Ends in:" targetDate="2026-12-31T23:59:59Z" />
     </main>
   );

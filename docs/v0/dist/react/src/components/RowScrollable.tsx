@@ -35,10 +35,6 @@ import { observeLazyMount } from "../utils/lazyObserver";
 function RowScrollable(props: RowScrollableProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<any>({
-    disconnect: null,
-    row: null,
-  });
   const [canScrollLeft, setCanScrollLeft] = useState(() => false);
 
   const [canScrollRight, setCanScrollRight] = useState(() => false);
@@ -72,6 +68,11 @@ function RowScrollable(props: RowScrollableProps) {
     }
   }
 
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+    row: null as any,
+  }));
+
   useEffect(() => {
     const el = rowRef.current;
     if (el) {
@@ -81,8 +82,8 @@ function RowScrollable(props: RowScrollableProps) {
         checkScroll();
       }, 150);
       if (typeof ResizeObserver !== "undefined") {
-        observerBox.current.row = new ResizeObserver(() => checkScroll());
-        observerBox.current.row.observe(el);
+        observerBox.row = new ResizeObserver(() => checkScroll());
+        observerBox.row.observe(el);
       }
     }
     window.addEventListener("resize", checkScroll);
@@ -91,7 +92,7 @@ function RowScrollable(props: RowScrollableProps) {
       return;
     }
     if (containerRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         containerRef.current,
         () => {
           setIsVisible(true);
@@ -115,10 +116,10 @@ function RowScrollable(props: RowScrollableProps) {
       if (typeof window !== "undefined") {
         window.removeEventListener("resize", checkScroll);
       }
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
-      if (observerBox.current.row) {
-        observerBox.current.row.disconnect();
-        observerBox.current.row = null;
+      if (observerBox.disconnect) observerBox.disconnect();
+      if (observerBox.row) {
+        observerBox.row.disconnect();
+        observerBox.row = null;
       }
     };
   }, []);

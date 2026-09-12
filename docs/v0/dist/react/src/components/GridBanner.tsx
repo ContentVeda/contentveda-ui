@@ -52,11 +52,6 @@ import { observeLazyMount } from "../utils/lazyObserver";
 
 function GridBanner(props: GridBannerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
   const [isVisible, setIsVisible] = useState(() => false);
 
   function shouldMount() {
@@ -80,13 +75,17 @@ function GridBanner(props: GridBannerProps) {
     return `${props.columnsMobile || props.columnsTablet || 2}`;
   }
 
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       setIsVisible(true);
       return;
     }
     if (rootRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         rootRef.current,
         () => {
           setIsVisible(true);
@@ -99,7 +98,7 @@ function GridBanner(props: GridBannerProps) {
 
   useEffect(() => {
     return () => {
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
+      if (observerBox.disconnect) observerBox.disconnect();
     };
   }, []);
 

@@ -19,7 +19,7 @@ function tmpFile(ext) {
 // or the repo) into a single browser-runnable ESM file, using esbuild --
 // already a devDependency, so this stays fully offline/deterministic and
 // appropriate for a pre-commit hook (no CDN fetch of React/Svelte at test time).
-async function bundleEntry(entryCode) {
+async function bundleEntry(entryCode, plugins = []) {
   const result = await esbuild.build({
     stdin: {
       contents: entryCode,
@@ -30,7 +30,14 @@ async function bundleEntry(entryCode) {
     format: 'esm',
     target: 'es2020',
     write: false,
-    logLevel: 'silent'
+    logLevel: 'silent',
+    plugins,
+    tsconfigRaw: {
+      compilerOptions: {
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true
+      }
+    }
   });
   const outFile = tmpFile('js');
   fs.writeFileSync(outFile, result.outputFiles[0].text);
@@ -118,4 +125,73 @@ window.__svelteInstance = new Component({ target: mount, props: ${JSON.stringify
   }
 }
 
-module.exports = { bundleReactHarness, bundleSvelteHarness };
+const vuePlugin = require('esbuild-plugin-vue3');
+const { solidPlugin } = require('esbuild-plugin-solid');
+
+async function bundleVueHarness(pascalName, props) {
+  const entry = `
+import { createApp, h } from 'vue';
+import Component from '${path.join(ROOT, 'dist', 'vue', 'src', 'components', `${pascalName}.vue`).replace(/\\/g, '/')}';
+
+const mount = document.getElementById('mount');
+const app = createApp({
+  render() {
+    return h(Component, ${JSON.stringify(props)});
+  }
+});
+window.__vueApp = app;
+app.mount(mount);
+`;
+  return bundleEntry(entry, [vuePlugin()]);
+}
+
+async function bundleSolidHarness(pascalName, props) {
+  const entry = `
+import { render } from 'solid-js/web';
+import { createComponent } from 'solid-js';
+import Component from '${path.join(ROOT, 'dist', 'solid', 'src', 'components', `${pascalName}.tsx`).replace(/\\/g, '/')}';
+
+const mount = document.getElementById('mount');
+window.__solidDispose = render(() => createComponent(Component, ${JSON.stringify(props)}), mount);
+`;
+  return bundleEntry(entry, [solidPlugin()]);
+}
+
+async function bundleAngularHarness(pascalName, props) {
+  const kebabName = pascalName.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase().replace(/^-/, '');
+  const entry = `
+import 'core-js/proposals/reflect-metadata';
+import 'zone.js';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { BrowserModule } from '@angular/platform-browser';
+import { NgModule, Component } from '@angular/core';
+
+import ComponentTarget, { ${pascalName}Module } from '${path.join(ROOT, 'dist', 'angular', 'src', 'components', `${pascalName}.ts`).replace(/\\/g, '/')}';
+
+@Component({
+  selector: 'app-root',
+  template: \`<${kebabName} ` + Object.keys(props).map(k => `[${k}]="props['${k}']"`).join(' ') + `></${kebabName}>\`
+})
+class AppRoot {
+  constructor() {
+    this.props = ${JSON.stringify(props)};
+  }
+}
+
+@NgModule({
+  declarations: [AppRoot],
+  imports: [BrowserModule, ${pascalName}Module],
+  bootstrap: [AppRoot]
+})
+class AppModule {}
+
+const mount = document.getElementById('mount');
+mount.innerHTML = '<app-root></app-root>';
+
+platformBrowserDynamic().bootstrapModule(AppModule)
+  .catch(err => console.error(err));
+`;
+  return bundleEntry(entry);
+}
+
+module.exports = { bundleReactHarness, bundleSvelteHarness, bundleVueHarness, bundleSolidHarness, bundleAngularHarness };

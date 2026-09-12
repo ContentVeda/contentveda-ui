@@ -28,4 +28,4 @@ Feature: GridBanner
       | columns | 3 |
       | items   | [{"id":"1","title":"Women's","media":{"type":"image","url":"/assets/img/placeholder-02.svg"}},{"id":"2","title":"Men's","media":{"type":"image","url":"/assets/img/placeholder-03.svg"}}] |
     Then it should render without any page errors
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
