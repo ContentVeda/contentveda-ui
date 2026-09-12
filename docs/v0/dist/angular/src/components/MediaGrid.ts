@@ -30,7 +30,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
 @Component({
   selector: "media-grid",
   template: `
-    <div #rootRef [class]="\`cv-media-grid \${className || ''}\`">
+    <div #rootRef [class]="'cv-media-grid ' + (className || '')">
       <ng-container *ngIf="showSkeleton"
         ><div class="cv-media-primary cv-image-shimmer"></div>
         <div class="cv-media-secondary-col">
@@ -41,8 +41,8 @@ import { observeLazyMount } from "../utils/lazyObserver";
         ><ng-container *ngIf="primaryMedia"
           ><a
             class="cv-media-primary"
-            [attr.href]="primaryMedia.mapLinks?.[0]?.url || undefined"
-            [attr.aria-label]='primaryMedia.mapLinks?.[0]?.url ? primaryMedia.altText || primaryMedia.title || "Media content" : undefined'
+            [attr.href]="(primaryMedia.mapLinks ? primaryMedia.mapLinks[0] : null)?.url || undefined"
+            [attr.aria-label]='(primaryMedia.mapLinks ? primaryMedia.mapLinks[0] : null)?.url ? primaryMedia.altText || primaryMedia.title || "Media content" : undefined'
             ><ng-container *ngIf="primaryMedia.media?.type === 'video'"
               ><video
                 class="cv-media-asset"
@@ -65,8 +65,8 @@ import { observeLazyMount } from "../utils/lazyObserver";
               *ngFor="let item of secondaryMedia; trackBy: trackByItem0"
               ><a
                 class="cv-media-secondary-item"
-                [attr.href]="item.mapLinks?.[0]?.url || undefined"
-                [attr.aria-label]='item.mapLinks?.[0]?.url ? item.altText || item.title || "Media content" : undefined'
+                [attr.href]="ite(m.mapLinks ? m.mapLinks[0] : null)?.url || undefined"
+                [attr.aria-label]='ite(m.mapLinks ? m.mapLinks[0] : null)?.url ? item.altText || item.title || "Media content" : undefined'
                 ><ng-container *ngIf="item.media?.type === 'video'"
                   ><video
                     class="cv-media-asset"
@@ -117,6 +117,12 @@ export default class MediaGrid {
   };
   trackByItem0(_, item) {
     return item.id;
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
   }
 
   ngOnInit() {

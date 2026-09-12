@@ -17,12 +17,8 @@ export interface AnnouncementBarProps {
   selector: "announcement-bar",
   template: `
     <div
-      [class]="\`cv-announcement-bar \${className || ''}\`"
+      [class]="'cv-announcement-bar ' + (className || '')"
       [ngStyle]="{
-          // Defaults pair white text with the ContentVeda brand teal, which
-          // measures 8.70:1 -- clearing WCAG 2.1 AAA. Falls back through the
-          // shared primary token so a consumer theming the library gets their
-          // colour, not this hardcoded one.
           backgroundColor: backgroundColor || 'var(--cv-color-primary-fill, #245066)',
           color: textColor || 'var(--cv-color-on-primary, #ffffff)'
         }"
@@ -30,7 +26,7 @@ export interface AnnouncementBarProps {
       <ng-container *ngIf="mapLinks && mapLinks.length > 0"
         ><a
           class="cv-announcement-link"
-          [attr.href]="mapLinks?.[0]?.url"
+          [attr.href]="mapLinks[0]?.url"
           >{{message}}</a
         ></ng-container
       >

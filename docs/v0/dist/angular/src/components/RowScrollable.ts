@@ -38,7 +38,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
   template: `
     <div
       #containerRef
-      [class]="\`cv-scrollable-container \${className || ''}\`"
+      [class]="'cv-scrollable-container ' + (className || '')"
     >
       <ng-container *ngIf="title"
         ><h3 class="cv-scrollable-title">{{title}}</h3></ng-container
@@ -51,12 +51,12 @@ import { observeLazyMount } from "../utils/lazyObserver";
       >
         <div
           #rowRef
-          [class]="\`cv-scrollable-row \${config?.hideScrollbar ? 'cv-scrollable-hide-scrollbar' : ''}\`"
+          [class]="'cv-scrollable-row ' + (config?.hideScrollbar ? 'cv-scrollable-hide-scrollbar' : '')"
         >
           <ng-container *ngFor="let item of items; trackBy: trackByItem0"
             ><a
-              [attr.href]="item.mapLinks?.[0]?.url || undefined"
-              [class]="\`cv-scrollable-card \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+              [attr.href]="item.mapLinks[0]?.url || undefined"
+              [class]="'cv-scrollable-card ' + (showSkeleton ? 'cv-image-shimmer' : '')"
               ><ng-container *ngIf="!showSkeleton"
                 ><ng-container *ngIf="item.media?.url"
                   ><div class="cv-scrollable-img-wrap">
@@ -193,6 +193,12 @@ export default class RowScrollable {
   };
   trackByItem0(_, item) {
     return item.id;
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
   }
 
   ngOnInit() {

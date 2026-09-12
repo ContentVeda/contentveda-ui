@@ -81,7 +81,7 @@ import type {
     <div
       role="region"
       #rootRef
-      [class]="\`cv-sliding-banner \${showSkeleton ? 'cv-image-shimmer' : ''} \${className || ''} effect-\${animationClass} bg-effect-\${backgroundClass} quality-\${qualityClass} \${config?.showDots ? 'has-dots' : ''}\`"
+      [class]="'cv-sliding-banner ' + (showSkeleton ? 'cv-image-shimmer' : '') + ' ' + (className || '') + ' effect-' + (animationClass) + ' bg-effect-' + (backgroundClass) + ' quality-' + (qualityClass) + ' ' + (config?.showDots ? 'has-dots' : '')"
       (mouseenter)="stopAutoPlay()"
       (mouseleave)="startAutoPlay()"
       [ngStyle]="{
@@ -92,7 +92,7 @@ import type {
       <ng-container *ngIf="backgroundClass !== 'none'"
         ><canvas class="cv-sliding-banner-canvas" #canvasRef></canvas
       ></ng-container>
-      <ng-container *ngIf="config?.height === 'auto' && items?.[0]?.media?.url"
+      <ng-container *ngIf="config?.height === 'auto' && items[0]?.media?.url"
         ><img
           alt=""
           [attr.src]="items[0].media.url"
@@ -105,9 +105,9 @@ import type {
         }"
       /></ng-container>
       <div
-        [class]="\`cv-sliding-banner-track dir-\${direction} \${wrapping ? 'no-transition' : ''}\`"
+        [class]="'cv-sliding-banner-track dir-' + (direction) + ' ' + (wrapping ? 'no-transition' : '')"
         [ngStyle]="{
-          transform: \`translateX(-\${currentIndex * 100}%)\`,
+          transform: 'translateX(-' + (currentIndex * 100) + '%)',
           position: config?.height === 'auto' ? 'absolute' : 'relative',
           top: 0,
           left: 0,
@@ -118,7 +118,7 @@ import type {
         <ng-container
           *ngFor="let item of items; index as index; trackBy: trackByItem0"
           ><div
-            [class]="\`cv-sliding-slide \${index === currentIndex ? 'active' : ''} \${index === previousIndex && index !== currentIndex ? 'previous' : ''}\`"
+            [class]="'cv-sliding-slide ' + (index === currentIndex ? 'active' : '') + ' ' + (index === previousIndex && index !== currentIndex ? 'previous' : '')"
           >
             <ng-container *ngIf="shouldMount && item.media?.type === 'video'"
               ><video
@@ -127,7 +127,7 @@ import type {
                 [attr.loop]="true"
                 [attr.muted]="true"
                 [attr.playsInline]="true"
-                [class]="\`cv-sliding-bg-video \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+                [class]="'cv-sliding-bg-video ' + (showSkeleton ? 'cv-image-shimmer' : '')"
                 [ngStyle]="{
           position: 'absolute',
           top: 0,
@@ -140,9 +140,9 @@ import type {
             ></ng-container>
             <ng-container *ngIf="shouldMount && item.media?.type !== 'video'"
               ><div
-                [class]="\`cv-sliding-bg \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+                [class]="'cv-sliding-bg ' + (showSkeleton ? 'cv-image-shimmer' : '')"
                 [ngStyle]="{
-          backgroundImage: item.media?.url ? \`url(\${item.media.url})\` : 'none',
+          backgroundImage: item.media?.url ? 'url(' + (item.media.url) + ')' : 'none',
           backgroundPosition: config?.bgPosition || 'center'
         }"
               ></div
@@ -152,14 +152,14 @@ import type {
               ><div
                 class="cv-curtain-panel cv-curtain-panel-left"
                 [ngStyle]="{
-          backgroundImage: item.media?.url ? \`url(\${item.media.url})\` : 'none',
+          backgroundImage: item.media?.url ? 'url(' + (item.media.url) + ')' : 'none',
           backgroundPosition: config?.bgPosition || 'center'
         }"
               ></div>
               <div
                 class="cv-curtain-panel cv-curtain-panel-right"
                 [ngStyle]="{
-          backgroundImage: item.media?.url ? \`url(\${item.media.url})\` : 'none',
+          backgroundImage: item.media?.url ? 'url(' + (item.media.url) + ')' : 'none',
           backgroundPosition: config?.bgPosition || 'center'
         }"
               ></div
@@ -220,7 +220,7 @@ import type {
                 <ng-container *ngIf="item.ctaText"
                   ><a
                     class="cv-sliding-cta"
-                    [attr.href]="item.mapLinks?.[0]?.url || undefined"
+                    [attr.href]="item.mapLinks[0]?.url || undefined"
                     >{{item.ctaText}}</a
                   ></ng-container
                 ></ng-container
@@ -268,8 +268,8 @@ import type {
             *ngFor="let _ of items; index as index; trackBy: trackBy_1"
             ><button
               type="button"
-              [class]="\`cv-sliding-dot \${index === currentIndex ? 'active' : ''}\`"
-              [attr.aria-label]="\`Go to slide \${index + 1}\`"
+              [class]="'cv-sliding-dot ' + (index === currentIndex ? 'active' : '')"
+              [attr.aria-label]="'Go to slide ' + (index + 1)"
               (click)="goTo(index)"
             ></button
           ></ng-container></div
@@ -407,6 +407,12 @@ export default class SlidingBanner {
   }
   trackBy_1(index, _) {
     return index;
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
   }
 
   ngOnInit() {

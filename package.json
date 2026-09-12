@@ -50,7 +50,7 @@
   },
   "main": "./dist/react/src/components/index.js",
   "scripts": {
-    "build": "npx mitosis build && node fix-styles.js && node fix-props.js && node fix-framework-utils.js && node fix-react.js && node fix-wc-props.js && node build-wc.js && node fix-wc-onmount.js && node fix-minify.js",
+    "build": "npx mitosis build && node fix-styles.js && node fix-props.js && node fix-framework-utils.js && node fix-angular.js && node fix-react.js && node fix-wc-props.js && node build-wc.js && node fix-wc-onmount.js && node fix-minify.js",
     "docs": "node scripts/generate-docs.js",
     "postbuild": "npm run docs",
     "prepare": "husky && npm run build",

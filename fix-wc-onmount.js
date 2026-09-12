@@ -13,7 +13,7 @@ if (fs.existsSync(wcDistDir)) {
     // Check if onMount is defined
     if (code.includes('onMount() {')) {
       // Add const self = this; if it's not already there
-      if (!code.includes('onMount() {\n        const self = this;')) {
+      if (!code.match(/onMount\(\)\s*\{\s*const self\s*=\s*this;/)) {
         code = code.replace(/onMount\(\)\s*\{/, 'onMount() {\n        const self = this;');
         fs.writeFileSync(filePath, code, 'utf8');
         console.log(`Patched onMount in ${file}`);

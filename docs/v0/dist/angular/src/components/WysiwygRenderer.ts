@@ -2,6 +2,7 @@ import { NgModule } from "@angular/core";
 import { CommonModule } from "@angular/common";
 
 import {
+  inject,
   Component,
   ViewChild,
   ElementRef,
@@ -27,7 +28,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
   template: `
     <div
       #containerRef
-      [class]="\`cv-wysiwyg-content \${!shouldMount ? 'cv-image-shimmer' : ''} \${className || ''}\`"
+      [class]="'cv-wysiwyg-content ' + (!shouldMount ? 'cv-image-shimmer' : '') + ' ' + (className || '')"
       [ngStyle]="{
           minHeight: !shouldMount ? '120px' : ''
         }"
@@ -252,7 +253,14 @@ export default class WysiwygRenderer {
     disconnect: null as (() => void) | null,
   };
 
-  constructor(protected sanitizer: DomSanitizer) {}
+  sanitizer = inject(DomSanitizer);
+  constructor() {}
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
+  }
 
   ngOnInit() {
     if (typeof window !== "undefined") {
