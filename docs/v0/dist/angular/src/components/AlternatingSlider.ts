@@ -50,7 +50,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
     <div
       role="region"
       #rootRef
-      [class]="\`cv-alt-slider \${showSkeleton ? 'cv-image-shimmer' : ''} \${className || ''}\`"
+      [class]="'cv-alt-slider ' + (showSkeleton ? 'cv-image-shimmer' : '') + ' ' + (className || '')"
       (mouseenter)="stopAutoPlay()"
       (mouseleave)="startAutoPlay()"
       [ngStyle]="{
@@ -58,7 +58,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
           minHeight: config?.height === 'auto' ? 'auto' : config?.minHeight || ''
         }"
     >
-      <ng-container *ngIf="config?.height === 'auto' && items?.[0]?.media?.url"
+      <ng-container *ngIf="config?.height === 'auto' && items[0]?.media?.url"
         ><img
           alt=""
           [attr.src]="items[0].media.url"
@@ -73,7 +73,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
       <div
         class="cv-alt-cols-container"
         [ngStyle]="{
-          gridTemplateColumns: \`repeat(\${columns}, 1fr)\`,
+          gridTemplateColumns: 'repeat(' + (columns) + ', 1fr)',
           position: config?.height === 'auto' ? 'absolute' : 'relative',
           top: 0,
           left: 0,
@@ -89,7 +89,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
             <div
               class="cv-alt-track"
               [ngStyle]="{
-          transform: \`translateY(\${colIndex % 2 === 0 ? -currentIndex * 100 : currentIndex * 100}%)\`
+          transform: 'translateY(' + (colIndex % 2 === 0 ? -currentIndex * 100 : currentIndex * 100) + '%)'
         }"
             >
               <ng-container
@@ -97,11 +97,11 @@ import { observeLazyMount } from "../utils/lazyObserver";
                 ><div
                   class="cv-alt-cell"
                   [ngStyle]="{
-          top: \`\${colIndex % 2 === 0 ? slideIndex * 100 : -slideIndex * 100}%\`
+          top: (colIndex % 2 === 0 ? slideIndex * 100 : -slideIndex * 100) + '%'
         }"
                 >
                   <ng-container *ngIf="slideRow[colIndex]"
-                    ><ng-container *ngIf="slideRow[colIndex].mapLinks?.[0]?.url"
+                    ><ng-container *ngIf="slideRow[colIndex].mapLinks[0]?.url"
                       ><a
                         class="cv-alt-content-wrap"
                         [attr.href]="slideRow[colIndex].mapLinks[0].url"
@@ -118,7 +118,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
                             [attr.loop]="true"
                             [attr.muted]="true"
                             [attr.playsInline]="true"
-                            [class]="\`cv-alt-bg-video \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+                            [class]="'cv-alt-bg-video ' + (showSkeleton ? 'cv-image-shimmer' : '')"
                             [ngStyle]="{
           position: 'absolute',
           top: 0,
@@ -133,10 +133,10 @@ import { observeLazyMount } from "../utils/lazyObserver";
                           *ngIf="shouldMount && slideRow[colIndex].media?.type !== 'video'"
                           ><div
                             [ngStyle]="{
-          backgroundImage: slideRow[colIndex].media?.url ? \`url(\${slideRow[colIndex].media.url})\` : 'none',
+          backgroundImage: slideRow[colIndex].media?.url ? 'url(' + (slideRow[colIndex].media.url) + ')' : 'none',
           backgroundPosition: config?.bgPosition || 'center'
         }"
-                            [class]="\`cv-alt-bg \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+                            [class]="'cv-alt-bg ' + (showSkeleton ? 'cv-image-shimmer' : '')"
                           ></div
                         ></ng-container>
                         <div class="cv-alt-overlay"></div>
@@ -201,7 +201,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
                         </div></a
                       ></ng-container
                     >
-                    <ng-container *ngIf="!slideRow[colIndex].mapLinks?.[0]?.url"
+                    <ng-container *ngIf="!slideRow[colIndex].mapLinks[0]?.url"
                       ><div class="cv-alt-content-wrap">
                         <ng-container
                           *ngIf="shouldMount && slideRow[colIndex].media?.type === 'video'"
@@ -211,7 +211,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
                             [attr.loop]="true"
                             [attr.muted]="true"
                             [attr.playsInline]="true"
-                            [class]="\`cv-alt-bg-video \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+                            [class]="'cv-alt-bg-video ' + (showSkeleton ? 'cv-image-shimmer' : '')"
                             [ngStyle]="{
           position: 'absolute',
           top: 0,
@@ -226,10 +226,10 @@ import { observeLazyMount } from "../utils/lazyObserver";
                           *ngIf="shouldMount && slideRow[colIndex].media?.type !== 'video'"
                           ><div
                             [ngStyle]="{
-          backgroundImage: slideRow[colIndex].media?.url ? \`url(\${slideRow[colIndex].media.url})\` : 'none',
+          backgroundImage: slideRow[colIndex].media?.url ? 'url(' + (slideRow[colIndex].media.url) + ')' : 'none',
           backgroundPosition: config?.bgPosition || 'center'
         }"
-                            [class]="\`cv-alt-bg \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+                            [class]="'cv-alt-bg ' + (showSkeleton ? 'cv-image-shimmer' : '')"
                           ></div
                         ></ng-container>
                         <div class="cv-alt-overlay"></div>
@@ -340,8 +340,8 @@ import { observeLazyMount } from "../utils/lazyObserver";
             *ngFor="let _ of slideSets; index as index; trackBy: trackBy_2"
             ><button
               type="button"
-              [class]="\`cv-alt-dot \${index === currentIndex ? 'active' : ''}\`"
-              [attr.aria-label]="\`Go to slide \${index + 1}\`"
+              [class]="'cv-alt-dot ' + (index === currentIndex ? 'active' : '')"
+              [attr.aria-label]="'Go to slide ' + (index + 1)"
               (click)="goTo(index)"
             ></button
           ></ng-container></div
@@ -357,6 +357,13 @@ import { observeLazyMount } from "../utils/lazyObserver";
   ],
 })
 export default class AlternatingSlider {
+  Array = Array;
+  @Input() set columns(val: any) {
+    if (val !== undefined && val !== null) {
+      if (!this.config) this.config = {} as any;
+      this.config.columns = Number(val);
+    }
+  }
   @Input() lazyLoad!: AlternatingSliderProps["lazyLoad"];
   @Input() lazyThreshold!: AlternatingSliderProps["lazyThreshold"];
   @Input() lazyRootMargin!: AlternatingSliderProps["lazyRootMargin"];
@@ -426,6 +433,12 @@ export default class AlternatingSlider {
   }
   trackBy_2(index, _) {
     return `dot-${index}`;
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
   }
 
   ngOnInit() {

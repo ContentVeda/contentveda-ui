@@ -379,6 +379,26 @@ for (const file of allFiles) {
   // Remove any duplicate const self = this; declarations
   finalCode = finalCode.replace(/const self\s*=\s*this;(\s*const self\s*=\s*this;)+/g, 'const self = this;');
 
+  // Bundle any external node_modules dependencies (e.g. isomorphic-dompurify) so web component
+  // files are completely self-contained in the browser and don't fail on bare module imports.
+  if (finalCode.includes('isomorphic-dompurify')) {
+    const esbuild = require('esbuild');
+    const bundled = esbuild.buildSync({
+      stdin: {
+        contents: finalCode,
+        resolveDir: __dirname,
+        loader: 'js'
+      },
+      bundle: true,
+      format: 'esm',
+      target: 'es2020',
+      platform: 'browser',
+      external: ['./utils/*'],
+      write: false
+    });
+    finalCode = bundled.outputFiles[0].text;
+  }
+
   fs.writeFileSync(outPath, finalCode);
 }
 console.log('Successfully compiled Web Components.');

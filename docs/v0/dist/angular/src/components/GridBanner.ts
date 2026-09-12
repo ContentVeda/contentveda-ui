@@ -56,7 +56,7 @@ import { observeLazyMount } from "../utils/lazyObserver";
   template: `
     <div
       #rootRef
-      [class]="\`cv-grid-banner \${className || ''}\`"
+      [class]="'cv-grid-banner ' + (className || '')"
       [ngStyle]="{
           gridTemplateColumns: gridTemplateColumns,
           '--cv-grid-cols-tablet': columnsTabletVar,
@@ -69,9 +69,9 @@ import { observeLazyMount } from "../utils/lazyObserver";
         *ngFor="let item of items; index as index; trackBy: trackByItem0"
         ><a
           class="cv-grid-item"
-          [attr.href]="item.mapLinks?.[0]?.url || undefined"
+          [attr.href]="item.mapLinks[0]?.url || undefined"
           ><div
-            [class]="\`cv-grid-img-wrap \${showSkeleton ? 'cv-image-shimmer' : ''}\`"
+            [class]="'cv-grid-img-wrap ' + (showSkeleton ? 'cv-image-shimmer' : '')"
             [ngStyle]="{
           height: config?.height || '',
           minHeight: config?.minHeight || '',
@@ -193,6 +193,12 @@ export default class GridBanner {
   };
   trackByItem0(index, item) {
     return item.id || index;
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
   }
 
   ngOnInit() {

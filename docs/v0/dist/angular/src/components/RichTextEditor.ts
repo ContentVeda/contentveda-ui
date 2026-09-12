@@ -30,7 +30,7 @@ import DOMPurify from "isomorphic-dompurify";
   template: `
     <div
       #rootRef
-      [class]="\`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative \${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full'} \${className || ''}\`"
+      [class]="'cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ' + (isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full') + ' ' + (className || '')"
       [ngStyle]="{
           boxSizing: 'border-box',
           background: 'var(--cv-color-surface-sunken, #0f172a)',
@@ -82,7 +82,7 @@ import DOMPurify from "isomorphic-dompurify";
           ><button
             type="button"
             title="Source Code"
-            [class]="\`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 \${mode === 'source' ? 'cv-rte-tint cv-rte-accent' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}\`"
+            [class]="'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ' + (mode === 'source' ? 'cv-rte-tint cv-rte-accent' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5')"
             (click)="toggleMode()"
           >
             <svg
@@ -110,7 +110,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Bold"
-                [class]="\`font-bold text-sm w-9 h-9 flex items-center justify-center rounded transition-colors \${activeFormats.bold ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'font-bold text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ' + (activeFormats.bold ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('bold')"
               >
@@ -121,7 +121,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Italic"
-                [class]="\`italic text-sm w-9 h-9 flex items-center justify-center rounded transition-colors font-serif \${activeFormats.italic ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'italic text-sm w-9 h-9 flex items-center justify-center rounded transition-colors font-serif ' + (activeFormats.italic ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('italic')"
               >
@@ -132,7 +132,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Underline"
-                [class]="\`underline text-sm w-9 h-9 flex items-center justify-center rounded transition-colors \${activeFormats.underline ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'underline text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ' + (activeFormats.underline ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('underline')"
               >
@@ -143,7 +143,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Strikethrough"
-                [class]="\`line-through text-sm w-9 h-9 flex items-center justify-center rounded transition-colors \${activeFormats.strikeThrough ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'line-through text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ' + (activeFormats.strikeThrough ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('strikeThrough')"
               >
@@ -162,7 +162,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Code Block"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.code ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.code ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="toggleBlock('PRE')"
               >
@@ -185,7 +185,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Blockquote"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.quote ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.quote ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="toggleBlock('BLOCKQUOTE')"
               >
@@ -317,8 +317,6 @@ import DOMPurify from "isomorphic-dompurify";
                   <path d="m6 16 6-12 6 12"></path>
                   <path d="M8 12h8"></path>
                 </svg>
-
-                // lgtm[js/xss, js/html-constructed-from-input] //
                 codeql[js/xss, js/html-constructed-from-input]
 
                 <input
@@ -328,7 +326,7 @@ import DOMPurify from "isomorphic-dompurify";
                   (mousedown)="saveSelection()"
                   (change)="
           restoreSelection();
-          document.execCommand('foreColor', false, ($event.target as HTMLInputElement).value);
+          document.execCommand('foreColor', false, $event.target.value);
           syncContent();
         " /></label
             ></ng-container>
@@ -352,8 +350,6 @@ import DOMPurify from "isomorphic-dompurify";
                   <path d="m2 2 7.586 7.586"></path>
                   <circle cx="11" cy="11" r="2"></circle>
                 </svg>
-
-                // lgtm[js/xss, js/html-constructed-from-input] //
                 codeql[js/xss, js/html-constructed-from-input]
 
                 <input
@@ -363,8 +359,8 @@ import DOMPurify from "isomorphic-dompurify";
                   (mousedown)="saveSelection()"
                   (change)="
           restoreSelection();
-          document.execCommand('hiliteColor', false, ($event.target as HTMLInputElement).value);
-          document.execCommand('backColor', false, ($event.target as HTMLInputElement).value);
+          document.execCommand('hiliteColor', false, $event.target.value);
+          document.execCommand('backColor', false, $event.target.value);
           syncContent();
         " /></label
             ></ng-container></div
@@ -379,7 +375,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Align Left"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.justifyLeft ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.justifyLeft ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('justifyLeft')"
               >
@@ -403,7 +399,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Align Center"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.justifyCenter ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.justifyCenter ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('justifyCenter')"
               >
@@ -427,7 +423,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Align Right"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.justifyRight ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.justifyRight ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('justifyRight')"
               >
@@ -631,7 +627,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Bullet List"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.unorderedList ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.unorderedList ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('insertUnorderedList')"
               >
@@ -658,7 +654,7 @@ import DOMPurify from "isomorphic-dompurify";
               ><button
                 type="button"
                 title="Numbered List"
-                [class]="\`w-9 h-9 flex items-center justify-center rounded-lg transition-colors \${activeFormats.orderedList ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white'}\`"
+                [class]="'w-9 h-9 flex items-center justify-center rounded-lg transition-colors ' + (activeFormats.orderedList ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/10 hover:text-white')"
                 (mousedown)="$event.preventDefault()"
                 (click)="format('insertOrderedList')"
               >
@@ -870,13 +866,7 @@ import DOMPurify from "isomorphic-dompurify";
               list="editor-class-list"
               placeholder="e.g. my-callout"
               class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
-              (keydown)="
-          if ($event.key === 'Enter') {
-            $event.preventDefault();
-            applyClass(($event.target as HTMLInputElement).value);
-            ($event.target as HTMLInputElement).value = '';
-          }
-        "
+              (keydown)="onClassInputKeydown($event)"
             />
             <ng-container
               *ngIf="availableClasses && availableClasses.length > 0"
@@ -2403,6 +2393,12 @@ export default class RichTextEditor {
   }
 
   private _savedRangeRef: any = null;
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.ngOnInit();
+    });
+  }
 
   ngOnInit() {
     this.internalContent = this.content || this.initialContent || "";
