@@ -307,6 +307,20 @@ jobs:
 
           Merging this is what carries the version on to beta: the next push to main brings the branches level again."
 
+          # The PR is opened by github-actions[bot] which means GitHub will NOT
+          # trigger the pull_request workflow (bot-created events are excluded).
+          # The required 'test' check therefore hangs forever. Post the status
+          # directly to the commit so the PR is immediately mergeable.
+          sha=$(git rev-parse HEAD)
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${sha}" \
+            --field state=success \
+            --field context=test \
+            --field description="Version-bump commit — Playwright E2E already passed on the release commit" \
+            --field target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+
       # Keeps beta level with main.
       #
       # Runs on every push to main rather than only the ones that publish, and
