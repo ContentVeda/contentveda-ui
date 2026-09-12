@@ -1,5 +1,6 @@
 const { setWorldConstructor, World } = require('@cucumber/cucumber');
 const { bundleReactHarness, bundleSvelteHarness, bundleVueHarness, bundleSolidHarness, bundleAngularHarness } = require('./bundle');
+const { renderSsrString } = require('./ssr');
 
 // Converts Gherkin's kebab-case attribute table (image-url, is-loading, ...)
 // into camelCase JS prop values for the React/Svelte targets, parsing
@@ -129,6 +130,29 @@ class ContentVedaWorld extends World {
 
   async mountAngularComponent(pascalName, attrs) {
     await this._mountFrameworkHarness('angular', pascalName, attrs, bundleAngularHarness);
+  }
+
+  async ssrMount(pascalName, frameworkName, attrs) {
+    this.mountTarget = frameworkName;
+    const props = attrsToProps(attrs);
+    
+    // We navigate to harness.html first to give Playwright a real DOM environment
+    const baseUrl = this.parameters.baseUrl;
+    await this.page.goto(`${baseUrl}/tests/bdd/harness.html`, { waitUntil: 'load' });
+    
+    const htmlString = await renderSsrString(frameworkName, pascalName, props);
+    
+    await this.page.evaluate(
+      ({ htmlString, baseUrl, pascalName }) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = `${baseUrl}/dist/styles/components/${pascalName}.css`;
+        document.head.appendChild(link);
+        
+        document.getElementById('mount').innerHTML = htmlString;
+      },
+      { htmlString, baseUrl, pascalName }
+    );
   }
 
   subject() {

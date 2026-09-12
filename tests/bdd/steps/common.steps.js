@@ -31,9 +31,9 @@ Given('I mount the {string} Angular component with:', async function (pascalName
   await this.mountAngularComponent(pascalName, dataTable.rowsHash());
 });
 
-Given('I SSR mount the {string} {string} component with:', function (pascalName, framework, dataTable) {
-  // Pending implementation: Node.js SSR harness is required to render components to string
-  return 'skipped';
+Given('I SSR mount the {string} {string} component with:', async function (pascalName, framework, dataTable) {
+  const attrs = Object.fromEntries(dataTable.raw());
+  await this.ssrMount(pascalName, framework, attrs);
 });
 
 When('I wait {int} ms', async function (ms) {
