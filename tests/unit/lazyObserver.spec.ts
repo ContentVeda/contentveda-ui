@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { observeLazyMount } from '../../src/utils/lazyObserver';
 
 describe('lazyObserver', () => {

@@ -1,9 +1,10 @@
-import { defineConfig } from 'vitest/config';
+const { defineConfig } = require('vitest/config');
 
-export default defineConfig({
+module.exports = defineConfig({
   test: {
+    globals: true,
     environment: 'jsdom',
-    include: ['tests/unit/**/*.spec.ts', 'tests/unit/**/*.test.ts', 'tests/unit/**/*.spec.mts', 'tests/unit/**/*.test.mts'],
+    include: ['tests/unit/**/*.spec.ts', 'tests/unit/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

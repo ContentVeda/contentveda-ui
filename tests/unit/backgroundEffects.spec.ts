@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from 'vitest';
 import { defaultBackgroundEffectPlugin, BackgroundEffectContext } from '../../src/utils/backgroundEffects';
 
 describe('backgroundEffects', () => {
