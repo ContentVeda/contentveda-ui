@@ -238,6 +238,9 @@ class v extends HTMLElement{static get observedAttributes(){return["content","in
                     <path d="m6 16 6-12 6 12"></path>
                     <path d="M8 12h8"></path>
                   </svg>
+      
+                  // lgtm [js/html-constructed-from-input]
+      
                   <input
                     type="color"
                     aria-label="Text Color"
@@ -268,6 +271,9 @@ class v extends HTMLElement{static get observedAttributes(){return["content","in
                     <path d="m2 2 7.586 7.586"></path>
                     <circle cx="11" cy="11" r="2"></circle>
                   </svg>
+      
+                  // lgtm [js/html-constructed-from-input]
+      
                   <input
                     type="color"
                     aria-label="Background Color"
