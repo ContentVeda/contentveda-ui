@@ -1,4 +1,5 @@
 import { useStore, useRef, onMount, Show } from '@builder.io/mitosis';
+import DOMPurify from 'isomorphic-dompurify';
 
 export interface RichTextEditorConfig {
   toolbar?: string[];
@@ -335,7 +336,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       if (editorRef) {
         // lgtm[js/xss, js/html-constructed-from-input]
 // codeql[js/xss, js/html-constructed-from-input]
-        editorRef.innerHTML = state.internalContent;
+        editorRef.innerHTML = DOMPurify.sanitize(state.internalContent);
       }
     },
     
@@ -542,7 +543,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         if (editorRef) {
           // lgtm[js/xss, js/html-constructed-from-input]
 // codeql[js/xss, js/html-constructed-from-input]
-          editorRef.innerHTML = state.internalContent;
+          editorRef.innerHTML = DOMPurify.sanitize(state.internalContent);
         }
       }
     },
@@ -599,7 +600,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     if (editorRef) {
       // lgtm[js/xss, js/html-constructed-from-input]
 // codeql[js/xss, js/html-constructed-from-input]
-      editorRef.innerHTML = state.internalContent;
+      editorRef.innerHTML = DOMPurify.sanitize(state.internalContent);
     }
     if (typeof document !== 'undefined') {
       const styleId = 'cv-editor-styles';

@@ -11,6 +11,8 @@ export interface RichTextEditorProps {
   config?: RichTextEditorConfig;
 }
 
+import DOMPurify from "isomorphic-dompurify";
+
 /**
  * Usage:
  *
@@ -363,7 +365,9 @@ class RichTextEditor extends HTMLElement {
         if (self._editorRef) {
           // lgtm[js/xss, js/html-constructed-from-input]
           // codeql[js/xss, js/html-constructed-from-input]
-          self._editorRef.innerHTML = self.state.internalContent;
+          self._editorRef.innerHTML = DOMPurify.sanitize(
+            self.state.internalContent
+          );
         }
       },
       openTableModal() {
@@ -572,7 +576,9 @@ class RichTextEditor extends HTMLElement {
           if (self._editorRef) {
             // lgtm[js/xss, js/html-constructed-from-input]
             // codeql[js/xss, js/html-constructed-from-input]
-            self._editorRef.innerHTML = self.state.internalContent;
+            self._editorRef.innerHTML = DOMPurify.sanitize(
+              self.state.internalContent
+            );
           }
         }
       },
@@ -2324,7 +2330,9 @@ class RichTextEditor extends HTMLElement {
     if (self._editorRef) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      self._editorRef.innerHTML = this.state.internalContent;
+      self._editorRef.innerHTML = DOMPurify.sanitize(
+        this.state.internalContent
+      );
     }
     if (typeof document !== "undefined") {
       const styleId = "cv-editor-styles";

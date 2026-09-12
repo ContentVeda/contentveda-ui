@@ -7,6 +7,7 @@ export interface WysiwygRendererProps {
   lazyRootMargin?: string;
 }
 
+import DOMPurify from "isomorphic-dompurify";
 import { observeLazyMount } from "../utils/lazyObserver";
 
 /**

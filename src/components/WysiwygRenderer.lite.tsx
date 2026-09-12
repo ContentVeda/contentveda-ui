@@ -1,4 +1,5 @@
 import { useStore, onMount, onUnMount, onUpdate, useRef } from '@builder.io/mitosis';
+import DOMPurify from 'isomorphic-dompurify';
 import { observeLazyMount } from '../utils/lazyObserver';
 
 export interface WysiwygRendererProps {

@@ -15,6 +15,8 @@ export interface RichTextEditorProps {
   config?: RichTextEditorConfig;
 }
 
+import DOMPurify from "isomorphic-dompurify";
+
 function RichTextEditor(props: RichTextEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -350,7 +352,7 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (editorRef.current) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      editorRef.current.innerHTML = internalContent;
+      editorRef.current.innerHTML = DOMPurify.sanitize(internalContent);
     }
   }
 
@@ -544,7 +546,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       if (editorRef.current) {
         // lgtm[js/xss, js/html-constructed-from-input]
         // codeql[js/xss, js/html-constructed-from-input]
-        editorRef.current.innerHTML = internalContent;
+        editorRef.current.innerHTML = DOMPurify.sanitize(internalContent);
       }
     }
   }
@@ -624,7 +626,7 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (editorRef.current) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      editorRef.current.innerHTML = internalContent;
+      editorRef.current.innerHTML = DOMPurify.sanitize(internalContent);
     }
     if (typeof document !== "undefined") {
       const styleId = "cv-editor-styles";

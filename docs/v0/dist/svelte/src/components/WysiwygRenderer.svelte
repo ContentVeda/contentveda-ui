@@ -13,6 +13,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
 
+  import DOMPurify from "isomorphic-dompurify";
   import { observeLazyMount } from "../utils/lazyObserver";
 
   export let lazyLoad: WysiwygRendererProps["lazyLoad"];

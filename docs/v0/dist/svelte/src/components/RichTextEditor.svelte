@@ -18,6 +18,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
+  import DOMPurify from "isomorphic-dompurify";
+
   export let content: RichTextEditorProps["content"];
   export let initialContent: RichTextEditorProps["initialContent"];
   export let onMediaRequest: RichTextEditorProps["onMediaRequest"];
@@ -297,7 +299,7 @@
     if (editorRef) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      editorRef.innerHTML = internalContent;
+      editorRef.innerHTML = DOMPurify.sanitize(internalContent);
     }
   }
   function openTableModal() {
@@ -477,7 +479,7 @@
       if (editorRef) {
         // lgtm[js/xss, js/html-constructed-from-input]
         // codeql[js/xss, js/html-constructed-from-input]
-        editorRef.innerHTML = internalContent;
+        editorRef.innerHTML = DOMPurify.sanitize(internalContent);
       }
     }
   }
@@ -588,7 +590,7 @@
     if (editorRef) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      editorRef.innerHTML = internalContent;
+      editorRef.innerHTML = DOMPurify.sanitize(internalContent);
     }
     if (typeof document !== "undefined") {
       const styleId = "cv-editor-styles";

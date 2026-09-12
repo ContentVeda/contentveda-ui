@@ -1942,6 +1942,8 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 
+import DOMPurify from "isomorphic-dompurify";
+
 export interface RichTextEditorConfig {
   toolbar?: string[];
 }
@@ -2013,7 +2015,7 @@ export default defineComponent({
     if (this.$refs.editorRef) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      this.$refs.editorRef.innerHTML = this.internalContent;
+      this.$refs.editorRef.innerHTML = DOMPurify.sanitize(this.internalContent);
     }
     if (typeof document !== "undefined") {
       const styleId = "cv-editor-styles";
@@ -2300,7 +2302,9 @@ export default defineComponent({
       if (this.$refs.editorRef) {
         // lgtm[js/xss, js/html-constructed-from-input]
         // codeql[js/xss, js/html-constructed-from-input]
-        this.$refs.editorRef.innerHTML = this.internalContent;
+        this.$refs.editorRef.innerHTML = DOMPurify.sanitize(
+          this.internalContent
+        );
       }
     },
     openTableModal() {
@@ -2486,7 +2490,9 @@ export default defineComponent({
         if (this.$refs.editorRef) {
           // lgtm[js/xss, js/html-constructed-from-input]
           // codeql[js/xss, js/html-constructed-from-input]
-          this.$refs.editorRef.innerHTML = this.internalContent;
+          this.$refs.editorRef.innerHTML = DOMPurify.sanitize(
+            this.internalContent
+          );
         }
       }
     },

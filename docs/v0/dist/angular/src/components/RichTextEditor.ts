@@ -23,6 +23,8 @@ export interface RichTextEditorProps {
   config?: RichTextEditorConfig;
 }
 
+import DOMPurify from "isomorphic-dompurify";
+
 @Component({
   selector: "rich-text-editor",
   template: `
@@ -2138,7 +2140,9 @@ export default class RichTextEditor {
     if (this.editorRef?.nativeElement) {
       // lgtm[js/xss, js/html-constructed-from-input]
       // codeql[js/xss, js/html-constructed-from-input]
-      this.editorRef!.nativeElement.innerHTML = this.internalContent;
+      this.editorRef!.nativeElement.innerHTML = DOMPurify.sanitize(
+        this.internalContent
+      );
     }
   }
   openTableModal() {
@@ -2324,7 +2328,9 @@ export default class RichTextEditor {
       if (this.editorRef?.nativeElement) {
         // lgtm[js/xss, js/html-constructed-from-input]
         // codeql[js/xss, js/html-constructed-from-input]
-        this.editorRef!.nativeElement.innerHTML = this.internalContent;
+        this.editorRef!.nativeElement.innerHTML = DOMPurify.sanitize(
+          this.internalContent
+        );
       }
     }
   }
@@ -2408,7 +2414,9 @@ export default class RichTextEditor {
       if (this.editorRef?.nativeElement) {
         // lgtm[js/xss, js/html-constructed-from-input]
         // codeql[js/xss, js/html-constructed-from-input]
-        this.editorRef!.nativeElement.innerHTML = this.internalContent;
+        this.editorRef!.nativeElement.innerHTML = DOMPurify.sanitize(
+          this.internalContent
+        );
       }
       if (typeof document !== "undefined") {
         const styleId = "cv-editor-styles";

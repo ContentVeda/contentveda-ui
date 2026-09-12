@@ -14,6 +14,7 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 
+import DOMPurify from "isomorphic-dompurify";
 import { observeLazyMount } from "../utils/lazyObserver";
 
 export interface WysiwygRendererProps {
