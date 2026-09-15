@@ -2302,6 +2302,22 @@ export default class RichTextEditor {
   mode = "visual";
   isFullscreen = false;
   internalContent = null;
+  getTrustedHttpUrl(rawUrl: string) {
+    try {
+      const parsed = new URL(
+        rawUrl,
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost"
+      );
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
   getHostname(url: string) {
     try {
       return new URL(
@@ -2926,8 +2942,10 @@ export default class RichTextEditor {
         bq.className = "twitter-tweet";
         bq.setAttribute("data-theme", "dark");
         bq.style.pointerEvents = "none";
+        const trustedTweetUrl = this.getTrustedHttpUrl(url);
+        if (!trustedTweetUrl) return;
         const a = document.createElement("a");
-        a.href = url;
+        a.href = trustedTweetUrl;
         bq.appendChild(a);
         el.appendChild(bq);
         markRendered();
@@ -2987,9 +3005,11 @@ export default class RichTextEditor {
         const embedUrl = url.includes("/embed/")
           ? url
           : url.replace(/\/posts?\//, "/embed/feed/update/");
+        const trustedEmbedUrl = this.getTrustedHttpUrl(embedUrl);
+        if (!trustedEmbedUrl) return;
         el.innerHTML = "";
         const liIframe = document.createElement("iframe");
-        liIframe.src = embedUrl;
+        liIframe.src = trustedEmbedUrl;
         liIframe.height = "400";
         liIframe.width = "100%";
         liIframe.setAttribute("frameborder", "0");

@@ -39,6 +39,22 @@
     return styles;
   }
 
+  function getTrustedHttpUrl(rawUrl: string) {
+    try {
+      const parsed = new URL(
+        rawUrl,
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost"
+      );
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
   function getHostname(url: string) {
     try {
       return new URL(
@@ -603,8 +619,10 @@
         bq.className = "twitter-tweet";
         bq.setAttribute("data-theme", "dark");
         bq.style.pointerEvents = "none";
+        const trustedTweetUrl = getTrustedHttpUrl(url);
+        if (!trustedTweetUrl) return;
         const a = document.createElement("a");
-        a.href = url;
+        a.href = trustedTweetUrl;
         bq.appendChild(a);
         el.appendChild(bq);
         markRendered();
@@ -664,9 +682,11 @@
         const embedUrl = url.includes("/embed/")
           ? url
           : url.replace(/\/posts?\//, "/embed/feed/update/");
+        const trustedEmbedUrl = getTrustedHttpUrl(embedUrl);
+        if (!trustedEmbedUrl) return;
         el.innerHTML = "";
         const liIframe = document.createElement("iframe");
-        liIframe.src = embedUrl;
+        liIframe.src = trustedEmbedUrl;
         liIframe.height = "400";
         liIframe.width = "100%";
         liIframe.setAttribute("frameborder", "0");

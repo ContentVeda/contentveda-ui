@@ -34,6 +34,22 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     // any of those fields injects it as live markup rather than literal
     // text/attribute content -- this is the one place that has to hold the
     // line before the string becomes HTML.
+    // data-url/socialUrl ultimately drive real navigation sinks (a.href,
+    // iframe.src) in renderEmbeds(). Without this, a "javascript:" or
+    // "data:" URL there would execute when the rendered link/frame is
+    // interacted with -- restrict to the two protocols an embed link is
+    // ever legitimately going to need.
+    getTrustedHttpUrl(rawUrl: string): string | null {
+      try {
+        const parsed = new URL(rawUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return null;
+        }
+        return parsed.toString();
+      } catch {
+        return null;
+      }
+    },
     // A substring check like url.includes('youtube.com') matches
     // "evil.com/?x=youtube.com" and "youtube.com.evil.com" just as readily
     // as a real YouTube link -- parse the actual hostname instead.
@@ -598,8 +614,10 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           bq.className = 'twitter-tweet';
           bq.setAttribute('data-theme', 'dark');
           bq.style.pointerEvents = 'none';
+          const trustedTweetUrl = state.getTrustedHttpUrl(url);
+          if (!trustedTweetUrl) return;
           const a = document.createElement('a');
-          a.href = url;
+          a.href = trustedTweetUrl;
           bq.appendChild(a);
           el.appendChild(bq);
           markRendered();
@@ -652,9 +670,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           }
         } else if (platform === 'linkedin') {
           const embedUrl = url.includes('/embed/') ? url : url.replace(/\/posts?\//, '/embed/feed/update/');
+          const trustedEmbedUrl = state.getTrustedHttpUrl(embedUrl);
+          if (!trustedEmbedUrl) return;
           el.innerHTML = '';
           const liIframe = document.createElement('iframe');
-          liIframe.src = embedUrl;
+          liIframe.src = trustedEmbedUrl;
           liIframe.height = '400';
           liIframe.width = '100%';
           liIframe.setAttribute('frameborder', '0');
