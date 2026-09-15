@@ -226,12 +226,30 @@ function WysiwygRenderer(props: WysiwygRendererProps) {
             const katex = (window as any).katex;
             if (!katex) return;
             try {
-              // lgtm[js/xss, js/html-constructed-from-input]
-              // codeql[js/xss, js/html-constructed-from-input]
-              el.innerHTML = katex.renderToString(formula, {
-                throwOnError: false,
-                displayMode: false,
-              });
+              // formula is read back from a DOM attribute (getAttribute
+              // decodes entities, undoing any escaping done when it was
+              // written), then handed to a third-party HTML generator
+              // (katex.renderToString) whose output we do not otherwise
+              // control -- sanitize that output before it reaches
+              // innerHTML rather than trusting the katex output as-is.
+              el.innerHTML = DOMPurify.sanitize(
+                katex.renderToString(formula, {
+                  throwOnError: false,
+                  displayMode: false,
+                }),
+                {
+                  USE_PROFILES: {
+                    html: true,
+                    mathMl: true,
+                    svg: true,
+                  },
+                  // DOMPurify's mathMl profile omits <semantics>/<annotation>           // (katex's copy-source-as-LaTeX accessibility layer) --
+                  // add them back explicitly so sanitizing does not quietly
+                  // degrade that.
+                  ADD_TAGS: ["semantics", "annotation"],
+                  ADD_ATTR: ["encoding"],
+                }
+              );
               el.setAttribute("data-cv-math-rendered", "true");
             } catch (mathErr) {
               // leave raw formula text as fallback
