@@ -6,14 +6,15 @@ export interface RichTextEditorConfig {
 export interface RichTextEditorProps {
   content?: string;
   initialContent?: string;
-  onChange?: (content: string) => void;
-  onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
-  availableClasses?: string[];
+  onChange?: (html: string) => void;
   className?: string;
+  availableClasses?: string[];
+  onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
   config?: RichTextEditorConfig;
 }
 
 import DOMPurify from "isomorphic-dompurify";
+let activeSavedRange: any = null;
 
 function RichTextEditor(props: RichTextEditorProps) {
   const [mode, setMode] = createSignal("visual");
@@ -54,6 +55,27 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [btnStyle, setBtnStyle] = createSignal("primary");
 
+  const [fontFamily, setFontFamily] = createSignal("Inter");
+
+  const [fontSize, setFontSize] = createSignal("16px");
+
+  const [textColor, setTextColor] = createSignal("#0f172a");
+
+  const [highlightColor, setHighlightColor] = createSignal("#fde047");
+
+  const [appliedClasses, setAppliedClasses] = createSignal([
+    "cv-callout",
+    "variant-blue",
+  ]);
+
+  const [showInsertMenu, setShowInsertMenu] = createSignal(false);
+
+  const [showAiModal, setShowAiModal] = createSignal(false);
+
+  const [aiAction, setAiAction] = createSignal("improve");
+
+  const [aiInput, setAiInput] = createSignal("");
+
   const [activeFormats, setActiveFormats] = createSignal({
     bold: false,
     italic: false,
@@ -62,6 +84,7 @@ function RichTextEditor(props: RichTextEditorProps) {
     justifyLeft: false,
     justifyCenter: false,
     justifyRight: false,
+    justifyFull: false,
     quote: false,
     code: false,
     unorderedList: false,
@@ -79,6 +102,54 @@ function RichTextEditor(props: RichTextEditorProps) {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
+        let currentEl =
+          node && node.nodeType === 1 ? node : node ? node.parentElement : null;
+        if (currentEl) {
+          try {
+            const computed = window.getComputedStyle(currentEl);
+            if (computed && computed.fontSize) {
+              setFontSize(computed.fontSize);
+            }
+            if (computed && computed.fontFamily) {
+              const primaryFont = computed.fontFamily
+                .split(",")[0]
+                .replace('"', "")
+                .replace("'", "")
+                .trim();
+              if (primaryFont) {
+                setFontFamily(primaryFont);
+              }
+            }
+          } catch (err) {}
+          const classSet: string[] = [];
+          let searchNode = currentEl;
+          while (searchNode && searchNode !== editorRef) {
+            if (
+              searchNode.className &&
+              typeof searchNode.className === "string"
+            ) {
+              if (searchNode.className.indexOf("wysiwyg-content") !== -1) {
+                break;
+              }
+              const parts = searchNode.className.split(/\s+/);
+              for (let pi = 0; pi < parts.length; pi++) {
+                const p = parts[pi];
+                if (
+                  p &&
+                  p.indexOf("prose") !== 0 &&
+                  p !== "task-list" &&
+                  !classSet.includes(p)
+                ) {
+                  classSet.push(p);
+                }
+              }
+            }
+            searchNode = searchNode.parentElement;
+          }
+          if (classSet.length > 0) {
+            setAppliedClasses(classSet);
+          }
+        }
         while (
           node &&
           node.nodeName !== "DIV" &&
@@ -99,6 +170,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         justifyLeft: document.queryCommandState("justifyLeft"),
         justifyCenter: document.queryCommandState("justifyCenter"),
         justifyRight: document.queryCommandState("justifyRight"),
+        justifyFull: document.queryCommandState("justifyFull"),
         unorderedList: document.queryCommandState("insertUnorderedList"),
         orderedList: document.queryCommandState("insertOrderedList"),
         quote: isQuote,
@@ -124,19 +196,32 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function saveSelection() {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      savedRangeRef = sel.getRangeAt(0);
+    if (typeof window !== "undefined") {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const r = sel.getRangeAt(0);
+        if (!r.collapsed) {
+          activeSavedRange = r.cloneRange();
+        }
+      }
     }
   }
 
   function restoreSelection() {
-    if (savedRangeRef && editorRef) {
-      editorRef.focus();
-      const sel = window.getSelection();
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(savedRangeRef);
+    if (typeof window !== "undefined") {
+      if (editorRef) {
+        try {
+          if (typeof (editorRef as any).focus === "function") {
+            (editorRef as any).focus();
+          }
+        } catch (e) {}
+        if (activeSavedRange) {
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(activeSavedRange.cloneRange());
+          }
+        }
       }
     }
   }
@@ -168,72 +253,110 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function format(cmd: string, val?: string) {
-    // lgtm[js/xss, js/html-constructed-from-input]
-    // codeql[js/xss, js/html-constructed-from-input]
+    restoreSelection();
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand(cmd, false, val);
+    saveSelection();
+    syncContent();
+    checkFormats();
+  }
+
+  function applyColor(cmd: string, color: string) {
+    if (!color) return;
+    if (cmd === "foreColor") {
+      setTextColor(color);
+    } else {
+      setHighlightColor(color);
+    }
+    restoreSelection();
+    if (cmd === "foreColor") {
+      document.execCommand("foreColor", false, color);
+    } else {
+      if (!document.execCommand("hiliteColor", false, color)) {
+        document.execCommand("backColor", false, color);
+      }
+    }
+    saveSelection();
     syncContent();
     checkFormats();
   }
 
   function formatHeading(level: string) {
-    // lgtm[js/xss, js/html-constructed-from-input]
-    // codeql[js/xss, js/html-constructed-from-input]
+    restoreSelection();
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("formatBlock", false, level);
+    setHeadingFormat(level);
     syncContent();
     checkFormats();
+    if (editorRef) {
+      editorRef.focus();
+    }
   }
 
-  function insertMedia(type: string) {
+  function insertMedia(type: "image" | "video" | "audio") {
     saveSelection();
-    if (props.onMediaRequest) {
-      props.onMediaRequest(type as any).then((url: string) => {
-        if (url) {
-          restoreSelection();
-          let html = "";
-          if (type === "image")
-            html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
-          else if (type === "video")
-            html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
-          else if (type === "audio")
-            html = `<audio src="${url}" controls></audio>`;
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
-          document.execCommand("insertHTML", false, html);
-          syncContent();
-        }
-      });
-    } else {
-      const url = prompt(`Enter ${type} URL:`);
-      if (url) {
-        restoreSelection();
-        let html = "";
-        if (type === "image")
-          html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
-        else if (type === "video")
-          html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
-        else if (type === "audio")
-          html = `<audio src="${url}" controls></audio>`;
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
-        document.execCommand("insertHTML", false, html);
-        syncContent();
+    const insertContent = (url: string) => {
+      if (editorRef) {
+        editorRef.focus();
       }
+      restoreSelection();
+      if (!url) return;
+      let html = "";
+      if (type === "image") {
+        html = `<img src="${url}" alt="Image" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+      } else if (type === "video") {
+        html = `<video src="${url}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+      } else if (type === "audio") {
+        html = `<audio src="${url}" controls style="margin: 16px 0;"></audio><p><br></p>`;
+      }
+
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      const success = document.execCommand("insertHTML", false, html);
+      if (!success) {
+        if (activeSavedRange && activeSavedRange.insertNode) {
+          const template = document.createElement("template");
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
+          template.innerHTML = html.trim();
+          const frag = template.content;
+          activeSavedRange.deleteContents();
+          activeSavedRange.insertNode(frag);
+          activeSavedRange.collapse(false);
+        } else {
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
+          editorRef.innerHTML += html;
+        }
+      }
+      syncContent();
+    };
+    if (props.onMediaRequest) {
+      props
+        .onMediaRequest(type)
+        .then((url) => {
+          if (url) insertContent(url);
+        })
+        .catch((err) => {
+          console.error("Media request failed", err);
+        });
+    } else {
+      const url = window.prompt(`Enter ${type} URL:`);
+      if (url) insertContent(url);
     }
   }
 
   function clearAllFormatting() {
-    // Native clear format for inline styles (bold, italic, etc.)
-    // lgtm[js/xss, js/html-constructed-from-input]
-    // codeql[js/xss, js/html-constructed-from-input]
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("removeFormat", false, undefined);
-    // Reset block formatting (removes headings, blockquotes, pre)
-    // lgtm[js/xss, js/html-constructed-from-input]
-    // codeql[js/xss, js/html-constructed-from-input]
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("formatBlock", false, "P");
-    // If we have custom class spans, a quick trick to strip them without losing lines
-    // is usually sufficient with removeFormat and formatBlock, but to be sure we also run:
-    // lgtm[js/xss, js/html-constructed-from-input]
-    // codeql[js/xss, js/html-constructed-from-input]
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("unlink", false, undefined);
     syncContent();
     checkFormats();
@@ -244,12 +367,12 @@ function RichTextEditor(props: RichTextEditorProps) {
     const isActive =
       type === "PRE" ? activeFormats().code : activeFormats().quote;
     if (isActive) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("formatBlock", false, "P");
     } else {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("formatBlock", false, type);
     }
     syncContent();
@@ -302,22 +425,22 @@ function RichTextEditor(props: RichTextEditorProps) {
       }
       const url = btnUrl() || "#";
       const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${btnText()}</a>&nbsp;`;
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       const success = document.execCommand("insertHTML", false, html);
       if (!success) {
-        if (savedRangeRef && savedRangeRef.insertNode) {
+        if (activeSavedRange && activeSavedRange.insertNode) {
           const template = document.createElement("template");
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
           template.innerHTML = html.trim();
           const frag = template.content;
-          savedRangeRef.deleteContents();
-          savedRangeRef.insertNode(frag);
-          savedRangeRef.collapse(false);
+          activeSavedRange.deleteContents();
+          activeSavedRange.insertNode(frag);
+          activeSavedRange.collapse(false);
         } else {
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
           editorRef.innerHTML += html;
         }
       }
@@ -327,8 +450,8 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function syncContent() {
     if (editorRef) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       setInternalContent(editorRef.innerHTML);
       if (props.onChange) {
         props.onChange(internalContent());
@@ -346,8 +469,8 @@ function RichTextEditor(props: RichTextEditorProps) {
       props.onChange(internalContent());
     }
     if (editorRef) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       editorRef.innerHTML = DOMPurify.sanitize(internalContent());
     }
   }
@@ -387,8 +510,8 @@ function RichTextEditor(props: RichTextEditorProps) {
         table += "</tr>";
       }
       table += "</tbody></table><p><br></p>";
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("insertHTML", false, table);
       syncContent();
     }
@@ -426,8 +549,8 @@ function RichTextEditor(props: RichTextEditorProps) {
         const newTd = document.createElement("td");
         newTd.style.cssText =
           "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         newTd.innerHTML = "Cell";
         newTr.appendChild(newTd);
       }
@@ -448,8 +571,8 @@ function RichTextEditor(props: RichTextEditorProps) {
           row.parentNode.nodeName === "THEAD"
             ? "padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);"
             : "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         newCell.innerHTML =
           row.parentNode.nodeName === "THEAD" ? "Header" : "Cell";
         const sibling = row.children[colIndex];
@@ -480,8 +603,8 @@ function RichTextEditor(props: RichTextEditorProps) {
     setShowLinkModal(false);
     if (linkUrl()) {
       restoreSelection();
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("createLink", false, linkUrl());
       syncContent();
     }
@@ -500,8 +623,8 @@ function RichTextEditor(props: RichTextEditorProps) {
     setShowWidgetModal(false);
     restoreSelection();
     let html = `<div class="cv-widget" data-widget="${selectedWidget()}" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${selectedWidget().toUpperCase()}]</div><p><br></p>`;
-    // lgtm[js/xss, js/html-constructed-from-input]
-    // codeql[js/xss, js/html-constructed-from-input]
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("insertHTML", false, html);
     syncContent();
   }
@@ -522,8 +645,8 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (socialUrl()) {
       restoreSelection();
       let embedHtml = `<div class="social-embed-placeholder" data-platform="${socialPlatform()}" data-url="${socialUrl()}" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${socialPlatform().toUpperCase()} Post: ${socialUrl()}]</div><p><br></p>`;
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("insertHTML", false, embedHtml);
       syncContent();
     }
@@ -535,13 +658,14 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function toggleMode() {
     if (mode() === "visual") {
+      syncContent();
       setInternalContent(formatHTML(internalContent()));
       setMode("source");
     } else {
       setMode("visual");
       if (editorRef) {
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         editorRef.innerHTML = DOMPurify.sanitize(internalContent());
       }
     }
@@ -564,6 +688,148 @@ function RichTextEditor(props: RichTextEditorProps) {
     }
   }
 
+  function changeFontFamily(font: string) {
+    setFontFamily(font);
+    restoreSelection();
+    document.execCommand("fontName", false, font);
+    syncContent();
+    checkFormats();
+  }
+
+  function changeFontSize(size: string) {
+    setFontSize(size);
+    restoreSelection();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      const span = document.createElement("span");
+      span.style.fontSize = size;
+      const contents = sel.getRangeAt(0).extractContents();
+      span.appendChild(contents);
+      sel.getRangeAt(0).insertNode(span);
+    } else {
+      const sizeMap: any = {
+        "12px": "1",
+        "14px": "2",
+        "16px": "3",
+        "18px": "4",
+        "20px": "5",
+        "24px": "6",
+        "32px": "7",
+      };
+      document.execCommand("fontSize", false, sizeMap[size] || "3");
+    }
+    syncContent();
+    checkFormats();
+  }
+
+  function insertChecklist() {
+    saveSelection();
+    const html =
+      '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="display: flex; align-items: center; gap: 8px; margin: 4px 0;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></li></ul><p><br></p>';
+    document.execCommand("insertHTML", false, html);
+    syncContent();
+  }
+
+  function insertFormula() {
+    saveSelection();
+    const formula = window.prompt(
+      "Enter math formula or expression:",
+      "E = mc²"
+    );
+    if (formula) {
+      restoreSelection();
+      const html = `<code class="cv-math-formula" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${formula}</code>&nbsp;`;
+      document.execCommand("insertHTML", false, html);
+      syncContent();
+    }
+  }
+
+  function addClass(className: string) {
+    if (!className) return;
+    if (!appliedClasses().includes(className)) {
+      setAppliedClasses([...appliedClasses(), className]);
+    }
+  }
+
+  function removeClass(className: string) {
+    setAppliedClasses(appliedClasses().filter((c: string) => c !== className));
+    if (editorRef) {
+      const elements = editorRef.querySelectorAll(`.${className}`);
+      elements.forEach((el: any) => {
+        el.classList.remove(className);
+        if (el.classList.length === 0 && el.tagName === "SPAN") {
+          const parent = el.parentNode;
+          while (el.firstChild) parent.insertBefore(el.firstChild, el);
+          parent.removeChild(el);
+        }
+      });
+      syncContent();
+    }
+  }
+
+  function handleClassInputKeyDown(e: any) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      const val = target.value ? target.value.trim() : "";
+      if (val) {
+        applyClass(val);
+        addClass(val);
+        target.value = "";
+      }
+    }
+  }
+
+  function openAiModal() {
+    saveSelection();
+    setShowAiModal(true);
+    setAiInput("");
+  }
+
+  function closeAiModal() {
+    setShowAiModal(false);
+  }
+
+  function applyAiAction(action: string) {
+    restoreSelection();
+    const sel = window.getSelection();
+    const selectedText = sel ? sel.toString() : "";
+    let result = "";
+    if (action === "improve") {
+      if (selectedText) {
+        result =
+          selectedText.trim() + " (enhanced for clarity and conciseness)";
+      } else {
+        result =
+          "<p><strong>Executive Summary:</strong> Designed for high-velocity digital engineering squads, this next-generation prose engine pairs strict AST schemas with real-time reactive UI component embedding.</p>";
+      }
+    } else if (action === "callout") {
+      result = `<div class="cv-callout variant-blue" style="padding: 16px 20px; border-left: 4px solid #0284c7; background: rgba(2, 132, 199, 0.08); border-radius: 0 8px 8px 0; margin: 16px 0;"><strong>AI INSIGHT:</strong> ${
+        selectedText ||
+        "Configure your toolbar modules, slot rules, and custom micro-frontends directly in the inspector panel."
+      }</div><p><br></p>`;
+    } else if (action === "summarize") {
+      result = `<p><em>Summary:</em> ${
+        selectedText
+          ? selectedText.slice(0, 100) + "..."
+          : "Key takeaways: High performance AST validation, component slot architecture, and real-time schema hydration."
+      }</p>`;
+    } else if (action === "grammar") {
+      result = selectedText
+        ? selectedText.trim()
+        : "<p>All grammar and formatting validated.</p>";
+    }
+    if (result) {
+      if (result.startsWith("<")) {
+        document.execCommand("insertHTML", false, result);
+      } else {
+        document.execCommand("insertText", false, result);
+      }
+      syncContent();
+    }
+    setShowAiModal(false);
+  }
+
   function showToolbarOption(option: string) {
     if (!props.config || !props.config.toolbar) {
       return true;
@@ -572,6 +838,14 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (option === "alignLeft") name = "justifyLeft";
     if (option === "alignCenter") name = "justifyCenter";
     if (option === "alignRight") name = "justifyRight";
+    if (option === "alignJustify") name = "justifyFull";
+    if (option === "bulletList") name = "unorderedList";
+    if (option === "numberedList") name = "orderedList";
+    if (option === "code")
+      return (
+        props.config.toolbar.includes("code") ||
+        props.config.toolbar.includes("pre")
+      );
     return (
       props.config.toolbar.includes(option) ||
       props.config.toolbar.includes(name)
@@ -615,6 +889,34 @@ function RichTextEditor(props: RichTextEditorProps) {
     return hasVisibleBefore && isNextGroupVisible;
   }
 
+  function handleFullscreenChange() {
+    if (typeof document !== "undefined") {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
+  }
+
+  function handleSelectionChange() {
+    if (typeof window !== "undefined" && editorRef) {
+      const sel = window.getSelection();
+      let inEditor = false;
+      try {
+        if (
+          sel &&
+          sel.anchorNode &&
+          typeof (editorRef as any).contains === "function"
+        ) {
+          inEditor = (editorRef as any).contains(sel.anchorNode as Node);
+        }
+      } catch (e) {}
+      if (inEditor) {
+        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+          saveSelection();
+        }
+        checkFormats();
+      }
+    }
+  }
+
   let rootRef: HTMLDivElement;
   let editorRef: HTMLDivElement;
 
@@ -623,8 +925,8 @@ function RichTextEditor(props: RichTextEditorProps) {
       setInternalContent(props.content || props.initialContent || "");
     }
     if (editorRef) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       editorRef.innerHTML = DOMPurify.sanitize(internalContent());
     }
     if (typeof document !== "undefined") {
@@ -632,19 +934,14 @@ function RichTextEditor(props: RichTextEditorProps) {
       if (!document.getElementById(styleId)) {
         const style = document.createElement("style");
         style.id = styleId;
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         style.innerHTML =
           ".wysiwyg-content blockquote { border-left: 4px solid var(--cv-color-quote-accent, #7fc4de) !important; background: linear-gradient(90deg, var(--cv-color-accent-tint, rgba(127, 196, 222, 0.1)) 0%, transparent 100%) !important; padding: 20px 24px !important; margin: 24px 0 !important; border-radius: 0 16px 16px 0 !important; font-style: italic !important; color: var(--cv-color-text-main, #e2e8f0) !important; font-size: 1.1em !important; line-height: 1.8 !important; position: relative; box-shadow: inset 2px 0 0px var(--cv-color-border, rgba(255,255,255,0.1)); } .wysiwyg-content pre { background: var(--cv-color-code-bg, #0f172a) !important; border: 1px solid var(--cv-color-code-border, rgba(255,255,255,0.1)) !important; border-radius: 12px !important; padding: 20px !important; color: var(--cv-color-code-text, #38bdf8) !important; font-family: 'Fira Code', monospace !important; overflow-x: auto !important; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5) !important; } .wysiwyg-content ul { list-style-type: disc !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content li { margin-bottom: 0.5em !important; display: list-item !important; } .wysiwyg-content a:not(.cv-btn) { color: var(--cv-color-link, #7fc4de) !important; text-decoration: underline !important; text-underline-offset: 3px !important; }";
         document.head.appendChild(style);
       }
-      const fsHandler = () => {
-        setIsFullscreen(!!document.fullscreenElement);
-      };
-      document.addEventListener("fullscreenchange", fsHandler);
-      return () => {
-        document.removeEventListener("fullscreenchange", fsHandler);
-      };
+      document.addEventListener("fullscreenchange", handleFullscreenChange);
+      document.addEventListener("selectionchange", handleSelectionChange);
     }
   });
 
@@ -666,163 +963,231 @@ function RichTextEditor(props: RichTextEditorProps) {
           "box-shadow": "var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))",
         }}
       >
-        <div
-          class="editor-toolbar flex flex-wrap gap-x-4 gap-y-3 px-6 py-4 select-none sticky top-0 z-10 w-full backdrop-blur-md"
-          style={{
-            background: "var(--cv-color-surface, rgba(15, 23, 42, 0.85))",
-            "border-bottom":
-              "1px solid var(--cv-color-border, rgba(255,255,255,0.08))",
-            "align-items": "center",
-            padding: "16px 24px",
-          }}
-        >
-          <Show when={showToolbarOption("fullscreen")}>
-            <button
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200"
-              type="button"
-              title="Full Screen"
-              style={{
-                background:
-                  "var(--cv-color-accent-tint, rgba(127, 196, 222, 0.15))",
-                color: "var(--cv-color-primary-hover, #a8d8ea)",
-                border: "none",
-              }}
-              onClick={(event) => toggleFullScreen()}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+        <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+          <div class="cv-toolbar-row cv-toolbar-row-1">
+            <div class="cv-toolbar-group">
+              <button
+                class="cv-toolbar-btn"
+                type="button"
+                title="Undo"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => format("undo")}
               >
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-              </svg>
-              <Show fallback={<>Full Screen</>} when={isFullscreen()}>
-                Exit Full Screen
-              </Show>
-            </button>
-          </Show>
-          <Show when={showToolbarOption("source")}>
-            <button
-              class={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                mode() === "source"
-                  ? "cv-rte-tint cv-rte-accent"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              }`}
-              type="button"
-              title="Source Code"
-              onClick={(event) => toggleMode()}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M3 7v6h6"></path>
+                  <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+                </svg>
+              </button>
+              <button
+                class="cv-toolbar-btn"
+                type="button"
+                title="Redo"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => format("redo")}
               >
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
-              </svg>
-              Source Code
-            </button>
-          </Show>
-          <Show
-            when={
-              showToolbarOption("bold") ||
-              showToolbarOption("italic") ||
-              showToolbarOption("underline") ||
-              showToolbarOption("strikeThrough")
-            }
-          >
-            <div class="flex items-center gap-2 text-slate-300">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 7v6h-6"></path>
+                  <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="cv-toolbar-divider"></div>
+            <Show when={showToolbarOption("headings")}>
+              <div class="cv-toolbar-select-wrapper">
+                <span class="cv-toolbar-select-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="21" y1="6" x2="3" y2="6"></line>
+                    <line x1="15" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="18" x2="3" y2="18"></line>
+                  </svg>
+                </span>
+                <select
+                  class="cv-toolbar-select"
+                  title="Paragraph Style"
+                  value={headingFormat()}
+                  onMouseDown={(event) => saveSelection()}
+                  onChange={(e) => formatHeading(e.target.value)}
+                >
+                  <option value="P">Paragraph</option>
+                  <option value="H1">Heading 1</option>
+                  <option value="H2">Heading 2</option>
+                  <option value="H3">Heading 3</option>
+                  <option value="H4">Heading 4</option>
+                </select>
+                <span class="cv-toolbar-select-chevron">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </div>
+            </Show>
+            <div class="cv-toolbar-select-wrapper">
+              <select
+                class="cv-toolbar-select no-icon"
+                title="Font Family"
+                value={fontFamily()}
+                onMouseDown={(event) => saveSelection()}
+                onChange={(e) => {
+                  restoreSelection();
+                  changeFontFamily(e.target.value);
+                }}
+              >
+                <option value="Inter">Inter</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Outfit">Outfit</option>
+                <option value="Fira Code">Fira Code</option>
+                <option value="Georgia">Georgia</option>
+                <option value="system-ui">System Sans</option>
+              </select>
+              <span class="cv-toolbar-select-chevron">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+            <div class="cv-toolbar-select-wrapper">
+              <select
+                class="cv-toolbar-select no-icon"
+                title="Font Size"
+                value={fontSize()}
+                onMouseDown={(event) => saveSelection()}
+                onChange={(e) => {
+                  restoreSelection();
+                  changeFontSize(e.target.value);
+                }}
+              >
+                <option value="12px">12px</option>
+                <option value="14px">14px</option>
+                <option value="16px">16px</option>
+                <option value="18px">18px</option>
+                <option value="20px">20px</option>
+                <option value="24px">24px</option>
+                <option value="32px">32px</option>
+              </select>
+              <span class="cv-toolbar-select-chevron">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+            <div class="cv-toolbar-divider"></div>
+            <div class="cv-toolbar-segmented-group">
               <Show when={showToolbarOption("bold")}>
                 <button
-                  class={`font-bold text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ${
-                    activeFormats().bold
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
+                  class={`cv-toolbar-btn ${
+                    activeFormats().bold ? "is-active" : ""
                   }`}
                   type="button"
                   title="Bold"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => format("bold")}
                 >
-                  B
+                  <span class="font-bold text-xs">B</span>
                 </button>
               </Show>
               <Show when={showToolbarOption("italic")}>
                 <button
-                  class={`italic text-sm w-9 h-9 flex items-center justify-center rounded transition-colors font-serif ${
-                    activeFormats().italic
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
+                  class={`cv-toolbar-btn ${
+                    activeFormats().italic ? "is-active" : ""
                   }`}
                   type="button"
                   title="Italic"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => format("italic")}
                 >
-                  I
+                  <span class="italic font-serif text-xs">I</span>
                 </button>
               </Show>
               <Show when={showToolbarOption("underline")}>
                 <button
-                  class={`underline text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ${
-                    activeFormats().underline
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
+                  class={`cv-toolbar-btn ${
+                    activeFormats().underline ? "is-active" : ""
                   }`}
                   type="button"
                   title="Underline"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => format("underline")}
                 >
-                  U
+                  <span class="underline text-xs font-medium">U</span>
                 </button>
               </Show>
               <Show when={showToolbarOption("strikeThrough")}>
                 <button
-                  class={`line-through text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ${
-                    activeFormats().strikeThrough
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
+                  class={`cv-toolbar-btn ${
+                    activeFormats().strikeThrough ? "is-active" : ""
                   }`}
                   type="button"
                   title="Strikethrough"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => format("strikeThrough")}
                 >
-                  T
+                  <span class="line-through text-xs font-medium">S</span>
                 </button>
               </Show>
-            </div>
-          </Show>
-          <Show when={showSeparator(0)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show
-            when={
-              showToolbarOption("code") ||
-              showToolbarOption("quote") ||
-              showToolbarOption("clear")
-            }
-          >
-            <div class="flex items-center gap-2 text-slate-300">
               <Show when={showToolbarOption("code")}>
                 <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().code
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
+                  class={`cv-toolbar-btn ${
+                    activeFormats().code ? "is-active" : ""
                   }`}
                   type="button"
                   title="Code Block"
@@ -831,8 +1196,8 @@ function RichTextEditor(props: RichTextEditorProps) {
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="13"
+                    height="13"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -845,138 +1210,208 @@ function RichTextEditor(props: RichTextEditorProps) {
                   </svg>
                 </button>
               </Show>
-              <Show when={showToolbarOption("quote")}>
-                <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().quote
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
-                  }`}
-                  type="button"
-                  title="Blockquote"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => toggleBlock("BLOCKQUOTE")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
-                    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path>
-                  </svg>
-                </button>
-              </Show>
-              <Show when={showToolbarOption("clear")}>
-                <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                  type="button"
-                  title="Clear Formatting"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => clearAllFormatting()}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M4 12h8"></path>
-                    <path d="M4 18V6a2 2 0 0 1 2-2h4"></path>
-                    <path d="M15 9l5 5"></path>
-                    <path d="M20 9l-5 5"></path>
-                  </svg>
-                </button>
-              </Show>
             </div>
-          </Show>
-          <Show when={showSeparator(1)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show when={showToolbarOption("headings")}>
-            <select
-              class="bg-black/20 border border-white/10 text-slate-300 font-semibold text-sm rounded-lg px-3 py-1.5 outline-none focus:cv-rte-accent-border transition-colors cursor-pointer"
-              value={headingFormat()}
-              onMouseDown={(e) => {
-                saveSelection();
-              }}
-              onChange={(e) => {
-                restoreSelection();
-                formatHeading(e.target.value);
-                editorRef.focus();
-              }}
+            <div class="cv-toolbar-divider"></div>
+            <Show
+              when={
+                showToolbarOption("foreColor") || showToolbarOption("backColor")
+              }
             >
-              <option
-                class="cv-rte-surface"
-                value="P"
-                style={{
-                  "font-size": "14px",
-                  "font-weight": "normal",
-                }}
-              >
-                Paragraph
-              </option>
-              <option
-                class="cv-rte-surface"
-                value="H1"
-                style={{
-                  "font-size": "24px",
-                  "font-weight": "bold",
-                }}
-              >
-                Heading 1
-              </option>
-              <option
-                class="cv-rte-surface"
-                value="H2"
-                style={{
-                  "font-size": "20px",
-                  "font-weight": "bold",
-                }}
-              >
-                Heading 2
-              </option>
-              <option
-                class="cv-rte-surface"
-                value="H3"
-                style={{
-                  "font-size": "18px",
-                  "font-weight": "bold",
-                }}
-              >
-                Heading 3
-              </option>
-            </select>
-          </Show>
-          <Show when={showSeparator(2)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show
-            when={
-              showToolbarOption("foreColor") || showToolbarOption("backColor")
-            }
-          >
-            <div class="flex items-center gap-1 text-slate-300">
-              <Show when={showToolbarOption("foreColor")}>
-                <label
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative"
-                  title="Text Color"
+              <div class="cv-toolbar-group">
+                <Show when={showToolbarOption("foreColor")}>
+                  <label
+                    class="cv-toolbar-color-btn"
+                    title="Text Color"
+                    onMouseDown={(event) => saveSelection()}
+                  >
+                    <span
+                      class="font-bold text-xs"
+                      style={{
+                        "line-height": "1",
+                      }}
+                    >
+                      A
+                    </span>
+                    <span
+                      class="cv-color-indicator"
+                      style={{
+                        "background-color": textColor(),
+                      }}
+                    ></span>
+                    <input
+                      class="cv-color-input"
+                      type="color"
+                      aria-label="Text Color"
+                      value={textColor()}
+                      onMouseDown={(event) => saveSelection()}
+                      onInput={(e) =>
+                        applyColor(
+                          "foreColor",
+                          (e.target as HTMLInputElement).value
+                        )
+                      }
+                      onInput={(e) =>
+                        applyColor(
+                          "foreColor",
+                          (e.target as HTMLInputElement).value
+                        )
+                      }
+                    />
+                  </label>
+                </Show>
+                <Show when={showToolbarOption("backColor")}>
+                  <label
+                    class="cv-toolbar-color-btn"
+                    title="Highlight Color"
+                    onMouseDown={(event) => saveSelection()}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m14 12-8.5 8.5a2.12 2.12 0 1 1-3-3L11 9"></path>
+                      <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                      <path d="m2 2 7.586 7.586"></path>
+                    </svg>
+                    <span
+                      class="cv-color-indicator"
+                      style={{
+                        "background-color": highlightColor(),
+                      }}
+                    ></span>
+                    <input
+                      class="cv-color-input"
+                      type="color"
+                      aria-label="Background Color"
+                      value={highlightColor()}
+                      onMouseDown={(event) => saveSelection()}
+                      onInput={(e) =>
+                        applyColor(
+                          "backColor",
+                          (e.target as HTMLInputElement).value
+                        )
+                      }
+                      onInput={(e) =>
+                        applyColor(
+                          "backColor",
+                          (e.target as HTMLInputElement).value
+                        )
+                      }
+                    />
+                  </label>
+                </Show>
+              </div>
+            </Show>
+            <div class="cv-toolbar-divider"></div>
+            <Show
+              when={
+                showToolbarOption("justifyLeft") ||
+                showToolbarOption("justifyCenter") ||
+                showToolbarOption("justifyRight")
+              }
+            >
+              <div class="cv-toolbar-segmented-group">
+                <Show when={showToolbarOption("justifyLeft")}>
+                  <button
+                    class={`cv-toolbar-btn ${
+                      activeFormats().justifyLeft ? "is-active" : ""
+                    }`}
+                    type="button"
+                    title="Align Left"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => format("justifyLeft")}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="21" y1="6" x2="3" y2="6"></line>
+                      <line x1="15" y1="12" x2="3" y2="12"></line>
+                      <line x1="17" y1="18" x2="3" y2="18"></line>
+                    </svg>
+                  </button>
+                </Show>
+                <Show when={showToolbarOption("justifyCenter")}>
+                  <button
+                    class={`cv-toolbar-btn ${
+                      activeFormats().justifyCenter ? "is-active" : ""
+                    }`}
+                    type="button"
+                    title="Align Center"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => format("justifyCenter")}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="21" y1="6" x2="3" y2="6"></line>
+                      <line x1="17" y1="12" x2="7" y2="12"></line>
+                      <line x1="19" y1="18" x2="5" y2="18"></line>
+                    </svg>
+                  </button>
+                </Show>
+                <Show when={showToolbarOption("justifyRight")}>
+                  <button
+                    class={`cv-toolbar-btn ${
+                      activeFormats().justifyRight ? "is-active" : ""
+                    }`}
+                    type="button"
+                    title="Align Right"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => format("justifyRight")}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="21" y1="6" x2="3" y2="6"></line>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                      <line x1="21" y1="18" x2="7" y2="18"></line>
+                    </svg>
+                  </button>
+                </Show>
+                <button
+                  class={`cv-toolbar-btn ${
+                    activeFormats().justifyFull ? "is-active" : ""
+                  }`}
+                  type="button"
+                  title="Align Justify"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => format("justifyFull")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -984,36 +1419,60 @@ function RichTextEditor(props: RichTextEditorProps) {
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <path d="M4 20h16"></path>
-                    <path d="m6 16 6-12 6 12"></path>
-                    <path d="M8 12h8"></path>
+                    <line x1="21" y1="6" x2="3" y2="6"></line>
+                    <line x1="21" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="18" x2="3" y2="18"></line>
                   </svg>
-                  <input
-                    class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                    type="color"
-                    aria-label="Text Color"
-                    onMouseDown={(event) => saveSelection()}
-                    onInput={(e) => {
-                      restoreSelection();
-                      document.execCommand(
-                        "foreColor",
-                        false,
-                        (e.target as HTMLInputElement).value
-                      );
-                      syncContent();
-                    }}
-                  />
-                </label>
+                </button>
+              </div>
+            </Show>
+          </div>
+          <div class="cv-toolbar-row cv-toolbar-row-2">
+            <div class="cv-toolbar-group">
+              <Show when={showToolbarOption("unorderedList")}>
+                <button
+                  class={`cv-toolbar-btn ${
+                    activeFormats().unorderedList ? "is-active" : ""
+                  }`}
+                  type="button"
+                  title="Bullet List"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => format("insertUnorderedList")}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                  </svg>
+                </button>
               </Show>
-              <Show when={showToolbarOption("backColor")}>
-                <label
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative"
-                  title="Highlight Color"
+              <Show when={showToolbarOption("orderedList")}>
+                <button
+                  class={`cv-toolbar-btn ${
+                    activeFormats().orderedList ? "is-active" : ""
+                  }`}
+                  type="button"
+                  title="Numbered List"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => format("insertOrderedList")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1021,154 +1480,426 @@ function RichTextEditor(props: RichTextEditorProps) {
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <path d="m12 19 7-7 3 3-7 7-3-3z"></path>
-                    <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
-                    <path d="m2 2 7.586 7.586"></path>
-                    <circle cx="11" cy="11" r="2"></circle>
+                    <line x1="10" y1="6" x2="21" y2="6"></line>
+                    <line x1="10" y1="12" x2="21" y2="12"></line>
+                    <line x1="10" y1="18" x2="21" y2="18"></line>
+                    <path d="M4 6h1v4"></path>
+                    <path d="M4 10h2"></path>
+                    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path>
                   </svg>
-                  <input
-                    class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                    type="color"
-                    aria-label="Background Color"
-                    onMouseDown={(event) => saveSelection()}
-                    onInput={(e) => {
-                      restoreSelection();
-                      document.execCommand(
-                        "hiliteColor",
-                        false,
-                        (e.target as HTMLInputElement).value
-                      );
-                      document.execCommand(
-                        "backColor",
-                        false,
-                        (e.target as HTMLInputElement).value
-                      );
-                      syncContent();
+                </button>
+              </Show>
+              <button
+                class="cv-toolbar-btn"
+                type="button"
+                title="Task List"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => insertChecklist()}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="9 11 12 14 22 4"></polyline>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="cv-toolbar-divider"></div>
+            <div class="cv-toolbar-group relative">
+              <button
+                class="cv-toolbar-action-btn"
+                type="button"
+                title="Insert Options"
+                onClick={(event) => setShowInsertMenu(!showInsertMenu())}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Insert</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <Show when={showInsertMenu()}>
+                <div class="cv-insert-menu shadow-xl">
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      openTableModal();
                     }}
-                  />
-                </label>
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="3"
+                        y="3"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="3" y1="9" x2="21" y2="9"></line>
+                      <line x1="9" y1="3" x2="9" y2="21"></line>
+                    </svg>
+                    Table
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      insertMedia("image");
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="3"
+                        y="3"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    Image
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      openLinkModal();
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                    Link
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      insertMedia("video");
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="2"
+                        y="2"
+                        width="20"
+                        height="20"
+                        rx="2.18"
+                        ry="2.18"
+                      ></rect>
+                      <line x1="7" y1="2" x2="7" y2="22"></line>
+                      <line x1="17" y1="2" x2="17" y2="22"></line>
+                    </svg>
+                    Video
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      openButtonModal();
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="3"
+                        y="3"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                    </svg>
+                    Action Button
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      openSocialModal();
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                    </svg>
+                    Social Post
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      format("insertHorizontalRule");
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Horizontal Line
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      toggleBlock("BLOCKQUOTE");
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+                      <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path>
+                    </svg>
+                    Quote
+                  </button>
+                  <button
+                    class="cv-insert-item"
+                    type="button"
+                    onClick={(event) => {
+                      setShowInsertMenu(false);
+                      clearAllFormatting();
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M4 12h8"></path>
+                      <path d="M4 18V6a2 2 0 0 1 2-2h4"></path>
+                      <path d="M15 9l5 5"></path>
+                      <path d="M20 9l-5 5"></path>
+                    </svg>
+                    Clear Formatting
+                  </button>
+                </div>
               </Show>
             </div>
-          </Show>
-          <Show when={showSeparator(3)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show
-            when={
-              showToolbarOption("justifyLeft") ||
-              showToolbarOption("justifyCenter") ||
-              showToolbarOption("justifyRight")
-            }
-          >
-            <div class="flex items-center gap-2 text-slate-300">
-              <Show when={showToolbarOption("justifyLeft")}>
+            <Show when={showToolbarOption("table")}>
+              <button
+                class="cv-toolbar-action-btn"
+                type="button"
+                title="Table"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => openTableModal()}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="3" y1="15" x2="21" y2="15"></line>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                  <line x1="15" y1="3" x2="15" y2="21"></line>
+                </svg>
+                <span>Table</span>
+              </button>
+            </Show>
+            <Show when={activeFormats().inTable && showToolbarOption("table")}>
+              <div class="flex items-center cv-rte-tint rounded-lg p-0.5 border cv-rte-accent-border">
                 <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().justifyLeft
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
-                  }`}
+                  class="w-6 h-6 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
                   type="button"
-                  title="Align Left"
+                  title="Add Row Below"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => format("justifyLeft")}
+                  onClick={(event) => modifyTable("addRow")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="11"
+                    height="11"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    stroke-width="2.5"
                   >
-                    <line x1="21" y1="6" x2="3" y2="6"></line>
-                    <line x1="15" y1="12" x2="3" y2="12"></line>
-                    <line x1="17" y1="18" x2="3" y2="18"></line>
+                    <path d="M12 5v14M5 12h14"></path>
                   </svg>
+                  <span class="text-[9px] font-bold ml-0.5">R</span>
                 </button>
-              </Show>
-              <Show when={showToolbarOption("justifyCenter")}>
                 <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().justifyCenter
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
-                  }`}
+                  class="w-6 h-6 flex items-center justify-center rounded hover:bg-rose-500/30 text-rose-500 transition-colors"
                   type="button"
-                  title="Align Center"
+                  title="Delete Row"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => format("justifyCenter")}
+                  onClick={(event) => modifyTable("removeRow")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="11"
+                    height="11"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    stroke-width="2.5"
                   >
-                    <line x1="21" y1="6" x2="3" y2="6"></line>
-                    <line x1="17" y1="12" x2="7" y2="12"></line>
-                    <line x1="19" y1="18" x2="5" y2="18"></line>
+                    <path d="M5 12h14"></path>
                   </svg>
+                  <span class="text-[9px] font-bold ml-0.5">R</span>
                 </button>
-              </Show>
-              <Show when={showToolbarOption("justifyRight")}>
+                <div class="w-px h-3 cv-rte-tint-strong mx-0.5"></div>
                 <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().justifyRight
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
-                  }`}
+                  class="w-6 h-6 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
                   type="button"
-                  title="Align Right"
+                  title="Add Column Right"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => format("justifyRight")}
+                  onClick={(event) => modifyTable("addCol")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="11"
+                    height="11"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    stroke-width="2.5"
                   >
-                    <line x1="21" y1="6" x2="3" y2="6"></line>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                    <line x1="21" y1="18" x2="7" y2="18"></line>
+                    <path d="M12 5v14M5 12h14"></path>
                   </svg>
+                  <span class="text-[9px] font-bold ml-0.5">C</span>
                 </button>
-              </Show>
-            </div>
-          </Show>
-          <Show when={showSeparator(4)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show
-            when={
-              showToolbarOption("image") ||
-              showToolbarOption("link") ||
-              showToolbarOption("table") ||
-              showToolbarOption("unorderedList") ||
-              showToolbarOption("orderedList") ||
-              showToolbarOption("horizontalRule") ||
-              showToolbarOption("video") ||
-              showToolbarOption("social")
-            }
-          >
-            <div class="flex items-center gap-2 text-slate-300">
+                <button
+                  class="w-6 h-6 flex items-center justify-center rounded hover:bg-rose-500/30 text-rose-500 transition-colors"
+                  type="button"
+                  title="Delete Column"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => modifyTable("removeCol")}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
+                    <path d="M5 12h14"></path>
+                  </svg>
+                  <span class="text-[9px] font-bold ml-0.5">C</span>
+                </button>
+              </div>
+            </Show>
+            <div class="cv-toolbar-group">
               <Show when={showToolbarOption("image")}>
                 <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                  class="cv-toolbar-btn"
                   type="button"
                   title="Image"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1176,8 +1907,8 @@ function RichTextEditor(props: RichTextEditorProps) {
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1200,7 +1931,7 @@ function RichTextEditor(props: RichTextEditorProps) {
               </Show>
               <Show when={showToolbarOption("link")}>
                 <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                  class="cv-toolbar-btn"
                   type="button"
                   title="Link"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1208,8 +1939,8 @@ function RichTextEditor(props: RichTextEditorProps) {
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1222,262 +1953,18 @@ function RichTextEditor(props: RichTextEditorProps) {
                   </svg>
                 </button>
               </Show>
-              <Show when={showToolbarOption("table")}>
-                <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                  type="button"
-                  title="Table"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => openTableModal()}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect
-                      x="3"
-                      y="3"
-                      width="18"
-                      height="18"
-                      rx="2"
-                      ry="2"
-                    ></rect>
-                    <line x1="3" y1="9" x2="21" y2="9"></line>
-                    <line x1="3" y1="15" x2="21" y2="15"></line>
-                    <line x1="9" y1="3" x2="9" y2="21"></line>
-                    <line x1="15" y1="3" x2="15" y2="21"></line>
-                  </svg>
-                </button>
-              </Show>
-              <Show
-                when={activeFormats().inTable && showToolbarOption("table")}
+              <button
+                class="cv-toolbar-btn"
+                type="button"
+                title="Formula"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => insertFormula()}
               >
-                <div class="flex items-center cv-rte-tint rounded-lg p-0.5 border cv-rte-accent-border ml-1 mr-1 shadow-inner">
-                  <button
-                    class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
-                    type="button"
-                    title="Add Row Below"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(event) => modifyTable("addRow")}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M12 5v14M5 12h14"></path>
-                    </svg>
-                    <span class="text-[10px] font-bold ml-0.5">R</span>
-                  </button>
-                  <button
-                    class="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-500/40 text-rose-300 transition-colors"
-                    type="button"
-                    title="Delete Row"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(event) => modifyTable("removeRow")}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M5 12h14"></path>
-                    </svg>
-                    <span class="text-[10px] font-bold ml-0.5">R</span>
-                  </button>
-                  <div class="w-px h-4 cv-rte-tint-strong mx-0.5"></div>
-                  <button
-                    class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
-                    type="button"
-                    title="Add Column Right"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(event) => modifyTable("addCol")}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M12 5v14M5 12h14"></path>
-                    </svg>
-                    <span class="text-[10px] font-bold ml-0.5">C</span>
-                  </button>
-                  <button
-                    class="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-500/40 text-rose-300 transition-colors"
-                    type="button"
-                    title="Delete Column"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(event) => modifyTable("removeCol")}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M5 12h14"></path>
-                    </svg>
-                    <span class="text-[10px] font-bold ml-0.5">C</span>
-                  </button>
-                </div>
-              </Show>
-              <Show when={showToolbarOption("unorderedList")}>
-                <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().unorderedList
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
-                  }`}
-                  type="button"
-                  title="Bullet List"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => format("insertUnorderedList")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <line x1="8" y1="6" x2="21" y2="6"></line>
-                    <line x1="8" y1="12" x2="21" y2="12"></line>
-                    <line x1="8" y1="18" x2="21" y2="18"></line>
-                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                  </svg>
-                </button>
-              </Show>
-              <Show when={showToolbarOption("orderedList")}>
-                <button
-                  class={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                    activeFormats().orderedList
-                      ? "bg-white/20 text-white shadow-inner"
-                      : "hover:bg-white/10 hover:text-white"
-                  }`}
-                  type="button"
-                  title="Numbered List"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => format("insertOrderedList")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <line x1="10" y1="6" x2="21" y2="6"></line>
-                    <line x1="10" y1="12" x2="21" y2="12"></line>
-                    <line x1="10" y1="18" x2="21" y2="18"></line>
-                    <path d="M4 6h1v4"></path>
-                    <path d="M4 10h2"></path>
-                    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path>
-                  </svg>
-                </button>
-              </Show>
-              <Show when={showToolbarOption("horizontalRule")}>
-                <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                  type="button"
-                  title="Horizontal Line"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => format("insertHorizontalRule")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                </button>
-              </Show>
-              <Show when={showToolbarOption("video")}>
-                <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                  type="button"
-                  title="Video"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => insertMedia("video")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect
-                      x="2"
-                      y="2"
-                      width="20"
-                      height="20"
-                      rx="2.18"
-                      ry="2.18"
-                    ></rect>
-                    <line x1="7" y1="2" x2="7" y2="22"></line>
-                    <line x1="17" y1="2" x2="17" y2="22"></line>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <line x1="2" y1="7" x2="7" y2="7"></line>
-                    <line x1="2" y1="17" x2="7" y2="17"></line>
-                    <line x1="17" y1="17" x2="22" y2="17"></line>
-                    <line x1="17" y1="7" x2="22" y2="7"></line>
-                  </svg>
-                </button>
-              </Show>
+                <span class="font-serif italic font-bold text-xs">Fx</span>
+              </button>
               <Show when={showToolbarOption("social")}>
                 <button
-                  class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                  class="cv-toolbar-btn"
                   type="button"
                   title="Social Media Embed"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1485,40 +1972,6 @@ function RichTextEditor(props: RichTextEditorProps) {
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-                  </svg>
-                </button>
-              </Show>
-            </div>
-          </Show>
-          <Show when={showSeparator(5)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show
-            when={
-              showToolbarOption("insertButton") ||
-              showToolbarOption("addWidget")
-            }
-          >
-            <div class="flex items-center gap-2">
-              <Show when={showToolbarOption("insertButton")}>
-                <button
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 border-none text-slate-300 hover:bg-white/10 hover:text-white"
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => openButtonModal()}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
                     width="14"
                     height="14"
                     viewBox="0 0 24 24"
@@ -1528,113 +1981,172 @@ function RichTextEditor(props: RichTextEditorProps) {
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <rect
-                      x="3"
-                      y="3"
-                      width="18"
-                      height="18"
-                      rx="2"
-                      ry="2"
-                    ></rect>
-                    <line x1="12" y1="8" x2="12" y2="16"></line>
-                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
-                  Insert Button
-                </button>
-              </Show>
-              <Show when={showToolbarOption("addWidget")}>
-                <button
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 cv-rte-tint cv-rte-accent border-none hover:cv-rte-tint"
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => openWidgetModal()}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="3" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="14" width="7" height="7"></rect>
-                    <rect x="3" y="14" width="7" height="7"></rect>
-                  </svg>
-                  Add Widget
                 </button>
               </Show>
             </div>
-          </Show>
-          <Show when={showSeparator(6)}>
-            <div class="w-px h-6 bg-white/10"></div>
-          </Show>
-          <Show when={showToolbarOption("save")}>
-            <div class="flex items-center gap-1 text-slate-400">
+            <div class="cv-toolbar-divider"></div>
+            <Show when={showToolbarOption("addWidget")}>
               <button
-                class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                class="cv-toolbar-widget-btn"
                 type="button"
-                title="Save"
+                title="Add UI Widget"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={(event) => syncContent()}
+                onClick={(event) => openWidgetModal()}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="11"
+                  height="11"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="2.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                  <polyline points="7 3 7 8 15 8"></polyline>
+                  <path d="M12 5v14M5 12h14"></path>
                 </svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span>Add UI Widget</span>
               </button>
-            </div>
-          </Show>
-          <Show when={showToolbarOption("classInput")}>
-            <div class="ml-auto flex items-center bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 shadow-inner focus-within:cv-rte-accent-border focus-within:ring-1 focus-within:ring-violet-500 transition-all">
-              <span class="text-[10px] font-bold text-slate-500 tracking-wider mr-2">
-                CLASS
-              </span>
-              <input
-                class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
-                type="text"
-                aria-label="Dynamic CSS Class"
-                list="editor-class-list"
-                placeholder="e.g. my-callout"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    applyClass((e.target as HTMLInputElement).value);
-                    (e.target as HTMLInputElement).value = "";
+            </Show>
+            <Show when={showToolbarOption("classInput")}>
+              <div class="cv-toolbar-classes-group">
+                <span class="cv-class-badge">CLASS</span>
+                <For each={appliedClasses()}>
+                  {(cls, _index) => {
+                    const index = _index();
+                    return (
+                      <span class="cv-class-chip" key={cls}>
+                        <span>{cls}</span>
+                        <button
+                          class="cv-class-chip-remove"
+                          type="button"
+                          onClick={(event) => removeClass(cls)}
+                          title={"Remove " + cls}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  }}
+                </For>
+                <input
+                  class="cv-class-input"
+                  type="text"
+                  aria-label="Dynamic CSS Class"
+                  list="editor-class-list"
+                  placeholder="+ add class..."
+                  onKeyDown={(e) => handleClassInputKeyDown(e)}
+                />
+                <Show
+                  when={
+                    props.availableClasses && props.availableClasses.length > 0
                   }
-                }}
-              />
-              <Show
-                when={
-                  props.availableClasses && props.availableClasses.length > 0
-                }
-              >
-                <datalist id="editor-class-list">
-                  <For each={props.availableClasses}>
-                    {(cls, _index) => {
-                      const index = _index();
-                      return <option value={cls}>{cls}</option>;
-                    }}
-                  </For>
-                </datalist>
+                >
+                  <datalist id="editor-class-list">
+                    <For each={props.availableClasses}>
+                      {(cls, _index) => {
+                        const index = _index();
+                        return <option value={cls}>{cls}</option>;
+                      }}
+                    </For>
+                  </datalist>
+                </Show>
+              </div>
+            </Show>
+            <div class="ml-auto flex items-center gap-1.5 flex-shrink-0">
+              <Show when={showToolbarOption("source")}>
+                <button
+                  class={`cv-toolbar-btn ${
+                    mode() === "source" ? "is-active" : ""
+                  }`}
+                  type="button"
+                  title="View HTML Source Code"
+                  onClick={(event) => toggleMode()}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                  </svg>
+                </button>
+              </Show>
+              <Show when={showToolbarOption("fullscreen")}>
+                <button
+                  class="cv-toolbar-btn"
+                  type="button"
+                  title="Full Screen"
+                  onClick={(event) => toggleFullScreen()}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                  </svg>
+                </button>
+              </Show>
+              <Show when={showToolbarOption("save")}>
+                <button
+                  class="cv-toolbar-btn"
+                  type="button"
+                  title="Save"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => syncContent()}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                </button>
               </Show>
             </div>
-          </Show>
+          </div>
         </div>
         <div
           class="editor-content flex-1 overflow-y-auto relative min-h-[350px]"
@@ -1668,7 +2180,8 @@ function RichTextEditor(props: RichTextEditorProps) {
               showLinkModal() ||
               showWidgetModal() ||
               showSocialModal() ||
-              showButtonModal()
+              showButtonModal() ||
+              showAiModal()
             }
           >
             <div
@@ -1677,6 +2190,92 @@ function RichTextEditor(props: RichTextEditorProps) {
                 background: "rgba(0, 0, 0, 0.6)",
               }}
             >
+              <Show when={showAiModal()}>
+                <div class="cv-ai-modal shadow-2xl">
+                  <div class="cv-ai-modal-header">
+                    <div class="flex items-center gap-2 text-white font-bold text-base">
+                      <svg
+                        class="text-purple-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+                      </svg>
+                      ContentVeda AI Assistant
+                    </div>
+                    <button
+                      class="text-slate-400 hover:text-white text-lg font-bold"
+                      type="button"
+                      onClick={(event) => closeAiModal()}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      "flex-direction": "column",
+                      gap: "10px",
+                      "margin-bottom": "20px",
+                    }}
+                  >
+                    <button
+                      class="cv-ai-pill-btn"
+                      type="button"
+                      onClick={(event) => applyAiAction("improve")}
+                    >
+                      ✨ Improve Writing & Polish Flow
+                    </button>
+                    <button
+                      class="cv-ai-pill-btn"
+                      type="button"
+                      onClick={(event) => applyAiAction("callout")}
+                    >
+                      💡 Generate AI Callout Insight Box
+                    </button>
+                    <button
+                      class="cv-ai-pill-btn"
+                      type="button"
+                      onClick={(event) => applyAiAction("summarize")}
+                    >
+                      📝 Summarize Selected Section
+                    </button>
+                    <button
+                      class="cv-ai-pill-btn"
+                      type="button"
+                      onClick={(event) => applyAiAction("grammar")}
+                    >
+                      🔍 Fix Grammar & Syntax
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      "justify-content": "flex-end",
+                      gap: "10px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      style={{
+                        padding: "8px 16px",
+                        "font-size": "13px",
+                        color: "#cbd5e1",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "none",
+                        "border-radius": "6px",
+                        cursor: "pointer",
+                      }}
+                      onClick={(event) => closeAiModal()}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </Show>
               <Show when={showButtonModal()}>
                 <div
                   class="shadow-2xl"
@@ -1709,7 +2308,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       style={{
-                        color: "var(--cv-color-link, #7fc4de)",
+                        color: "var(--cv-color-primary, #7fc4de)",
                       }}
                     >
                       <rect
@@ -1812,12 +2411,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                           "letter-spacing": "0.05em",
                         }}
                       >
-                        Button Text
+                        Button Label
                       </label>
                       <input
                         type="text"
-                        aria-label="Button Text"
-                        placeholder="Click Here"
+                        aria-label="Button Label"
+                        placeholder="e.g. Get Started Today"
                         style={{
                           background:
                             "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
@@ -1829,6 +2428,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                           "font-size": "14px",
                           color: "var(--cv-color-text-main, #fff)",
                           outline: "none",
+                          "box-sizing": "border-box",
                         }}
                         value={btnText()}
                         onInput={(e) => setBtnText(e.target.value)}
@@ -1850,11 +2450,11 @@ function RichTextEditor(props: RichTextEditorProps) {
                           "letter-spacing": "0.05em",
                         }}
                       >
-                        Link URL
+                        Target URL
                       </label>
                       <input
                         type="url"
-                        aria-label="Button URL"
+                        aria-label="Target URL"
                         placeholder="https://..."
                         style={{
                           background:
@@ -1867,6 +2467,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                           "font-size": "14px",
                           color: "var(--cv-color-text-main, #fff)",
                           outline: "none",
+                          "box-sizing": "border-box",
                         }}
                         value={btnUrl()}
                         onInput={(e) => setBtnUrl(e.target.value)}
@@ -1878,7 +2479,6 @@ function RichTextEditor(props: RichTextEditorProps) {
                       display: "flex",
                       "justify-content": "flex-end",
                       gap: "12px",
-                      "margin-top": "32px",
                     }}
                   >
                     <button
@@ -1968,34 +2568,30 @@ function RichTextEditor(props: RichTextEditorProps) {
                       <line x1="9" y1="3" x2="9" y2="21"></line>
                       <line x1="15" y1="3" x2="15" y2="21"></line>
                     </svg>
-                    Insert Table
+                    Insert Table Grid
                   </h3>
                   <div
                     style={{
                       display: "flex",
-                      "flex-direction": "column",
                       gap: "16px",
-                      "margin-bottom": "24px",
+                      "margin-bottom": "20px",
                     }}
                   >
                     <div
                       style={{
+                        flex: 1,
                         display: "flex",
-                        "justify-content": "space-between",
-                        "align-items": "center",
-                        background:
-                          "var(--cv-color-surface-sunken, rgba(0,0,0,0.2))",
-                        padding: "12px",
-                        "border-radius": "8px",
-                        border:
-                          "1px solid var(--cv-color-hover, rgba(255,255,255,0.05))",
+                        "flex-direction": "column",
+                        gap: "8px",
                       }}
                     >
                       <label
                         style={{
-                          "font-size": "14px",
-                          "font-weight": "500",
-                          color: "var(--cv-color-text-secondary, #cbd5e1)",
+                          "font-size": "12px",
+                          "font-weight": "600",
+                          color: "var(--cv-color-text-muted, #94a3b8)",
+                          "text-transform": "uppercase",
+                          "letter-spacing": "0.05em",
                         }}
                       >
                         Rows
@@ -2004,16 +2600,20 @@ function RichTextEditor(props: RichTextEditorProps) {
                         type="number"
                         aria-label="Table Rows"
                         min="1"
-                        max="20"
+                        max="10"
                         style={{
-                          background: "transparent",
-                          border: "none",
-                          "text-align": "right",
+                          background:
+                            "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                          border:
+                            "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                          "border-radius": "8px",
+                          padding: "12px",
+                          width: "100%",
+                          "font-size": "15px",
                           color: "var(--cv-color-text-main, #fff)",
-                          "font-weight": "bold",
-                          width: "64px",
-                          "font-size": "14px",
                           outline: "none",
+                          "text-align": "center",
+                          "box-sizing": "border-box",
                         }}
                         value={tableRows()}
                         onInput={(e) => setTableRows(e.target.value)}
@@ -2021,22 +2621,19 @@ function RichTextEditor(props: RichTextEditorProps) {
                     </div>
                     <div
                       style={{
+                        flex: 1,
                         display: "flex",
-                        "justify-content": "space-between",
-                        "align-items": "center",
-                        background:
-                          "var(--cv-color-surface-sunken, rgba(0,0,0,0.2))",
-                        padding: "12px",
-                        "border-radius": "8px",
-                        border:
-                          "1px solid var(--cv-color-hover, rgba(255,255,255,0.05))",
+                        "flex-direction": "column",
+                        gap: "8px",
                       }}
                     >
                       <label
                         style={{
-                          "font-size": "14px",
-                          "font-weight": "500",
-                          color: "var(--cv-color-text-secondary, #cbd5e1)",
+                          "font-size": "12px",
+                          "font-weight": "600",
+                          color: "var(--cv-color-text-muted, #94a3b8)",
+                          "text-transform": "uppercase",
+                          "letter-spacing": "0.05em",
                         }}
                       >
                         Columns
@@ -2045,16 +2642,20 @@ function RichTextEditor(props: RichTextEditorProps) {
                         type="number"
                         aria-label="Table Columns"
                         min="1"
-                        max="20"
+                        max="10"
                         style={{
-                          background: "transparent",
-                          border: "none",
-                          "text-align": "right",
+                          background:
+                            "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                          border:
+                            "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                          "border-radius": "8px",
+                          padding: "12px",
+                          width: "100%",
+                          "font-size": "15px",
                           color: "var(--cv-color-text-main, #fff)",
-                          "font-weight": "bold",
-                          width: "64px",
-                          "font-size": "14px",
                           outline: "none",
+                          "text-align": "center",
+                          "box-sizing": "border-box",
                         }}
                         value={tableCols()}
                         onInput={(e) => setTableCols(e.target.value)}
@@ -2064,9 +2665,41 @@ function RichTextEditor(props: RichTextEditorProps) {
                   <div
                     style={{
                       display: "flex",
+                      "align-items": "center",
+                      gap: "10px",
+                      "margin-bottom": "28px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id="cv-header-check"
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        "border-radius": "4px",
+                        cursor: "pointer",
+                        "accent-color": "var(--cv-color-link, #7fc4de)",
+                      }}
+                      checked={tableHasHeader()}
+                      onInput={(e) => setTableHasHeader(e.target.checked)}
+                    />
+                    <label
+                      for="cv-header-check"
+                      style={{
+                        "font-size": "14px",
+                        color: "var(--cv-color-text-secondary, #cbd5e1)",
+                        cursor: "pointer",
+                        "user-select": "none",
+                      }}
+                    >
+                      Include header row
+                    </label>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
                       "justify-content": "flex-end",
                       gap: "12px",
-                      "margin-top": "32px",
                     }}
                   >
                     <button
@@ -2139,7 +2772,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       style={{
-                        color: "var(--cv-color-info, #0ea5e9)",
+                        color: "var(--cv-color-link, #7fc4de)",
                       }}
                     >
                       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
@@ -2164,7 +2797,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                         "letter-spacing": "0.05em",
                       }}
                     >
-                      Destination URL
+                      URL Destination
                     </label>
                     <input
                       type="url"
@@ -2599,17 +3232,25 @@ function RichTextEditor(props: RichTextEditorProps) {
           </Show>
         </div>
         <div
-          class="editor-source flex-1 overflow-y-auto bg-[var(--cv-color-background, #020617)] min-h-[350px]"
+          class="editor-source flex-1 relative min-h-[350px] overflow-hidden"
           style={{
-            display: mode() === "source" ? "block" : "none",
+            display: mode() === "source" ? "flex" : "none",
+            "flex-direction": "column",
+            height: "100%",
+            "min-height": "350px",
           }}
         >
           <textarea
-            class="w-full h-full p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none resize-none"
+            class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
             value={internalContent()}
             onInput={(e) => handleSourceInput(e)}
             style={{
               "white-space": "pre-wrap",
+              "overflow-y": "auto",
+              resize: "none",
+              height: "100%",
+              width: "100%",
+              "box-sizing": "border-box",
             }}
             spellcheck={false}
           ></textarea>

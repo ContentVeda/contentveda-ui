@@ -55,3 +55,8 @@ coverage/
 # MB of generated JS/history data that would otherwise bloat every commit.
 /tests/bdd/.allure-results/
 /docs/*/allure-report/
+
+# Claude & SvelteKit
+.claude/
+.svelte-kit/
+
