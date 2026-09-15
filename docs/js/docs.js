@@ -214,15 +214,21 @@ function initTabs() {
         const panel = container.querySelector(`[data-panel="${tabId}"]`);
         if (panel) panel.classList.add('active');
 
-        // Update sandbox button labels to reflect selected framework
+        // Update sandbox button labels to reflect selected framework.
+        // fwName comes from a tab button's own textContent -- always one of
+        // this page's own hardcoded framework names today, but CodeQL flags
+        // any DOM text re-fed into innerHTML on principle, so it is set via
+        // a separate text node rather than interpolated into an HTML string.
         const fwName = btn.textContent.trim();
         const fidBtn = container.querySelector('#jsfiddle-btn') || document.getElementById('jsfiddle-btn');
         const csBtn = container.querySelector('#codesandbox-btn') || document.getElementById('codesandbox-btn');
         if (fidBtn) {
-          fidBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg> Play ${fwName} in JSFiddle`;
+          fidBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg> ';
+          fidBtn.appendChild(document.createTextNode(`Play ${fwName} in JSFiddle`));
         }
         if (csBtn) {
-          csBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Open ${fwName} in CodeSandbox`;
+          csBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> ';
+          csBtn.appendChild(document.createTextNode(`Open ${fwName} in CodeSandbox`));
         }
       });
     });
