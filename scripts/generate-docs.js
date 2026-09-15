@@ -99,7 +99,7 @@ const DEFAULT_WC_ELEMENTS = {
   
   'timer-widget': `<cv-timer-widget id="interactive-preview" lazy-load="false" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></cv-timer-widget>`,
   
-  'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" lazy-load="false" html-content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
+  'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" lazy-load="false" content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
   
   'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
 };
@@ -347,34 +347,36 @@ function buildPropsTable(props) {
 
 // ── Build Interactive Controls Form ────────────────────────────────────────
 function buildControlsForm(component) {
+  if (component.slug === 'rich-text-editor') {
+    return `
+      <div class="control-group">
+        <label class="control-label">Initial HTML Content</label>
+        <textarea name="initialContent" class="control-input" style="height:80px;"><p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p></textarea>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Available Classes (JSON Array)</label>
+        <textarea name="availableClasses" class="control-input json-textarea" style="height:60px;">["text-pink-500", "font-bold", "tracking-wider"]</textarea>
+        <span class="json-error-msg">❌ Invalid JSON Array</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Toolbar Config (JSON Object)</label>
+        <textarea name="config" class="control-input json-textarea" style="height:120px;">{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}</textarea>
+        <span class="json-error-msg">❌ Invalid JSON Object</span>
+      </div>
+    `;
+  }
+  if (component.slug === 'wysiwyg-renderer') {
+    return `
+      <div class="control-group">
+        <label class="control-label">content <span class="control-type-badge">string</span></label>
+        <textarea name="content" class="control-input" style="height:140px;"><h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class="cv-social-embed" data-platform="youtube" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"></div><h3>Social X / Twitter Post</h3><div class="cv-social-embed" data-platform="x" data-url="https://x.com/NASA/status/1684947936109961216"></div><p>All scripts and scoped layouts load dynamically and securely.</p></textarea>
+      </div>
+    `;
+  }
+
   const api = component.api || [];
   if (api.length === 0) {
-    if (component.slug === 'rich-text-editor') {
-      return `
-        <div class="control-group">
-          <label class="control-label">Initial HTML Content</label>
-          <textarea name="initialContent" class="control-input" style="height:80px;"><p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p></textarea>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Available Classes (JSON Array)</label>
-          <textarea name="availableClasses" class="control-input json-textarea" style="height:60px;">["text-pink-500", "font-bold", "tracking-wider"]</textarea>
-          <span class="json-error-msg">❌ Invalid JSON Array</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Toolbar Config (JSON Object)</label>
-          <textarea name="config" class="control-input json-textarea" style="height:120px;">{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}</textarea>
-          <span class="json-error-msg">❌ Invalid JSON Object</span>
-        </div>
-      `;
-    }
-    if (component.slug === 'wysiwyg-renderer') {
-      return `
-        <div class="control-group">
-          <label class="control-label">content <span class="control-type-badge">string</span></label>
-          <textarea name="content" class="control-input" style="height:140px;"><h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class="cv-social-embed" data-platform="youtube" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"></div><h3>Social X / Twitter Post</h3><div class="cv-social-embed" data-platform="x" data-url="https://x.com/NASA/status/1684947936109961216"></div><p>All scripts and scoped layouts load dynamically and securely.</p></textarea>
-        </div>
-      `;
-    }
+    return '';
   }
 
   const filteredApi = api.filter(item => {
@@ -634,18 +636,8 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
 
 
       <!-- Code Tabs -->
-      <h2 class="section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+      <h2 class="section-heading" style="margin-bottom: 1rem;">
         Usage Code Generator
-        <span style="display:flex; gap:8px;">
-          <button class="jsfiddle-btn" id="jsfiddle-btn" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-            Play in JSFiddle
-          </button>
-          <button class="codesandbox-btn" id="codesandbox-btn" style="background:#151515; color:#fff; border:1px solid #333; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            Open in CodeSandbox
-          </button>
-        </span>
       </h2>
       <div class="tab-group">
         <div class="tabs-bar">
@@ -655,6 +647,16 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
           <button class="tab-btn" data-tab="solid">Solid</button>
           <button class="tab-btn" data-tab="angular">Angular</button>
           <button class="tab-btn" data-tab="wc">Web Component</button>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px;">
+          <button class="jsfiddle-btn" id="jsfiddle-btn" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+            Play in JSFiddle
+          </button>
+          <button class="codesandbox-btn" id="codesandbox-btn" style="background:#151515; color:#fff; border:1px solid #333; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            Open in CodeSandbox
+          </button>
         </div>
         <div class="tab-panel active" data-panel="react">
           ${codeBlock(examples.react, 'tsx')}
@@ -881,9 +883,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const reactCode = \`import \${pascalName} from '@contentveda/ui/react/\${pascalName}';
 import '@contentveda/ui/theme.css';
 
-<\${pascalName}
-  \${reactProps.join('\\n  ')}
-/>\`;
+export default function Example() {
+  return (
+    <\${pascalName}
+      \${reactProps.join('\\n      ')}
+    />
+  );
+}\`;
 
     // Vue prop string generator
     const vueProps = attrs.map(a => {
@@ -926,9 +932,13 @@ import '@contentveda/ui/theme.css';
     const solidCode = \`import \${pascalName} from '@contentveda/ui/solid/\${pascalName}';
 import '@contentveda/ui/theme.css';
 
-<\${pascalName}
-  \${reactProps.join('\\n  ')}
-/>\`;
+export default function Example() {
+  return (
+    <\${pascalName}
+      \${reactProps.join('\\n      ')}
+    />
+  );
+}\`;
 
     // Angular prop string generator
     const angularProps = attrs.map(a => {

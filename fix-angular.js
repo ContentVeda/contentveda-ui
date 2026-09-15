@@ -151,11 +151,14 @@ function fixAngularFile(filePath) {
 
   // 7. In RichTextEditor, fix type assertions and statement blocks in Angular template event handlers
   if (fileName === 'RichTextEditor.ts') {
-    // Remove ($event.target as HTMLInputElement).value
-    code = code.replace(/\(\$event\.target\s+as\s+HTMLInputElement\)\.value/g, '$event.target.value');
-    // Replace multiline if ($event.key === 'Enter') block with component method call
-    code = code.replace(/\(keydown\)="\s*if\s*\(\$event\.key\s*===\s*'Enter'\)[\s\S]*?;\s*\}\s*"/g, '(keydown)="onClassInputKeydown($event)"');
-    if (!code.includes('onClassInputKeydown(')) {
+    // Remove ($event.target as HTMLInputElement).value or any target type cast
+    code = code.replace(/\(\$event\.target\s+as\s+[^)]+\)\.value/g, '$event.target.value');
+    // Replace multiline if ($event.key === 'Enter') block with component method call safely within quotes
+    code = code.replace(/\(keydown\)="\s*if\s*\(\$event\.key\s*===\s*'Enter'\)[^"]*"/g, '(keydown)="onClassInputKeydown($event)"');
+    // In Angular, textarea must have [value]="internalContent" and {{ internalContent }} to show code in source view
+    code = code.replace(/<textarea([^>]*?)\[attr\.value\]="internalContent"([^>]*?)>[\s\S]*?<\/textarea>/g,
+      '<textarea$1[value]="internalContent"$2>{{ internalContent }}</textarea>');
+    if (code.includes('onClassInputKeydown(') && !code.includes('onClassInputKeydown($event: any)')) {
       code = code.replace(/export default class RichTextEditor\s*\{/, `export default class RichTextEditor {
   onClassInputKeydown($event: any) {
     if ($event.key === 'Enter') {

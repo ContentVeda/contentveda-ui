@@ -312,18 +312,8 @@ z"/>
 
 
       <!-- Code Tabs -->
-      <h2 class="section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+      <h2 class="section-heading" style="margin-bottom: 1rem;">
         Usage Code Generator
-        <span style="display:flex; gap:8px;">
-          <button class="jsfiddle-btn" id="jsfiddle-btn" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-            Play in JSFiddle
-          </button>
-          <button class="codesandbox-btn" id="codesandbox-btn" style="background:#151515; color:#fff; border:1px solid #333; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            Open in CodeSandbox
-          </button>
-        </span>
       </h2>
       <div class="tab-group">
         <div class="tabs-bar">
@@ -334,6 +324,16 @@ z"/>
           <button class="tab-btn" data-tab="angular">Angular</button>
           <button class="tab-btn" data-tab="wc">Web Component</button>
         </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px;">
+          <button class="jsfiddle-btn" id="jsfiddle-btn" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+            Play in JSFiddle
+          </button>
+          <button class="codesandbox-btn" id="codesandbox-btn" style="background:#151515; color:#fff; border:1px solid #333; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            Open in CodeSandbox
+          </button>
+        </div>
         <div class="tab-panel active" data-panel="react">
           
     <div class="code-block">
@@ -341,12 +341,16 @@ z"/>
       <pre><code><span class="kw">import</span> AnnouncementBar <span class="kw">from</span> <span class="str">'@contentveda/ui/react/AnnouncementBar'</span>;
 <span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
 
-&lt;<span class="tag">AnnouncementBar</span>
-  message=<span class="str">"🚀 Free shipping on orders over $75 — Shop the sale"</span>
-  backgroundColor=<span class="str">"#245066"</span>
-  textColor=<span class="str">"#ffffff"</span>
-  mapLinks={[{ url: <span class="str">'/sale'</span> }]}
-/&gt;</code></pre>
+<span class="kw">export</span> <span class="kw">default</span> <span class="kw">function</span> Example() {
+  <span class="kw">return</span> (
+    &lt;<span class="tag">AnnouncementBar</span>
+      message=<span class="str">"🚀 Free shipping on orders over $75 — Shop the sale"</span>
+      backgroundColor=<span class="str">"#245066"</span>
+      textColor=<span class="str">"#ffffff"</span>
+      mapLinks={[{ url: <span class="str">'/sale'</span> }]}
+    /&gt;
+  );
+}</code></pre>
     </div>
         </div>
         <div class="tab-panel" data-panel="vue">
@@ -393,12 +397,16 @@ z"/>
       <pre><code><span class="kw">import</span> AnnouncementBar <span class="kw">from</span> <span class="str">'@contentveda/ui/solid/AnnouncementBar'</span>;
 <span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
 
-&lt;<span class="tag">AnnouncementBar</span>
-  message=<span class="str">"🚀 Free shipping on orders over $75 — Shop the sale"</span>
-  backgroundColor=<span class="str">"#245066"</span>
-  textColor=<span class="str">"#ffffff"</span>
-  mapLinks={[{ url: <span class="str">'/sale'</span> }]}
-/&gt;</code></pre>
+<span class="kw">export</span> <span class="kw">default</span> <span class="kw">function</span> Example() {
+  <span class="kw">return</span> (
+    &lt;<span class="tag">AnnouncementBar</span>
+      message=<span class="str">"🚀 Free shipping on orders over $75 — Shop the sale"</span>
+      backgroundColor=<span class="str">"#245066"</span>
+      textColor=<span class="str">"#ffffff"</span>
+      mapLinks={[{ url: <span class="str">'/sale'</span> }]}
+    /&gt;
+  );
+}</code></pre>
     </div>
         </div>
         <div class="tab-panel" data-panel="angular">
@@ -696,9 +704,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';
 
-<${pascalName}
-  ${reactProps.join('\n  ')}
-/>`;
+export default function Example() {
+  return (
+    <${pascalName}
+      ${reactProps.join('\n      ')}
+    />
+  );
+}`;
 
     // Vue prop string generator
     const vueProps = attrs.map(a => {
@@ -741,9 +753,13 @@ import '@contentveda/ui/theme.css';
     const solidCode = `import ${pascalName} from '@contentveda/ui/solid/${pascalName}';
 import '@contentveda/ui/theme.css';
 
-<${pascalName}
-  ${reactProps.join('\n  ')}
-/>`;
+export default function Example() {
+  return (
+    <${pascalName}
+      ${reactProps.join('\n      ')}
+    />
+  );
+}`;
 
     // Angular prop string generator
     const angularProps = attrs.map(a => {

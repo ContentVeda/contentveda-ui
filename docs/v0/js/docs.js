@@ -213,6 +213,23 @@ function initTabs() {
         btn.classList.add('active');
         const panel = container.querySelector(`[data-panel="${tabId}"]`);
         if (panel) panel.classList.add('active');
+
+        // Update sandbox button labels to reflect selected framework.
+        // fwName comes from a tab button's own textContent -- always one of
+        // this page's own hardcoded framework names today, but CodeQL flags
+        // any DOM text re-fed into innerHTML on principle, so it is set via
+        // a separate text node rather than interpolated into an HTML string.
+        const fwName = btn.textContent.trim();
+        const fidBtn = container.querySelector('#jsfiddle-btn') || document.getElementById('jsfiddle-btn');
+        const csBtn = container.querySelector('#codesandbox-btn') || document.getElementById('codesandbox-btn');
+        if (fidBtn) {
+          fidBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg> ';
+          fidBtn.appendChild(document.createTextNode(`Play ${fwName} in JSFiddle`));
+        }
+        if (csBtn) {
+          csBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> ';
+          csBtn.appendChild(document.createTextNode(`Open ${fwName} in CodeSandbox`));
+        }
       });
     });
   });
@@ -426,31 +443,9 @@ function generateLiveDemoCode() {
     ? `<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/components/${componentName}.css">\n`
     : '';
 
+  let sandboxFiles = null;
+
   if (framework === 'react') {
-    // Setup Babel Standalone in the HTML pane to preserve native ES Modules
-    // Note: the npm 'beta' dist-tag points to a stale pre-release (1.0.0-beta.17)
-    // whose package.json#exports has no './react/*' wildcard, so esm.sh rejects
-    // deep subpath imports like '/react/AlternatingSlider'. 'latest' has the
-    // correct wildcard exports and matches this repo's current published version.
-    // A plain `import '@contentveda/ui/theme.css'` is a *value-less* side-effect
-    // import, which the browser fetches expecting a JS/Wasm module. esm.sh (and
-    // any static host) serves that file with Content-Type: text/css, and browsers
-    // enforce strict MIME checking for module scripts — that single line throws
-    // a SyntaxError that aborts the entire module graph, so `root.render(...)`
-    // never runs and the sandbox just shows a blank page. Strip it from the JS
-    // and load it as a plain <link rel="stylesheet"> in the HTML pane instead,
-    // the same way the Web Component tab below already does it.
-    // Pin the exact React version via esm.sh's `?deps=` param on the component
-    // import. Without it, esm.sh resolves SlidingBanner's own internal
-    // `peerDependencies: { react: ">=17" }` reference independently from our
-    // own top-level `import React from '.../react@18...'` — landing on a
-    // *different* concrete React version (e.g. two copies, 19.x vs 18.x)
-    // that don't share a hook dispatcher. Calling any hook (useRef, etc.)
-    // then throws "Cannot read properties of null" because the component's
-    // React instance has no active render in progress from ITS OWN copy's
-    // point of view. `?deps=` forces the component's internal resolution to
-    // reuse the exact same pinned version as our own import, so there's
-    // only ever one React instance in the whole page.
     const REACT_VERSION = '18.3.1';
     jsCode = rawCode
       .replace(/import\s+['"]@contentveda\/ui\/theme\.css['"];?\n?/g, '')
@@ -462,7 +457,7 @@ function generateLiveDemoCode() {
 
     htmlCode = `<div id="root"></div>
 
-<!-- Load Theme (loaded as a stylesheet, not a JS import — see comment in docs.js) -->
+<!-- Load Theme -->
 <link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
 ${componentCssLink}
 <!-- Use Babel Standalone to compile JSX natively while preserving ES Modules -->
@@ -477,10 +472,206 @@ const root = createRoot(document.getElementById('root'));
 root.render(${jsxComponent || '<div />'});
 </script>`;
 
-    jsCode = ''; // Leave JS pane empty because all logic is in the module script
-  } else if (['svelte', 'vue', 'solid', 'angular'].includes(framework)) {
-    const frameworkName = framework.charAt(0).toUpperCase() + framework.slice(1);
-    return { framework, unsupported: true, frameworkName };
+    jsCode = '';
+    sandboxFiles = {
+      'sandbox.config.json': { content: { template: 'static' } },
+      'package.json': { content: { name: 'contentveda-ui-react-demo', version: '1.0.0', main: 'index.html' } },
+      'index.html': { content: htmlCode }
+    };
+  } else if (framework === 'vue') {
+    htmlCode = `<div id="app"></div>
+
+<!-- Load Theme -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue3-sfc-loader/dist/vue3-sfc-loader.js"></script>
+<script>
+const options = {
+  moduleCache: { vue: Vue },
+  async getFile(url) {
+    if (url === './App.vue') return ${JSON.stringify(rawCode)};
+    return fetch(url).then(res => res.text());
+  },
+  addStyle(textContent) {
+    const style = Object.assign(document.createElement('style'), { textContent });
+    document.head.appendChild(style);
+  }
+};
+const { loadModule } = window['vue3-sfc-loader'];
+loadModule('./App.vue', options).then(App => {
+  Vue.createApp(App).mount('#app');
+});
+</script>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'package.json': {
+        content: JSON.stringify({
+          name: 'contentveda-ui-vue-demo',
+          private: true,
+          version: '0.0.0',
+          type: 'module',
+          scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
+          dependencies: {
+            vue: '^3.4.0',
+            '@contentveda/ui': 'latest'
+          },
+          devDependencies: {
+            '@vitejs/plugin-vue': '^5.0.0',
+            vite: '^5.0.0'
+          }
+        }, null, 2)
+      },
+      'vite.config.js': {
+        content: `import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+export default defineConfig({
+  plugins: [vue()]
+});`
+      },
+      'index.html': {
+        content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ContentVeda UI - Vue Demo</title>
+  </head>
+  <body style="background: #0f172a; color: #fff; padding: 20px;">
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>`
+      },
+      'src/main.js': {
+        content: `import { createApp } from 'vue';
+import App from './App.vue';
+import '@contentveda/ui/theme.css';
+
+createApp(App).mount('#app');`
+      },
+      'src/App.vue': { content: rawCode }
+    };
+  } else if (framework === 'svelte') {
+    htmlCode = `<!-- Live Svelte / Universal Demo -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
+
+<div style="padding: 20px;">
+  <p style="color:#94a3b8; font-size: 13px; margin-bottom:16px;">Svelte demo rendered via ContentVeda Universal Element:</p>
+  <cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}></cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}>
+</div>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'package.json': {
+        content: JSON.stringify({
+          name: 'contentveda-ui-svelte-demo',
+          private: true,
+          version: '0.0.0',
+          type: 'module',
+          scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
+          dependencies: { svelte: '^4.2.0', '@contentveda/ui': 'latest' },
+          devDependencies: { '@sveltejs/vite-plugin-svelte': '^3.0.0', vite: '^5.0.0' }
+        }, null, 2)
+      },
+      'vite.config.js': {
+        content: `import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+export default defineConfig({ plugins: [svelte()] });`
+      },
+      'index.html': {
+        content: `<!DOCTYPE html>
+<html>
+  <body style="background: #0f172a; color: #fff; padding: 20px;">
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>`
+      },
+      'src/main.js': {
+        content: `import App from './App.svelte';
+import '@contentveda/ui/theme.css';
+const app = new App({ target: document.getElementById('app') });
+export default app;`
+      },
+      'src/App.svelte': { content: rawCode }
+    };
+  } else if (framework === 'solid') {
+    htmlCode = `<!-- Live Solid / Universal Demo -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
+
+<div style="padding: 20px;">
+  <p style="color:#94a3b8; font-size: 13px; margin-bottom:16px;">Solid demo rendered via ContentVeda Universal Element:</p>
+  <cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}></cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}>
+</div>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'package.json': {
+        content: JSON.stringify({
+          name: 'contentveda-ui-solid-demo',
+          private: true,
+          version: '0.0.0',
+          type: 'module',
+          scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
+          dependencies: { 'solid-js': '^1.8.0', '@contentveda/ui': 'latest' },
+          devDependencies: { 'vite-plugin-solid': '^2.8.0', vite: '^5.0.0' }
+        }, null, 2)
+      },
+      'vite.config.js': {
+        content: `import { defineConfig } from 'vite';
+import solidPlugin from 'vite-plugin-solid';
+export default defineConfig({ plugins: [solidPlugin()] });`
+      },
+      'index.html': {
+        content: `<!DOCTYPE html>
+<html>
+  <body style="background: #0f172a; color: #fff; padding: 20px;">
+    <div id="root"></div>
+    <script type="module" src="/src/index.jsx"></script>
+  </body>
+</html>`
+      },
+      'src/index.jsx': {
+        content: `import { render } from 'solid-js/web';
+import App from './App';
+import '@contentveda/ui/theme.css';
+render(() => <App />, document.getElementById('root'));`
+      },
+      'src/App.jsx': { content: rawCode }
+    };
+  } else if (framework === 'angular') {
+    htmlCode = `<!-- Live Angular / Universal Demo -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
+
+<div style="padding: 20px;">
+  <p style="color:#94a3b8; font-size: 13px; margin-bottom:16px;">Angular demo rendered via ContentVeda Universal Element:</p>
+  <cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}></cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}>
+</div>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'sandbox.config.json': { content: { template: 'static' } },
+      'package.json': {
+        content: {
+          name: 'contentveda-ui-angular-demo',
+          version: '1.0.0',
+          main: 'index.html',
+          dependencies: {
+            '@angular/core': '^16.0.0',
+            '@angular/common': '^16.0.0',
+            '@contentveda/ui': 'latest'
+          }
+        }
+      },
+      'index.html': { content: htmlCode }
+    };
   } else {
     // Web Component
     htmlCode = `<!-- Load Theme -->
@@ -489,10 +680,17 @@ ${componentCssLink}
 <!-- Load Web Component -->
 <script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
 
-${rawCode.replace(/<link rel="stylesheet" href="node_modules[^>]*>\n?/, '').replace(/<script type="module"[\s\S]*?<\/script>\n*/, '')}`; // strip local script and css tags
+${rawCode.replace(/<link rel="stylesheet" href="node_modules[^>]*>\n?/, '').replace(/<script type="module"[\s\S]*?<\/script>\n*/, '')}`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'sandbox.config.json': { content: { template: 'static' } },
+      'package.json': { content: { name: 'contentveda-ui-demo', version: '1.0.0', main: 'index.html' } },
+      'index.html': { content: htmlCode }
+    };
   }
 
-  return { framework, htmlCode, jsCode };
+  return { framework, htmlCode, jsCode, sandboxFiles };
 }
 
 /* ── JSFiddle Integration ────────────────────────────────── */
@@ -503,10 +701,6 @@ function initJsfiddle() {
   btn.addEventListener('click', () => {
     const generated = generateLiveDemoCode();
     if (!generated) return;
-    if (generated.unsupported) {
-      alert(`${generated.frameworkName || 'Framework'} components require a compiler/bundler environment (like Vite, Angular CLI, or Nuxt) to run. They cannot be executed natively in JSFiddle.\n\nPlease check out the Web Component or React tabs for live JSFiddle demos!`);
-      return;
-    }
     const { htmlCode, jsCode } = generated;
 
     const form = document.createElement('form');
@@ -535,14 +729,7 @@ function initJsfiddle() {
   });
 }
 
-/* ── CodeSandbox Integration ────────────────────────────────
-   CodeSandbox's "define" API accepts a JSON POST (no lz-string compression
-   needed, unlike its older query-string form) and returns a sandbox_id to
-   redirect to. For both the React and Web Component tabs the whole demo is
-   already a single self-contained HTML file (same one JSFiddle's HTML pane
-   uses) — CodeSandbox's "static" template runs that directly with no
-   bundler needed, so we hand it the same generated file rather than
-   duplicating the transform logic a third time. */
+/* ── CodeSandbox Integration ──────────────────────────────── */
 function initCodesandbox() {
   const btn = document.getElementById('codesandbox-btn');
   if (!btn) return;
@@ -550,11 +737,8 @@ function initCodesandbox() {
   btn.addEventListener('click', async () => {
     const generated = generateLiveDemoCode();
     if (!generated) return;
-    if (generated.unsupported) {
-      alert(`${generated.frameworkName || 'Framework'} components require a compiler/bundler environment (like Vite, Angular CLI, or Nuxt) to run. They cannot be executed natively in this static CodeSandbox template.\n\nPlease check out the Web Component or React tabs for live demos!`);
-      return;
-    }
-    const { htmlCode } = generated;
+    const { sandboxFiles } = generated;
+    if (!sandboxFiles) return;
 
     btn.disabled = true;
     const originalLabel = btn.innerHTML;
@@ -564,23 +748,7 @@ function initCodesandbox() {
       const res = await fetch('https://codesandbox.io/api/v1/sandboxes/define?json=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: {
-            // Without this, CodeSandbox's newer "Nodebox" runtime treats any
-            // package.json as an npm project and looks for a `scripts.start`
-            // (or similar) dev-server command to run — since ours has none,
-            // it just sits there with an empty preview instead of erroring.
-            // sandbox.config.json#template:"static" forces the classic
-            // static-file server instead, which serves index.html directly.
-            'sandbox.config.json': {
-              content: { template: 'static' }
-            },
-            'package.json': {
-              content: { name: 'contentveda-ui-demo', version: '1.0.0', main: 'index.html' }
-            },
-            'index.html': { content: htmlCode }
-          }
-        })
+        body: JSON.stringify({ files: sandboxFiles })
       });
       const data = await res.json();
       if (data.sandbox_id) {
