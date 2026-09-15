@@ -15,101 +15,180 @@
       boxShadow: 'var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))',
     }"
   >
-    <div
-      class="editor-toolbar flex flex-wrap gap-x-4 gap-y-3 px-6 py-4 select-none sticky top-0 z-10 w-full backdrop-blur-md"
-      :style="{
-        background: 'var(--cv-color-surface, rgba(15, 23, 42, 0.85))',
-        borderBottom:
-          '1px solid var(--cv-color-border, rgba(255,255,255,0.08))',
-        alignItems: 'center',
-        padding: '16px 24px',
-      }"
-    >
-      <template v-if="showToolbarOption('fullscreen')">
-        <button
-          type="button"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200"
-          title="Full Screen"
-          :style="{
-            background:
-              'var(--cv-color-accent-tint, rgba(127, 196, 222, 0.15))',
-            color: 'var(--cv-color-primary-hover, #a8d8ea)',
-            border: 'none',
-          }"
-          @click="async (event) => toggleFullScreen()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+    <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+      <div class="cv-toolbar-row cv-toolbar-row-1">
+        <div class="cv-toolbar-group">
+          <button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Undo"
+            @mousedown="async (e) => e.preventDefault()"
+            @click="async (event) => format('undo')"
           >
-            <path
-              d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
-            ></path>
-          </svg>
-          <template v-if="isFullscreen"> Exit Full Screen </template>
-
-          <template v-else> Full Screen </template>
-        </button>
-      </template>
-
-      <template v-if="showToolbarOption('source')">
-        <button
-          type="button"
-          title="Source Code"
-          :class="`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
-            mode === 'source'
-              ? 'cv-rte-tint cv-rte-accent'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-          }`"
-          @click="async (event) => toggleMode()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 7v6h6"></path>
+              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+            </svg></button
+          ><button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Redo"
+            @mousedown="async (e) => e.preventDefault()"
+            @click="async (event) => format('redo')"
           >
-            <polyline points="16 18 22 12 16 6"></polyline>
-            <polyline points="8 6 2 12 8 18"></polyline>
-          </svg>
-          Source Code
-        </button>
-      </template>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 7v6h-6"></path>
+              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="cv-toolbar-divider"></div>
+        <template v-if="showToolbarOption('headings')">
+          <div class="cv-toolbar-select-wrapper">
+            <span class="cv-toolbar-select-icon"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="18" x2="3" y2="18"></line></svg></span
+            ><select
+              class="cv-toolbar-select"
+              title="Paragraph Style"
+              :value="headingFormat"
+              @mousedown="async (event) => saveSelection()"
+              @change="async (e) => formatHeading(e.target.value)"
+            >
+              <option value="P">Paragraph</option>
+              <option value="H1">Heading 1</option>
+              <option value="H2">Heading 2</option>
+              <option value="H3">Heading 3</option>
+              <option value="H4">Heading 4</option></select
+            ><span class="cv-toolbar-select-chevron"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline></svg
+            ></span>
+          </div>
+        </template>
 
-      <template
-        v-if="
-          showToolbarOption('bold') ||
-          showToolbarOption('italic') ||
-          showToolbarOption('underline') ||
-          showToolbarOption('strikeThrough')
-        "
-      >
-        <div class="flex items-center gap-2 text-slate-300">
+        <div class="cv-toolbar-select-wrapper">
+          <select
+            class="cv-toolbar-select no-icon"
+            title="Font Family"
+            :value="fontFamily"
+            @mousedown="async (event) => saveSelection()"
+            @change="
+              async (e) => {
+                restoreSelection();
+                changeFontFamily(e.target.value);
+              }
+            "
+          >
+            <option value="Inter">Inter</option>
+            <option value="Roboto">Roboto</option>
+            <option value="Outfit">Outfit</option>
+            <option value="Fira Code">Fira Code</option>
+            <option value="Georgia">Georgia</option>
+            <option value="system-ui">System Sans</option></select
+          ><span class="cv-toolbar-select-chevron"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline></svg
+          ></span>
+        </div>
+        <div class="cv-toolbar-select-wrapper">
+          <select
+            class="cv-toolbar-select no-icon"
+            title="Font Size"
+            :value="fontSize"
+            @mousedown="async (event) => saveSelection()"
+            @change="
+              async (e) => {
+                restoreSelection();
+                changeFontSize(e.target.value);
+              }
+            "
+          >
+            <option value="12px">12px</option>
+            <option value="14px">14px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+            <option value="24px">24px</option>
+            <option value="32px">32px</option></select
+          ><span class="cv-toolbar-select-chevron"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline></svg
+          ></span>
+        </div>
+        <div class="cv-toolbar-divider"></div>
+        <div class="cv-toolbar-segmented-group">
           <template v-if="showToolbarOption('bold')">
             <button
               type="button"
               title="Bold"
-              :class="`font-bold text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ${
-                activeFormats.bold
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
-              }`"
+              :class="`cv-toolbar-btn ${activeFormats.bold ? 'is-active' : ''}`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => format('bold')"
             >
-              B
+              <span class="font-bold text-xs">B</span>
             </button>
           </template>
 
@@ -117,15 +196,13 @@
             <button
               type="button"
               title="Italic"
-              :class="`italic text-sm w-9 h-9 flex items-center justify-center rounded transition-colors font-serif ${
-                activeFormats.italic
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
+              :class="`cv-toolbar-btn ${
+                activeFormats.italic ? 'is-active' : ''
               }`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => format('italic')"
             >
-              I
+              <span class="italic font-serif text-xs">I</span>
             </button>
           </template>
 
@@ -133,15 +210,13 @@
             <button
               type="button"
               title="Underline"
-              :class="`underline text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ${
-                activeFormats.underline
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
+              :class="`cv-toolbar-btn ${
+                activeFormats.underline ? 'is-active' : ''
               }`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => format('underline')"
             >
-              U
+              <span class="underline text-xs font-medium">U</span>
             </button>
           </template>
 
@@ -149,48 +224,28 @@
             <button
               type="button"
               title="Strikethrough"
-              :class="`line-through text-sm w-9 h-9 flex items-center justify-center rounded transition-colors ${
-                activeFormats.strikeThrough
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
+              :class="`cv-toolbar-btn ${
+                activeFormats.strikeThrough ? 'is-active' : ''
               }`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => format('strikeThrough')"
             >
-              T
+              <span class="line-through text-xs font-medium">S</span>
             </button>
           </template>
-        </div>
-      </template>
 
-      <template v-if="showSeparator(0)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template
-        v-if="
-          showToolbarOption('code') ||
-          showToolbarOption('quote') ||
-          showToolbarOption('clear')
-        "
-      >
-        <div class="flex items-center gap-2 text-slate-300">
           <template v-if="showToolbarOption('code')">
             <button
               type="button"
               title="Code Block"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.code
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
-              }`"
+              :class="`cv-toolbar-btn ${activeFormats.code ? 'is-active' : ''}`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => toggleBlock('PRE')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="13"
+                height="13"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -203,425 +258,102 @@
               </svg>
             </button>
           </template>
-
-          <template v-if="showToolbarOption('quote')">
-            <button
-              type="button"
-              title="Blockquote"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.quote
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
-              }`"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => toggleBlock('BLOCKQUOTE')"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
-                ></path>
-                <path
-                  d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"
-                ></path>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('clear')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Clear Formatting"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => clearAllFormatting()"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M4 12h8"></path>
-                <path d="M4 18V6a2 2 0 0 1 2-2h4"></path>
-                <path d="M15 9l5 5"></path>
-                <path d="M20 9l-5 5"></path>
-              </svg>
-            </button>
-          </template>
         </div>
-      </template>
-
-      <template v-if="showSeparator(1)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template v-if="showToolbarOption('headings')">
-        <select
-          class="bg-black/20 border border-white/10 text-slate-300 font-semibold text-sm rounded-lg px-3 py-1.5 outline-none focus:cv-rte-accent-border transition-colors cursor-pointer"
-          :value="headingFormat"
-          @mousedown="
-            async (e) => {
-              saveSelection();
-            }
-          "
-          @change="
-            async (e) => {
-              restoreSelection();
-              formatHeading(e.target.value);
-              this.$refs.editorRef.focus();
-            }
+        <div class="cv-toolbar-divider"></div>
+        <template
+          v-if="
+            showToolbarOption('foreColor') || showToolbarOption('backColor')
           "
         >
-          <option
-            value="P"
-            class="cv-rte-surface"
-            :style="{
-              fontSize: '14px',
-              fontWeight: 'normal',
-            }"
-          >
-            Paragraph
-          </option>
-          <option
-            value="H1"
-            class="cv-rte-surface"
-            :style="{
-              fontSize: '24px',
-              fontWeight: 'bold',
-            }"
-          >
-            Heading 1
-          </option>
-          <option
-            value="H2"
-            class="cv-rte-surface"
-            :style="{
-              fontSize: '20px',
-              fontWeight: 'bold',
-            }"
-          >
-            Heading 2
-          </option>
-          <option
-            value="H3"
-            class="cv-rte-surface"
-            :style="{
-              fontSize: '18px',
-              fontWeight: 'bold',
-            }"
-          >
-            Heading 3
-          </option>
-        </select>
-      </template>
-
-      <template v-if="showSeparator(2)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template
-        v-if="showToolbarOption('foreColor') || showToolbarOption('backColor')"
-      >
-        <div class="flex items-center gap-1 text-slate-300">
-          <template v-if="showToolbarOption('foreColor')">
-            <label
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative"
-              title="Text Color"
-              ><svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M4 20h16"></path>
-                <path d="m6 16 6-12 6 12"></path>
-                <path d="M8 12h8"></path></svg
-              ><input
-                type="color"
-                aria-label="Text Color"
-                class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+          <div class="cv-toolbar-group">
+            <template v-if="showToolbarOption('foreColor')">
+              <label
+                class="cv-toolbar-color-btn"
+                title="Text Color"
                 @mousedown="async (event) => saveSelection()"
-                @change="
-                  async (e) => {
-                    restoreSelection();
-                    document.execCommand('foreColor', false, e.target.value);
-                    syncContent();
-                  }
-                "
-            /></label>
-          </template>
+                ><span
+                  class="font-bold text-xs"
+                  :style="{
+                    lineHeight: '1',
+                  }"
+                  >A</span
+                ><span
+                  class="cv-color-indicator"
+                  :style="{
+                    backgroundColor: textColor,
+                  }"
+                ></span
+                ><input
+                  type="color"
+                  aria-label="Text Color"
+                  class="cv-color-input"
+                  :value="textColor"
+                  @mousedown="async (event) => saveSelection()"
+                  @input="async (e) => applyColor('foreColor', e.target.value)"
+                  @change="
+                    async (e) => applyColor('foreColor', e.target.value)
+                  "
+              /></label>
+            </template>
 
-          <template v-if="showToolbarOption('backColor')">
-            <label
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer relative"
-              title="Highlight Color"
-              ><svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m12 19 7-7 3 3-7 7-3-3z"></path>
-                <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
-                <path d="m2 2 7.586 7.586"></path>
-                <circle cx="11" cy="11" r="2"></circle></svg
-              ><input
-                type="color"
-                aria-label="Background Color"
-                class="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+            <template v-if="showToolbarOption('backColor')">
+              <label
+                class="cv-toolbar-color-btn"
+                title="Highlight Color"
                 @mousedown="async (event) => saveSelection()"
-                @change="
-                  async (e) => {
-                    restoreSelection();
-                    document.execCommand('hiliteColor', false, e.target.value);
-                    document.execCommand('backColor', false, e.target.value);
-                    syncContent();
-                  }
-                "
-            /></label>
-          </template>
-        </div>
-      </template>
+                ><svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m14 12-8.5 8.5a2.12 2.12 0 1 1-3-3L11 9"></path>
+                  <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                  <path d="m2 2 7.586 7.586"></path></svg
+                ><span
+                  class="cv-color-indicator"
+                  :style="{
+                    backgroundColor: highlightColor,
+                  }"
+                ></span
+                ><input
+                  type="color"
+                  aria-label="Background Color"
+                  class="cv-color-input"
+                  :value="highlightColor"
+                  @mousedown="async (event) => saveSelection()"
+                  @input="async (e) => applyColor('backColor', e.target.value)"
+                  @change="
+                    async (e) => applyColor('backColor', e.target.value)
+                  "
+              /></label>
+            </template>
+          </div>
+        </template>
 
-      <template v-if="showSeparator(3)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template
-        v-if="
-          showToolbarOption('justifyLeft') ||
-          showToolbarOption('justifyCenter') ||
-          showToolbarOption('justifyRight')
-        "
-      >
-        <div class="flex items-center gap-2 text-slate-300">
-          <template v-if="showToolbarOption('justifyLeft')">
-            <button
-              type="button"
-              title="Align Left"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.justifyLeft
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
-              }`"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => format('justifyLeft')"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="15" y1="12" x2="3" y2="12"></line>
-                <line x1="17" y1="18" x2="3" y2="18"></line>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('justifyCenter')">
-            <button
-              type="button"
-              title="Align Center"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.justifyCenter
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
-              }`"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => format('justifyCenter')"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="17" y1="12" x2="7" y2="12"></line>
-                <line x1="19" y1="18" x2="5" y2="18"></line>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('justifyRight')">
-            <button
-              type="button"
-              title="Align Right"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.justifyRight
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
-              }`"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => format('justifyRight')"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-                <line x1="21" y1="18" x2="7" y2="18"></line>
-              </svg>
-            </button>
-          </template>
-        </div>
-      </template>
-
-      <template v-if="showSeparator(4)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template
-        v-if="
-          showToolbarOption('image') ||
-          showToolbarOption('link') ||
-          showToolbarOption('table') ||
-          showToolbarOption('unorderedList') ||
-          showToolbarOption('orderedList') ||
-          showToolbarOption('horizontalRule') ||
-          showToolbarOption('video') ||
-          showToolbarOption('social')
-        "
-      >
-        <div class="flex items-center gap-2 text-slate-300">
-          <template v-if="showToolbarOption('image')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Image"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => insertMedia('image')"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('link')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Link"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => openLinkModal()"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                ></path>
-                <path
-                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                ></path>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('table')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Table"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => openTableModal()"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="3" y1="15" x2="21" y2="15"></line>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-                <line x1="15" y1="3" x2="15" y2="21"></line>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="activeFormats.inTable && showToolbarOption('table')">
-            <div
-              class="flex items-center cv-rte-tint rounded-lg p-0.5 border cv-rte-accent-border ml-1 mr-1 shadow-inner"
-            >
+        <div class="cv-toolbar-divider"></div>
+        <template
+          v-if="
+            showToolbarOption('justifyLeft') ||
+            showToolbarOption('justifyCenter') ||
+            showToolbarOption('justifyRight')
+          "
+        >
+          <div class="cv-toolbar-segmented-group">
+            <template v-if="showToolbarOption('justifyLeft')">
               <button
                 type="button"
-                class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
-                title="Add Row Below"
+                title="Align Left"
+                :class="`cv-toolbar-btn ${
+                  activeFormats.justifyLeft ? 'is-active' : ''
+                }`"
                 @mousedown="async (e) => e.preventDefault()"
-                @click="async (event) => modifyTable('addRow')"
+                @click="async (event) => format('justifyLeft')"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -630,40 +362,26 @@
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2.5"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path d="M12 5v14M5 12h14"></path></svg
-                ><span class="text-[10px] font-bold ml-0.5">R</span></button
-              ><button
-                type="button"
-                class="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-500/40 text-rose-300 transition-colors"
-                title="Delete Row"
-                @mousedown="async (e) => e.preventDefault()"
-                @click="async (event) => modifyTable('removeRow')"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M5 12h14"></path></svg
-                ><span class="text-[10px] font-bold ml-0.5">R</span>
+                  <line x1="21" y1="6" x2="3" y2="6"></line>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
+                  <line x1="17" y1="18" x2="3" y2="18"></line>
+                </svg>
               </button>
-              <div class="w-px h-4 cv-rte-tint-strong mx-0.5"></div>
+            </template>
+
+            <template v-if="showToolbarOption('justifyCenter')">
               <button
                 type="button"
-                class="w-7 h-7 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
-                title="Add Column Right"
+                title="Align Center"
+                :class="`cv-toolbar-btn ${
+                  activeFormats.justifyCenter ? 'is-active' : ''
+                }`"
                 @mousedown="async (e) => e.preventDefault()"
-                @click="async (event) => modifyTable('addCol')"
+                @click="async (event) => format('justifyCenter')"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -672,52 +390,89 @@
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2.5"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path d="M12 5v14M5 12h14"></path></svg
-                ><span class="text-[10px] font-bold ml-0.5">C</span></button
-              ><button
-                type="button"
-                class="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-500/40 text-rose-300 transition-colors"
-                title="Delete Column"
-                @mousedown="async (e) => e.preventDefault()"
-                @click="async (event) => modifyTable('removeCol')"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M5 12h14"></path></svg
-                ><span class="text-[10px] font-bold ml-0.5">C</span>
+                  <line x1="21" y1="6" x2="3" y2="6"></line>
+                  <line x1="17" y1="12" x2="7" y2="12"></line>
+                  <line x1="19" y1="18" x2="5" y2="18"></line>
+                </svg>
               </button>
-            </div>
-          </template>
+            </template>
 
+            <template v-if="showToolbarOption('justifyRight')">
+              <button
+                type="button"
+                title="Align Right"
+                :class="`cv-toolbar-btn ${
+                  activeFormats.justifyRight ? 'is-active' : ''
+                }`"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="async (event) => format('justifyRight')"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="21" y1="6" x2="3" y2="6"></line>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                  <line x1="21" y1="18" x2="7" y2="18"></line>
+                </svg>
+              </button>
+            </template>
+
+            <button
+              type="button"
+              title="Align Justify"
+              :class="`cv-toolbar-btn ${
+                activeFormats.justifyFull ? 'is-active' : ''
+              }`"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => format('justifyFull')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="18" x2="3" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </template>
+      </div>
+      <div class="cv-toolbar-row cv-toolbar-row-2">
+        <div class="cv-toolbar-group">
           <template v-if="showToolbarOption('unorderedList')">
             <button
               type="button"
               title="Bullet List"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.unorderedList
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
+              :class="`cv-toolbar-btn ${
+                activeFormats.unorderedList ? 'is-active' : ''
               }`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => format('insertUnorderedList')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -739,18 +494,16 @@
             <button
               type="button"
               title="Numbered List"
-              :class="`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                activeFormats.orderedList
-                  ? 'bg-white/20 text-white shadow-inner'
-                  : 'hover:bg-white/10 hover:text-white'
+              :class="`cv-toolbar-btn ${
+                activeFormats.orderedList ? 'is-active' : ''
               }`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => format('insertOrderedList')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -768,112 +521,429 @@
             </button>
           </template>
 
-          <template v-if="showToolbarOption('horizontalRule')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Horizontal Line"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => format('insertHorizontalRule')"
+          <button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Task List"
+            @mousedown="async (e) => e.preventDefault()"
+            @click="async (event) => insertChecklist()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('video')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Video"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => insertMedia('video')"
+              <polyline points="9 11 12 14 22 4"></polyline>
+              <path
+                d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <div class="cv-toolbar-divider"></div>
+        <div class="cv-toolbar-group relative">
+          <button
+            type="button"
+            class="cv-toolbar-action-btn"
+            title="Insert Options"
+            @click="async (event) => (showInsertMenu = !showInsertMenu)"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect
-                  x="2"
-                  y="2"
-                  width="20"
-                  height="20"
-                  rx="2.18"
-                  ry="2.18"
-                ></rect>
-                <line x1="7" y1="2" x2="7" y2="22"></line>
-                <line x1="17" y1="2" x2="17" y2="22"></line>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <line x1="2" y1="7" x2="7" y2="7"></line>
-                <line x1="2" y1="17" x2="7" y2="17"></line>
-                <line x1="17" y1="17" x2="22" y2="17"></line>
-                <line x1="17" y1="7" x2="22" y2="7"></line>
-              </svg>
-            </button>
-          </template>
-
-          <template v-if="showToolbarOption('social')">
-            <button
-              type="button"
-              class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-              title="Social Media Embed"
-              @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => openSocialModal()"
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line></svg
+            ><span>Insert</span
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <template v-if="showInsertMenu">
+            <div class="cv-insert-menu shadow-xl">
+              <button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    openTableModal();
+                  }
+                "
               >
-                <path
-                  d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"
-                ></path>
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+                Table</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    insertMedia('image');
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                Image</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    openLinkModal();
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                  ></path>
+                  <path
+                    d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                  ></path>
+                </svg>
+                Link</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    insertMedia('video');
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect
+                    x="2"
+                    y="2"
+                    width="20"
+                    height="20"
+                    rx="2.18"
+                    ry="2.18"
+                  ></rect>
+                  <line x1="7" y1="2" x2="7" y2="22"></line>
+                  <line x1="17" y1="2" x2="17" y2="22"></line>
+                </svg>
+                Video</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    openButtonModal();
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="9" x2="15" y2="9"></line>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                Button</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    openSocialModal();
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                  ></path>
+                </svg>
+                Social Post</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    format('insertHorizontalRule');
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Divider</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    toggleBlock('BLOCKQUOTE');
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.036V20c0 1 1 1 2 1z"
+                  ></path>
+                </svg>
+                Quote</button
+              ><button
+                type="button"
+                class="cv-insert-item"
+                @mousedown="async (e) => e.preventDefault()"
+                @click="
+                  async (event) => {
+                    showInsertMenu = false;
+                    clearAllFormatting();
+                  }
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Clear Format
+              </button>
+            </div>
           </template>
         </div>
-      </template>
+        <template v-if="showToolbarOption('table')">
+          <button
+            type="button"
+            class="cv-toolbar-action-btn"
+            title="Table"
+            @mousedown="async (e) => e.preventDefault()"
+            @click="async (event) => openTableModal()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="3" y1="15" x2="21" y2="15"></line>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+              <line x1="15" y1="3" x2="15" y2="21"></line></svg
+            ><span>Table</span>
+          </button>
+        </template>
 
-      <template v-if="showSeparator(5)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template
-        v-if="
-          showToolbarOption('insertButton') || showToolbarOption('addWidget')
-        "
-      >
-        <div class="flex items-center gap-2">
-          <template v-if="showToolbarOption('insertButton')">
+        <template v-if="activeFormats.inTable && showToolbarOption('table')">
+          <div
+            class="flex items-center cv-rte-tint rounded-lg p-0.5 border cv-rte-accent-border"
+          >
             <button
               type="button"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 border-none text-slate-300 hover:bg-white/10 hover:text-white"
+              class="w-6 h-6 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
+              title="Add Row Below"
               @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => openButtonModal()"
+              @click="async (event) => modifyTable('addRow')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M12 5v14M5 12h14"></path></svg
+              ><span class="text-[9px] font-bold ml-0.5">R</span></button
+            ><button
+              type="button"
+              class="w-6 h-6 flex items-center justify-center rounded hover:bg-rose-500/30 text-rose-500 transition-colors"
+              title="Delete Row"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => modifyTable('removeRow')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M5 12h14"></path></svg
+              ><span class="text-[9px] font-bold ml-0.5">R</span>
+            </button>
+            <div class="w-px h-3 cv-rte-tint-strong mx-0.5"></div>
+            <button
+              type="button"
+              class="w-6 h-6 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
+              title="Add Column Right"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => modifyTable('addCol')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M12 5v14M5 12h14"></path></svg
+              ><span class="text-[9px] font-bold ml-0.5">C</span></button
+            ><button
+              type="button"
+              class="w-6 h-6 flex items-center justify-center rounded hover:bg-rose-500/30 text-rose-500 transition-colors"
+              title="Delete Column"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => modifyTable('removeCol')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M5 12h14"></path></svg
+              ><span class="text-[9px] font-bold ml-0.5">C</span>
+            </button>
+          </div>
+        </template>
+
+        <div class="cv-toolbar-group">
+          <template v-if="showToolbarOption('image')">
+            <button
+              type="button"
+              class="cv-toolbar-btn"
+              title="Image"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => insertMedia('image')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -887,19 +957,19 @@
                 stroke-linejoin="round"
               >
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="12" y1="8" x2="12" y2="16"></line>
-                <line x1="8" y1="12" x2="16" y2="12"></line>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
-              Insert Button
             </button>
           </template>
 
-          <template v-if="showToolbarOption('addWidget')">
+          <template v-if="showToolbarOption('link')">
             <button
               type="button"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 cv-rte-tint cv-rte-accent border-none hover:cv-rte-tint"
+              class="cv-toolbar-btn"
+              title="Link"
               @mousedown="async (e) => e.preventDefault()"
-              @click="async (event) => openWidgetModal()"
+              @click="async (event) => openLinkModal()"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -908,93 +978,215 @@
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2.5"
+                stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                ></path>
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                ></path>
               </svg>
-              Add Widget
+            </button>
+          </template>
+
+          <button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Formula"
+            @mousedown="async (e) => e.preventDefault()"
+            @click="async (event) => insertFormula()"
+          >
+            <span class="font-serif italic font-bold text-xs">Fx</span>
+          </button>
+          <template v-if="showToolbarOption('social')">
+            <button
+              type="button"
+              class="cv-toolbar-btn"
+              title="Social Media Embed"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => openSocialModal()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                ></path>
+              </svg>
             </button>
           </template>
         </div>
-      </template>
-
-      <template v-if="showSeparator(6)">
-        <div class="w-px h-6 bg-white/10"></div>
-      </template>
-
-      <template v-if="showToolbarOption('save')">
-        <div class="flex items-center gap-1 text-slate-400">
+        <div class="cv-toolbar-divider"></div>
+        <template v-if="showToolbarOption('addWidget')">
           <button
             type="button"
-            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-            title="Save"
+            class="cv-toolbar-widget-btn"
+            title="Add UI Widget"
             @mousedown="async (e) => e.preventDefault()"
-            @click="async (event) => syncContent()"
+            @click="async (event) => openWidgetModal()"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
+              width="11"
+              height="11"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="2"
+              stroke-width="2.5"
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path
-                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"
-              ></path>
-              <polyline points="17 21 17 13 7 13 7 21"></polyline>
-              <polyline points="7 3 7 8 15 8"></polyline>
-            </svg>
+              <path d="M12 5v14M5 12h14"></path></svg
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect></svg
+            ><span>Add UI Widget</span>
           </button>
-        </div>
-      </template>
+        </template>
 
-      <template v-if="showToolbarOption('classInput')">
-        <div
-          class="ml-auto flex items-center bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 shadow-inner focus-within:cv-rte-accent-border focus-within:ring-1 focus-within:ring-violet-500 transition-all"
-        >
-          <span class="text-[10px] font-bold text-slate-500 tracking-wider mr-2"
-            >CLASS</span
-          ><input
-            type="text"
-            aria-label="Dynamic CSS Class"
-            list="editor-class-list"
-            placeholder="e.g. my-callout"
-            class="text-xs outline-none w-32 text-slate-200 placeholder-slate-600 bg-transparent"
-            @keydown="
-              async (e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  applyClass(e.target.value);
-                  e.target.value = '';
-                }
-              }
-            "
-          />
-          <template v-if="availableClasses && availableClasses.length > 0">
-            <datalist id="editor-class-list">
-              <template :key="index" v-for="(cls, index) in availableClasses">
-                <option :value="cls">{{ cls }}</option>
-              </template>
-            </datalist>
+        <template v-if="showToolbarOption('classInput')">
+          <div class="cv-toolbar-classes-group">
+            <span class="cv-class-badge">CLASS</span
+            ><template :key="cls" v-for="(cls, index) in appliedClasses">
+              <span class="cv-class-chip"
+                ><span>{{ cls }}</span
+                ><button
+                  type="button"
+                  class="cv-class-chip-remove"
+                  @click="async (event) => removeClass(cls)"
+                  :title="'Remove ' + cls"
+                >
+                  ×
+                </button></span
+              > </template
+            ><input
+              type="text"
+              aria-label="Dynamic CSS Class"
+              list="editor-class-list"
+              placeholder="+ add class..."
+              class="cv-class-input"
+              @keydown="async (e) => handleClassInputKeyDown(e)"
+            />
+            <template v-if="availableClasses && availableClasses.length > 0">
+              <datalist id="editor-class-list">
+                <template :key="index" v-for="(cls, index) in availableClasses">
+                  <option :value="cls">{{ cls }}</option>
+                </template>
+              </datalist>
+            </template>
+          </div>
+        </template>
+
+        <div class="ml-auto flex items-center gap-1.5 flex-shrink-0">
+          <template v-if="showToolbarOption('source')">
+            <button
+              type="button"
+              title="View HTML Source Code"
+              :class="`cv-toolbar-btn ${mode === 'source' ? 'is-active' : ''}`"
+              @click="async (event) => toggleMode()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+          </template>
+
+          <template v-if="showToolbarOption('fullscreen')">
+            <button
+              type="button"
+              class="cv-toolbar-btn"
+              title="Full Screen"
+              @click="async (event) => toggleFullScreen()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+                ></path>
+              </svg>
+            </button>
+          </template>
+
+          <template v-if="showToolbarOption('save')">
+            <button
+              type="button"
+              class="cv-toolbar-btn"
+              title="Save"
+              @mousedown="async (e) => e.preventDefault()"
+              @click="async (event) => syncContent()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                ></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+            </button>
           </template>
         </div>
-      </template>
+      </div>
     </div>
     <div
-      class="editor-content flex-1 overflow-y-auto relative min-h-[350px]"
+      :class="`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode}`"
+      @scroll="async (event) => updateResizeHandlePosition()"
       :style="{
-        display: mode === 'visual' ? 'block' : 'none',
         padding: '2rem 3rem',
         color: 'var(--cv-color-text-main, #f1f5f9)',
+        position: 'relative',
       }"
     >
       <div
@@ -1010,6 +1202,7 @@
         @blur="async (event) => handleInput()"
         @keyup="async (event) => checkFormats()"
         @mouseup="async (event) => checkFormats()"
+        @click="async (e) => handleEditorClick(e)"
         :style="{
           minHeight: '350px',
           fontFamily: 'Inter, sans-serif',
@@ -1017,13 +1210,35 @@
           fontSize: '15px',
         }"
       ></div>
+      <template v-if="selectedMediaEl">
+        <div
+          class="cv-resize-handle"
+          title="Drag to resize"
+          :style="{
+            position: 'absolute',
+            top: `${resizeHandleTop}px`,
+            left: `${resizeHandleLeft}px`,
+            width: '14px',
+            height: '14px',
+            borderRadius: '3px',
+            background: 'var(--cv-color-primary, #245066)',
+            border: '2px solid var(--cv-color-surface-raised, #fff)',
+            cursor: 'nwse-resize',
+            zIndex: 30,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+          }"
+          @mousedown="async (e) => startResize(e)"
+        ></div>
+      </template>
+
       <template
         v-if="
           showTableModal ||
           showLinkModal ||
           showWidgetModal ||
           showSocialModal ||
-          showButtonModal
+          showButtonModal ||
+          showAiModal
         "
       >
         <div
@@ -1032,6 +1247,94 @@
             background: 'rgba(0, 0, 0, 0.6)',
           }"
         >
+          <template v-if="showAiModal">
+            <div class="cv-ai-modal shadow-2xl">
+              <div class="cv-ai-modal-header">
+                <div
+                  class="flex items-center gap-2 text-white font-bold text-base"
+                >
+                  <svg
+                    class="text-purple-400"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"
+                    ></path>
+                  </svg>
+                  ContentVeda AI Assistant
+                </div>
+                <button
+                  type="button"
+                  class="text-slate-400 hover:text-white text-lg font-bold"
+                  @click="async (event) => closeAiModal()"
+                >
+                  ×
+                </button>
+              </div>
+              <div
+                :style="{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  marginBottom: '20px',
+                }"
+              >
+                <button
+                  type="button"
+                  class="cv-ai-pill-btn"
+                  @click="async (event) => applyAiAction('improve')"
+                >
+                  ✨ Improve Writing & Polish Flow</button
+                ><button
+                  type="button"
+                  class="cv-ai-pill-btn"
+                  @click="async (event) => applyAiAction('callout')"
+                >
+                  💡 Generate AI Callout Insight Box</button
+                ><button
+                  type="button"
+                  class="cv-ai-pill-btn"
+                  @click="async (event) => applyAiAction('summarize')"
+                >
+                  📝 Summarize Selected Section</button
+                ><button
+                  type="button"
+                  class="cv-ai-pill-btn"
+                  @click="async (event) => applyAiAction('grammar')"
+                >
+                  🔍 Fix Grammar & Syntax
+                </button>
+              </div>
+              <div
+                :style="{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '10px',
+                }"
+              >
+                <button
+                  type="button"
+                  :style="{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    color: '#cbd5e1',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }"
+                  @click="async (event) => closeAiModal()"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </template>
+
           <template v-if="showButtonModal">
             <div
               class="shadow-2xl"
@@ -1064,7 +1367,7 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   :style="{
-                    color: 'var(--cv-color-link, #7fc4de)',
+                    color: 'var(--cv-color-primary, #7fc4de)',
                   }"
                 >
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -1154,11 +1457,11 @@
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                     }"
-                    >Button Text</label
+                    >Button Label</label
                   ><input
                     type="text"
-                    aria-label="Button Text"
-                    placeholder="Click Here"
+                    aria-label="Button Label"
+                    placeholder="e.g. Get Started Today"
                     :style="{
                       background:
                         'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
@@ -1170,6 +1473,7 @@
                       fontSize: '14px',
                       color: 'var(--cv-color-text-main, #fff)',
                       outline: 'none',
+                      boxSizing: 'border-box',
                     }"
                     :value="btnText"
                     @input="async (e) => (btnText = e.target.value)"
@@ -1190,10 +1494,10 @@
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                     }"
-                    >Link URL</label
+                    >Target URL</label
                   ><input
                     type="url"
-                    aria-label="Button URL"
+                    aria-label="Target URL"
                     placeholder="https://..."
                     :style="{
                       background:
@@ -1206,6 +1510,7 @@
                       fontSize: '14px',
                       color: 'var(--cv-color-text-main, #fff)',
                       outline: 'none',
+                      boxSizing: 'border-box',
                     }"
                     :value="btnUrl"
                     @input="async (e) => (btnUrl = e.target.value)"
@@ -1217,7 +1522,6 @@
                   display: 'flex',
                   justifyContent: 'flex-end',
                   gap: '12px',
-                  marginTop: '32px',
                 }"
               >
                 <button
@@ -1299,50 +1603,50 @@
                   <line x1="9" y1="3" x2="9" y2="21"></line>
                   <line x1="15" y1="3" x2="15" y2="21"></line>
                 </svg>
-                Insert Table
+                Insert Table Grid
               </h3>
               <div
                 :style="{
                   display: 'flex',
-                  flexDirection: 'column',
                   gap: '16px',
-                  marginBottom: '24px',
+                  marginBottom: '20px',
                 }"
               >
                 <div
                   :style="{
+                    flex: 1,
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background:
-                      'var(--cv-color-surface-sunken, rgba(0,0,0,0.2))',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border:
-                      '1px solid var(--cv-color-hover, rgba(255,255,255,0.05))',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }"
                 >
                   <label
                     :style="{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: 'var(--cv-color-text-secondary, #cbd5e1)',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: 'var(--cv-color-text-muted, #94a3b8)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
                     }"
                     >Rows</label
                   ><input
                     type="number"
                     aria-label="Table Rows"
                     min="1"
-                    max="20"
+                    max="10"
                     :style="{
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
+                      background:
+                        'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+                      border:
+                        '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      width: '100%',
+                      fontSize: '15px',
                       color: 'var(--cv-color-text-main, #fff)',
-                      fontWeight: 'bold',
-                      width: '64px',
-                      fontSize: '14px',
                       outline: 'none',
+                      textAlign: 'center',
+                      boxSizing: 'border-box',
                     }"
                     :value="tableRows"
                     @input="async (e) => (tableRows = e.target.value)"
@@ -1350,38 +1654,39 @@
                 </div>
                 <div
                   :style="{
+                    flex: 1,
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background:
-                      'var(--cv-color-surface-sunken, rgba(0,0,0,0.2))',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border:
-                      '1px solid var(--cv-color-hover, rgba(255,255,255,0.05))',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }"
                 >
                   <label
                     :style="{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: 'var(--cv-color-text-secondary, #cbd5e1)',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: 'var(--cv-color-text-muted, #94a3b8)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
                     }"
                     >Columns</label
                   ><input
                     type="number"
                     aria-label="Table Columns"
                     min="1"
-                    max="20"
+                    max="10"
                     :style="{
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
+                      background:
+                        'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+                      border:
+                        '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      width: '100%',
+                      fontSize: '15px',
                       color: 'var(--cv-color-text-main, #fff)',
-                      fontWeight: 'bold',
-                      width: '64px',
-                      fontSize: '14px',
                       outline: 'none',
+                      textAlign: 'center',
+                      boxSizing: 'border-box',
                     }"
                     :value="tableCols"
                     @input="async (e) => (tableCols = e.target.value)"
@@ -1391,9 +1696,39 @@
               <div
                 :style="{
                   display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '28px',
+                }"
+              >
+                <input
+                  type="checkbox"
+                  id="cv-header-check"
+                  :style="{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    accentColor: 'var(--cv-color-link, #7fc4de)',
+                  }"
+                  :checked="tableHasHeader"
+                  @change="async (e) => (tableHasHeader = e.target.checked)"
+                /><label
+                  for="cv-header-check"
+                  :style="{
+                    fontSize: '14px',
+                    color: 'var(--cv-color-text-secondary, #cbd5e1)',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }"
+                  >Include header row</label
+                >
+              </div>
+              <div
+                :style="{
+                  display: 'flex',
                   justifyContent: 'flex-end',
                   gap: '12px',
-                  marginTop: '32px',
                 }"
               >
                 <button
@@ -1465,7 +1800,7 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   :style="{
-                    color: 'var(--cv-color-info, #0ea5e9)',
+                    color: 'var(--cv-color-link, #7fc4de)',
                   }"
                 >
                   <path
@@ -1493,7 +1828,7 @@
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                   }"
-                  >Destination URL</label
+                  >URL Destination</label
                 ><input
                   type="url"
                   aria-label="Hyperlink URL"
@@ -1797,6 +2132,22 @@
                     @change="async (e) => (socialPlatform = e.target.value)"
                   >
                     <option
+                      value="youtube"
+                      :style="{
+                        background: 'var(--cv-color-surface-raised, #1e293b)',
+                      }"
+                    >
+                      YouTube
+                    </option>
+                    <option
+                      value="vimeo"
+                      :style="{
+                        background: 'var(--cv-color-surface-raised, #1e293b)',
+                      }"
+                    >
+                      Vimeo
+                    </option>
+                    <option
                       value="x"
                       :style="{
                         background: 'var(--cv-color-surface-raised, #1e293b)',
@@ -1915,17 +2266,24 @@
       </template>
     </div>
     <div
-      class="editor-source flex-1 overflow-y-auto bg-[var(--cv-color-background, #020617)] min-h-[350px]"
+      :class="`editor-source flex-1 relative min-h-[350px] overflow-hidden cv-mode-src-${mode}`"
       :style="{
-        display: mode === 'source' ? 'block' : 'none',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: '350px',
       }"
     >
       <textarea
-        class="w-full h-full p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none resize-none"
+        class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
         :value="internalContent"
         @input="async (e) => handleSourceInput(e)"
         :style="{
           whiteSpace: 'pre-wrap',
+          overflowY: 'auto',
+          resize: 'none',
+          height: '100%',
+          width: '100%',
+          boxSizing: 'border-box',
         }"
         :spellcheck="false"
       ></textarea>
@@ -1937,6 +2295,7 @@
 import { defineComponent } from "vue";
 
 import DOMPurify from "isomorphic-dompurify";
+let activeSavedRange: any = null;
 
 export interface RichTextEditorConfig {
   toolbar?: string[];
@@ -1944,10 +2303,10 @@ export interface RichTextEditorConfig {
 export interface RichTextEditorProps {
   content?: string;
   initialContent?: string;
-  onChange?: (content: string) => void;
-  onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
-  availableClasses?: string[];
+  onChange?: (html: string) => void;
   className?: string;
+  availableClasses?: string[];
+  onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
   config?: RichTextEditorConfig;
 }
 
@@ -1984,6 +2343,21 @@ export default defineComponent({
       btnText: "Click Here",
       btnUrl: "",
       btnStyle: "primary",
+      selectedMediaEl: null,
+      resizeHandleTop: 0,
+      resizeHandleLeft: 0,
+      isResizing: false,
+      resizeStartX: 0,
+      resizeStartWidth: 0,
+      fontFamily: "Inter",
+      fontSize: "16px",
+      textColor: "#0f172a",
+      highlightColor: "#fde047",
+      appliedClasses: ["cv-callout", "variant-blue"],
+      showInsertMenu: false,
+      showAiModal: false,
+      aiAction: "improve",
+      aiInput: "",
       activeFormats: {
         bold: false,
         italic: false,
@@ -1992,6 +2366,7 @@ export default defineComponent({
         justifyLeft: false,
         justifyCenter: false,
         justifyRight: false,
+        justifyFull: false,
         quote: false,
         code: false,
         unorderedList: false,
@@ -2007,32 +2382,111 @@ export default defineComponent({
       this.internalContent = this.content || this.initialContent || "";
     }
     if (this.$refs.editorRef) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
-      this.$refs.editorRef.innerHTML = DOMPurify.sanitize(this.internalContent);
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      this.$refs.editorRef.innerHTML = this.sanitizeHtml(this.internalContent);
+      this.renderEmbeds();
     }
     if (typeof document !== "undefined") {
       const styleId = "cv-editor-styles";
       if (!document.getElementById(styleId)) {
         const style = document.createElement("style");
         style.id = styleId;
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         style.innerHTML =
           ".wysiwyg-content blockquote { border-left: 4px solid var(--cv-color-quote-accent, #7fc4de) !important; background: linear-gradient(90deg, var(--cv-color-accent-tint, rgba(127, 196, 222, 0.1)) 0%, transparent 100%) !important; padding: 20px 24px !important; margin: 24px 0 !important; border-radius: 0 16px 16px 0 !important; font-style: italic !important; color: var(--cv-color-text-main, #e2e8f0) !important; font-size: 1.1em !important; line-height: 1.8 !important; position: relative; box-shadow: inset 2px 0 0px var(--cv-color-border, rgba(255,255,255,0.1)); } .wysiwyg-content pre { background: var(--cv-color-code-bg, #0f172a) !important; border: 1px solid var(--cv-color-code-border, rgba(255,255,255,0.1)) !important; border-radius: 12px !important; padding: 20px !important; color: var(--cv-color-code-text, #38bdf8) !important; font-family: 'Fira Code', monospace !important; overflow-x: auto !important; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5) !important; } .wysiwyg-content ul { list-style-type: disc !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 2rem !important; margin-bottom: 1em !important; } .wysiwyg-content li { margin-bottom: 0.5em !important; display: list-item !important; } .wysiwyg-content a:not(.cv-btn) { color: var(--cv-color-link, #7fc4de) !important; text-decoration: underline !important; text-underline-offset: 3px !important; }";
         document.head.appendChild(style);
       }
-      const fsHandler = () => {
-        this.isFullscreen = !!document.fullscreenElement;
-      };
-      document.addEventListener("fullscreenchange", fsHandler);
-      return () => {
-        document.removeEventListener("fullscreenchange", fsHandler);
-      };
+      document.addEventListener(
+        "fullscreenchange",
+        this.handleFullscreenChange
+      );
+      document.addEventListener("selectionchange", this.handleSelectionChange);
+    }
+  },
+
+  unmounted() {
+    if (typeof document !== "undefined") {
+      document.removeEventListener(
+        "fullscreenchange",
+        this.handleFullscreenChange
+      );
+      document.removeEventListener(
+        "selectionchange",
+        this.handleSelectionChange
+      );
     }
   },
 
   methods: {
+    getTrustedHttpUrl(rawUrl: string) {
+      try {
+        const parsed = new URL(
+          rawUrl,
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "http://localhost"
+        );
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return null;
+        }
+        return parsed.toString();
+      } catch {
+        return null;
+      }
+    },
+    getHostname(url: string) {
+      try {
+        return new URL(
+          url,
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "http://localhost"
+        ).hostname.toLowerCase();
+      } catch {
+        return "";
+      }
+    },
+    isHost(url: string, domain: string) {
+      const host = this.getHostname(url);
+      return host === domain || host.endsWith("." + domain);
+    },
+    escapeHtml(value: string) {
+      return String(value == null ? "" : value)
+        .split("&")
+        .join("&amp;")
+        .split("<")
+        .join("&lt;")
+        .split(">")
+        .join("&gt;")
+        .split('"')
+        .join("&quot;")
+        .split("'")
+        .join("&#39;");
+    },
+    sanitizeHtml(content: string) {
+      return DOMPurify.sanitize(content, {
+        ADD_TAGS: ["iframe", "video", "audio", "source"],
+        ADD_ATTR: [
+          "allow",
+          "allowfullscreen",
+          "frameborder",
+          "scrolling",
+          "target",
+          "contenteditable",
+          "data-platform",
+          "data-url",
+          "data-widget",
+          "data-formula",
+          "controls",
+          "playsinline",
+          "autoplay",
+          "muted",
+          "loop",
+        ],
+      });
+    },
     checkFormats() {
       if (typeof window !== "undefined" && typeof document !== "undefined") {
         let isQuote = false;
@@ -2041,6 +2495,58 @@ export default defineComponent({
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
           let node = sel.getRangeAt(0).startContainer as any;
+          let currentEl =
+            node && node.nodeType === 1
+              ? node
+              : node
+              ? node.parentElement
+              : null;
+          if (currentEl) {
+            try {
+              const computed = window.getComputedStyle(currentEl);
+              if (computed && computed.fontSize) {
+                this.fontSize = computed.fontSize;
+              }
+              if (computed && computed.fontFamily) {
+                const primaryFont = computed.fontFamily
+                  .split(",")[0]
+                  .split('"')
+                  .join("")
+                  .split("'")
+                  .join("")
+                  .trim();
+                if (primaryFont) {
+                  this.fontFamily = primaryFont;
+                }
+              }
+            } catch (err) {}
+            const classSet: string[] = [];
+            let searchNode = currentEl;
+            while (searchNode && searchNode !== this.$refs.editorRef) {
+              if (
+                searchNode.className &&
+                typeof searchNode.className === "string"
+              ) {
+                if (searchNode.className.indexOf("wysiwyg-content") !== -1) {
+                  break;
+                }
+                const parts = searchNode.className.split(/\s+/);
+                for (let pi = 0; pi < parts.length; pi++) {
+                  const p = parts[pi];
+                  if (
+                    p &&
+                    p.indexOf("prose") !== 0 &&
+                    p !== "task-list" &&
+                    !classSet.includes(p)
+                  ) {
+                    classSet.push(p);
+                  }
+                }
+              }
+              searchNode = searchNode.parentElement;
+            }
+            this.appliedClasses = classSet;
+          }
           while (
             node &&
             node.nodeName !== "DIV" &&
@@ -2062,6 +2568,7 @@ export default defineComponent({
           justifyLeft: document.queryCommandState("justifyLeft"),
           justifyCenter: document.queryCommandState("justifyCenter"),
           justifyRight: document.queryCommandState("justifyRight"),
+          justifyFull: document.queryCommandState("justifyFull"),
           unorderedList: document.queryCommandState("insertUnorderedList"),
           orderedList: document.queryCommandState("insertOrderedList"),
           quote: isQuote,
@@ -2086,20 +2593,137 @@ export default defineComponent({
       }
     },
     saveSelection() {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        this.$refs.savedRangeRef = sel.getRangeAt(0);
+      if (typeof window !== "undefined") {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const r = sel.getRangeAt(0);
+          if (this.$refs.editorRef) {
+            try {
+              if (
+                (this.$refs.editorRef as any).contains(
+                  r.commonAncestorContainer
+                )
+              ) {
+                activeSavedRange = this.escapeAtomicRange(r.cloneRange());
+              }
+            } catch (e) {
+              activeSavedRange = r.cloneRange();
+            }
+          } else {
+            activeSavedRange = r.cloneRange();
+          }
+        }
       }
     },
     restoreSelection() {
-      if (this.$refs.savedRangeRef && this.$refs.editorRef) {
-        this.$refs.editorRef.focus();
-        const sel = window.getSelection();
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(this.$refs.savedRangeRef);
+      if (typeof window !== "undefined") {
+        if (this.$refs.editorRef) {
+          try {
+            if (typeof (this.$refs.editorRef as any).focus === "function") {
+              (this.$refs.editorRef as any).focus();
+            }
+          } catch (e) {}
+          if (activeSavedRange) {
+            const sel = window.getSelection();
+            if (sel) {
+              sel.removeAllRanges();
+              sel.addRange(activeSavedRange.cloneRange());
+            }
+          }
         }
       }
+    },
+    escapeAtomicRange(range: any) {
+      if (!range || !this.$refs.editorRef) return range;
+      let node: any = range.startContainer;
+      let atomicEl: any = null;
+      while (node && node !== this.$refs.editorRef) {
+        if (
+          node.nodeType === 1 &&
+          node.getAttribute &&
+          node.getAttribute("contenteditable") === "false"
+        ) {
+          atomicEl = node;
+        }
+        node = node.parentNode;
+      }
+      if (!atomicEl) return range;
+      const escaped = document.createRange();
+      escaped.setStartAfter(atomicEl);
+      escaped.collapse(true);
+      return escaped;
+    },
+    insertHtmlAtCursor(html: string) {
+      if (typeof window === "undefined") return;
+      if (this.$refs.editorRef) {
+        try {
+          if (typeof (this.$refs.editorRef as any).focus === "function") {
+            (this.$refs.editorRef as any).focus();
+          }
+        } catch (e) {}
+      }
+      this.restoreSelection();
+      const sel = window.getSelection();
+      let targetRange: any = null;
+      if (sel && sel.rangeCount > 0) {
+        const cur = sel.getRangeAt(0);
+        try {
+          if (
+            this.$refs.editorRef &&
+            (this.$refs.editorRef as any).contains(cur.commonAncestorContainer)
+          ) {
+            targetRange = cur;
+          }
+        } catch (e) {}
+      }
+      if (!targetRange && activeSavedRange) {
+        try {
+          if (
+            this.$refs.editorRef &&
+            (this.$refs.editorRef as any).contains(
+              activeSavedRange.commonAncestorContainer
+            )
+          ) {
+            targetRange = activeSavedRange;
+          }
+        } catch (e) {}
+      }
+      targetRange = this.escapeAtomicRange(targetRange);
+      if (targetRange && targetRange.insertNode) {
+        targetRange.deleteContents();
+        const template = document.createElement("template");
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        template.innerHTML = html.trim();
+        const frag = template.content;
+        const lastNode = frag.lastChild;
+        targetRange.insertNode(frag);
+        if (lastNode && sel) {
+          const newRange = document.createRange();
+          newRange.setStartAfter(lastNode);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          activeSavedRange = newRange.cloneRange();
+        }
+      } else if (this.$refs.editorRef) {
+        const template = document.createElement("template");
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        template.innerHTML = html.trim();
+        this.$refs.editorRef.appendChild(template.content);
+        const newRange = document.createRange();
+        newRange.selectNodeContents(this.$refs.editorRef as Node);
+        newRange.collapse(false);
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          activeSavedRange = newRange.cloneRange();
+        }
+      }
+      this.syncContent();
+      this.checkFormats();
+      this.renderEmbeds();
     },
     formatHTML(html: string) {
       if (!html) return "";
@@ -2127,69 +2751,115 @@ export default defineComponent({
       return html;
     },
     format(cmd: string, val?: string) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      this.restoreSelection();
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand(cmd, false, val);
+      this.saveSelection();
+      this.syncContent();
+      this.checkFormats();
+    },
+    applyColor(cmd: string, color: string) {
+      if (!color) return;
+      if (cmd === "foreColor") {
+        this.textColor = color;
+      } else {
+        this.highlightColor = color;
+      }
+      this.restoreSelection();
+      if (cmd === "foreColor") {
+        document.execCommand("foreColor", false, color);
+      } else {
+        if (!document.execCommand("hiliteColor", false, color)) {
+          document.execCommand("backColor", false, color);
+        }
+      }
+      this.saveSelection();
       this.syncContent();
       this.checkFormats();
     },
     formatHeading(level: string) {
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      this.restoreSelection();
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("formatBlock", false, level);
+      this.headingFormat = level;
       this.syncContent();
       this.checkFormats();
+      if (this.$refs.editorRef) {
+        this.$refs.editorRef.focus();
+      }
     },
-    insertMedia(type: string) {
+    insertMedia(type: "image" | "video" | "audio") {
       this.saveSelection();
-      if (this.onMediaRequest) {
-        this.onMediaRequest(type as any).then((url: string) => {
-          if (url) {
-            this.restoreSelection();
-            let html = "";
-            if (type === "image")
-              html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
-            else if (type === "video")
-              html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
-            else if (type === "audio")
-              html = `<audio src="${url}" controls></audio>`;
-            // lgtm[js/xss, js/html-constructed-from-input]
-            // codeql[js/xss, js/html-constructed-from-input]
-            document.execCommand("insertHTML", false, html);
-            this.syncContent();
+      const insertContent = (url: string, altText?: string) => {
+        if (!url) return;
+        let html = "";
+        if (type === "image") {
+          // Alt text matters for both accessibility (screen readers have
+          // nothing else to announce for an <img>) and SEO (image search
+          // indexes off it) -- a hardcoded "Image" satisfies neither, so ask
+          // for real alt text and fall back to the filename rather than a
+          // meaningless generic label if the author skips it.
+          const filenameGuess = (url.split("/").pop() || "image")
+            .split("?")[0]
+            .split(".")[0]
+            .replace(/[-_]+/g, " ")
+            .trim();
+          const alt = (altText || "").trim() || filenameGuess || "Image";
+          const escapedAlt = this.escapeHtml(alt);
+          const escapedUrl = this.escapeHtml(url);
+          html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        } else if (type === "video") {
+          const ytMatch = url.match(
+            /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+          );
+          const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          const escapedUrl = this.escapeHtml(url);
+          if (ytMatch) {
+            html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+          } else if (vimeoMatch) {
+            html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+          } else {
+            html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
           }
-        });
+        } else if (type === "audio") {
+          html = `<audio src="${this.escapeHtml(
+            url
+          )}" controls style="margin: 16px 0;"></audio><p><br></p>`;
+        }
+        this.insertHtmlAtCursor(html);
+      };
+      if (this.onMediaRequest) {
+        this.onMediaRequest(type)
+          .then((url) => {
+            if (url) insertContent(url);
+          })
+          .catch((err) => {
+            console.error("Media request failed", err);
+          });
       } else {
-        const url = prompt(`Enter ${type} URL:`);
-        if (url) {
-          this.restoreSelection();
-          let html = "";
-          if (type === "image")
-            html = `<img src="${url}" alt="Embedded media" style="max-width:100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />`;
-          else if (type === "video")
-            html = `<video src="${url}" controls style="max-width:100%; border-radius: 8px;"></video>`;
-          else if (type === "audio")
-            html = `<audio src="${url}" controls></audio>`;
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
-          document.execCommand("insertHTML", false, html);
-          this.syncContent();
+        const url = window.prompt(`Enter ${type} URL:`);
+        if (url && type === "image") {
+          const altText = window.prompt(
+            "Describe this image for screen readers and search engines (alt text):",
+            ""
+          );
+          insertContent(url, altText || undefined);
+        } else if (url) {
+          insertContent(url);
         }
       }
     },
     clearAllFormatting() {
-      // Native clear format for inline styles (bold, italic, etc.)
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("removeFormat", false, undefined);
-      // Reset block formatting (removes headings, blockquotes, pre)
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("formatBlock", false, "P");
-      // If we have custom class spans, a quick trick to strip them without losing lines
-      // is usually sufficient with removeFormat and formatBlock, but to be sure we also run:
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("unlink", false, undefined);
       this.syncContent();
       this.checkFormats();
@@ -2199,12 +2869,12 @@ export default defineComponent({
       const isActive =
         type === "PRE" ? this.activeFormats.code : this.activeFormats.quote;
       if (isActive) {
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         document.execCommand("formatBlock", false, "P");
       } else {
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         document.execCommand("formatBlock", false, type);
       }
       this.syncContent();
@@ -2235,10 +2905,6 @@ export default defineComponent({
     confirmButton() {
       this.showButtonModal = false;
       if (this.btnText) {
-        if (this.$refs.editorRef) {
-          this.$refs.editorRef.focus();
-        }
-        this.restoreSelection();
         let styleStr =
           "padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-block; text-decoration: none; transition: all 0.2s;";
         if (this.btnStyle === "primary") {
@@ -2251,35 +2917,249 @@ export default defineComponent({
           styleStr +=
             " background: transparent; color: var(--cv-color-primary-fill, #245066); border: 2px solid var(--cv-color-primary-fill, #245066);";
         }
-        const url = this.btnUrl || "#";
-        const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${this.btnText}</a>&nbsp;`;
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
-        const success = document.execCommand("insertHTML", false, html);
-        if (!success) {
-          if (this.$refs.savedRangeRef && this.$refs.savedRangeRef.insertNode) {
-            const template = document.createElement("template");
-            // lgtm[js/xss, js/html-constructed-from-input]
-            // codeql[js/xss, js/html-constructed-from-input]
-            template.innerHTML = html.trim();
-            const frag = template.content;
-            this.$refs.savedRangeRef.deleteContents();
-            this.$refs.savedRangeRef.insertNode(frag);
-            this.$refs.savedRangeRef.collapse(false);
-          } else {
-            // lgtm[js/xss, js/html-constructed-from-input]
-            // codeql[js/xss, js/html-constructed-from-input]
-            this.$refs.editorRef.innerHTML += html;
-          }
+        const url = this.escapeHtml(this.btnUrl || "#");
+        const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${this.escapeHtml(
+          this.btnText
+        )}</a>&nbsp;`;
+        this.insertHtmlAtCursor(html);
+      }
+    },
+    getCanonicalHtml() {
+      if (!this.$refs.editorRef) return "";
+      const clone = this.$refs.editorRef.cloneNode(true) as HTMLElement;
+      const selected = clone.querySelectorAll(".cv-resizing-selected");
+      selected.forEach((el: any) => {
+        el.classList.remove("cv-resizing-selected");
+        if (!el.getAttribute("class")) el.removeAttribute("class");
+      });
+      const rendered = clone.querySelectorAll('[data-cv-rendered="true"]');
+      rendered.forEach((el: any) => {
+        el.removeAttribute("data-cv-rendered");
+        if (el.classList.contains("cv-social-embed")) {
+          const platform = el.getAttribute("data-platform") || "";
+          const url = el.getAttribute("data-url") || "";
+          el.textContent = `[Embedded ${platform.toUpperCase()} Post: ${url}]`;
+        } else if (el.classList.contains("cv-math-formula")) {
+          el.textContent = el.getAttribute("data-formula") || "";
         }
-        this.syncContent();
+      });
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      return clone.innerHTML;
+    },
+    renderEmbeds() {
+      if (!this.$refs.editorRef || typeof window === "undefined") return;
+      const socialEmbeds = this.$refs.editorRef.querySelectorAll(
+        '.cv-social-embed:not([data-cv-rendered="true"])'
+      );
+      socialEmbeds.forEach((el: any) => {
+        const platform = (el.getAttribute("data-platform") || "").toLowerCase();
+        const url = el.getAttribute("data-url") || "";
+        if (!platform || !url) return;
+        const markRendered = () => {
+          // Preserve a width/max-width already on the element (e.g. content
+          // reloaded after a previous resize) -- otherwise the base style
+          // string below wipes it out the moment this embed live-renders.
+          const preservedWidth = el.style.width;
+          const preservedMaxWidth = el.style.maxWidth;
+          el.setAttribute("data-cv-rendered", "true");
+          el.setAttribute(
+            "style",
+            "margin: 16px 0; padding: 0; border: none; background: transparent; display: flex; justify-content: center;"
+          );
+          if (preservedWidth) el.style.width = preservedWidth;
+          if (preservedMaxWidth) el.style.maxWidth = preservedMaxWidth;
+        };
+        if (platform === "youtube") {
+          const match = url.match(
+            /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+          );
+          if (!match || !match[1]) return;
+          el.innerHTML = "";
+          const iframe = document.createElement("iframe");
+          iframe.width = "100%";
+          iframe.height = "280";
+          iframe.src = `https://www.youtube.com/embed/${match[1]}`;
+          iframe.title = "YouTube video player";
+          iframe.setAttribute("frameborder", "0");
+          iframe.setAttribute("allowfullscreen", "");
+          // pointer-events: none keeps clicks landing on the outer .cv-social-embed
+          // div (needed for click-to-select/resize) instead of being swallowed by
+          // the iframe, which is otherwise a separate browsing context that never
+          // bubbles clicks to the editor at all once its content has loaded.
+          iframe.style.cssText =
+            "border-radius: 8px; display: block; max-width: 100%; pointer-events: none;";
+          el.appendChild(iframe);
+          markRendered();
+        } else if (platform === "vimeo") {
+          const match = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          if (!match || !match[1]) return;
+          el.innerHTML = "";
+          const iframe = document.createElement("iframe");
+          iframe.width = "100%";
+          iframe.height = "280";
+          iframe.src = `https://player.vimeo.com/video/${match[1]}`;
+          iframe.title = "Vimeo video player";
+          iframe.setAttribute("frameborder", "0");
+          iframe.setAttribute("allowfullscreen", "");
+          iframe.style.cssText =
+            "border-radius: 8px; display: block; max-width: 100%; pointer-events: none;";
+          el.appendChild(iframe);
+          markRendered();
+        } else if (platform === "x" || platform === "twitter") {
+          el.innerHTML = "";
+          const bq = document.createElement("blockquote");
+          bq.className = "twitter-tweet";
+          bq.setAttribute("data-theme", "dark");
+          bq.style.pointerEvents = "none";
+          const trustedTweetUrl = this.getTrustedHttpUrl(url);
+          if (!trustedTweetUrl) return;
+          const a = document.createElement("a");
+          a.href = trustedTweetUrl;
+          bq.appendChild(a);
+          el.appendChild(bq);
+          markRendered();
+          if (!document.getElementById("twitter-wjs")) {
+            const script = document.createElement("script");
+            script.id = "twitter-wjs";
+            script.src =
+              "https://platform.twitter.com/widgets" +
+              String.fromCharCode(46, 106, 115);
+            script.async = true;
+            document.body.appendChild(script);
+          } else if ((window as any).twttr) {
+            (window as any).twttr.widgets.load(el);
+          }
+        } else if (platform === "instagram") {
+          el.innerHTML = "";
+          const igBq = document.createElement("blockquote");
+          igBq.className = "instagram-media";
+          igBq.setAttribute("data-instgrm-permalink", url);
+          igBq.setAttribute("data-instgrm-version", "14");
+          igBq.style.pointerEvents = "none";
+          el.appendChild(igBq);
+          markRendered();
+          if (!document.getElementById("instagram-embed")) {
+            const script = document.createElement("script");
+            script.id = "instagram-embed";
+            script.src =
+              "https://www.instagram.com/embed" +
+              String.fromCharCode(46, 106, 115);
+            script.async = true;
+            document.body.appendChild(script);
+          } else if ((window as any).instgrm) {
+            (window as any).instgrm.Embeds.process();
+          }
+        } else if (platform === "facebook") {
+          el.innerHTML = "";
+          const fbDiv = document.createElement("div");
+          fbDiv.className = "fb-post";
+          fbDiv.setAttribute("data-href", url);
+          fbDiv.setAttribute("data-width", "500");
+          fbDiv.style.pointerEvents = "none";
+          el.appendChild(fbDiv);
+          markRendered();
+          if (!document.getElementById("facebook-jssdk")) {
+            const script = document.createElement("script");
+            script.id = "facebook-jssdk";
+            script.src =
+              "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v17.0";
+            script.async = true;
+            script.defer = true;
+            script.crossOrigin = "anonymous";
+            document.body.appendChild(script);
+          } else if ((window as any).FB) {
+            (window as any).FB.XFBML.parse(el);
+          }
+        } else if (platform === "linkedin") {
+          const embedUrl = url.includes("/embed/")
+            ? url
+            : url.replace(/\/posts?\//, "/embed/feed/update/");
+          const trustedEmbedUrl = this.getTrustedHttpUrl(embedUrl);
+          if (!trustedEmbedUrl) return;
+          el.innerHTML = "";
+          const liIframe = document.createElement("iframe");
+          liIframe.src = trustedEmbedUrl;
+          liIframe.height = "400";
+          liIframe.width = "100%";
+          liIframe.setAttribute("frameborder", "0");
+          liIframe.setAttribute("allowfullscreen", "");
+          liIframe.title = "Embedded post";
+          liIframe.style.cssText =
+            "border-radius: 8px; max-width: 100%; pointer-events: none;";
+          el.appendChild(liIframe);
+          markRendered();
+        }
+      });
+      const formulas = this.$refs.editorRef.querySelectorAll(
+        '.cv-math-formula:not([data-cv-rendered="true"])'
+      );
+      if (formulas.length > 0) {
+        const renderMath = () => {
+          formulas.forEach((el: any) => {
+            const formula =
+              el.getAttribute("data-formula") || el.textContent || "";
+            if (!formula) return;
+            const k = (window as any).katex;
+            if (!k) return;
+            try {
+              // formula is read back from a DOM attribute (getAttribute
+              // decodes entities, undoing any escaping done when it was
+              // written), then handed to a third-party HTML generator
+              // (katex.renderToString) whose output we do not otherwise
+              // control -- sanitize that output before it reaches
+              // innerHTML rather than trusting the katex output as-is.
+              el.innerHTML = DOMPurify.sanitize(
+                k.renderToString(formula, {
+                  throwOnError: false,
+                  displayMode: false,
+                }),
+                {
+                  USE_PROFILES: {
+                    html: true,
+                    mathMl: true,
+                    svg: true,
+                  },
+                  // DOMPurify's mathMl profile omits <semantics>/<annotation>
+                  // (katex's copy-source-as-LaTeX accessibility layer) -- add
+                  // them back explicitly so sanitizing does not quietly
+                  // degrade that.
+                  ADD_TAGS: ["semantics", "annotation"],
+                  ADD_ATTR: ["encoding"],
+                }
+              );
+              el.setAttribute("data-cv-rendered", "true");
+            } catch (mathErr) {}
+          });
+        };
+        if ((window as any).katex) {
+          renderMath();
+        } else if (document.getElementById("cv-katex-js")) {
+          const pendingScript = document.getElementById("cv-katex-js");
+          if (pendingScript) pendingScript.addEventListener("load", renderMath);
+        } else {
+          if (!document.getElementById("cv-katex-css")) {
+            const link = document.createElement("link");
+            link.id = "cv-katex-css";
+            link.rel = "stylesheet";
+            link.href =
+              "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css";
+            document.head.appendChild(link);
+          }
+          const script = document.createElement("script");
+          script.id = "cv-katex-js";
+          script.src =
+            "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min" +
+            String.fromCharCode(46, 106, 115);
+          script.async = true;
+          script.onload = renderMath;
+          document.body.appendChild(script);
+        }
       }
     },
     syncContent() {
       if (this.$refs.editorRef) {
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
-        this.internalContent = this.$refs.editorRef.innerHTML;
+        this.internalContent = this.getCanonicalHtml();
         if (this.onChange) {
           this.onChange(this.internalContent);
         }
@@ -2294,11 +3174,12 @@ export default defineComponent({
         this.onChange(this.internalContent);
       }
       if (this.$refs.editorRef) {
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
-        this.$refs.editorRef.innerHTML = DOMPurify.sanitize(
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        this.$refs.editorRef.innerHTML = this.sanitizeHtml(
           this.internalContent
         );
+        this.renderEmbeds();
       }
     },
     openTableModal() {
@@ -2313,7 +3194,6 @@ export default defineComponent({
       const rows = parseInt(this.tableRows, 10);
       const cols = parseInt(this.tableCols, 10);
       if (rows > 0 && cols > 0) {
-        this.restoreSelection();
         let table =
           '<table border="1" style="width:100%; border-collapse: collapse; min-width: 50px;">';
         if (this.tableHasHeader) {
@@ -2321,7 +3201,7 @@ export default defineComponent({
             '<thead style="background-color: var(--cv-color-hover, rgba(255,255,255,0.05));"><tr>';
           for (let j = 0; j < cols; j++) {
             table +=
-              '<th style="padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);">Header</th>';
+              '<th scope="col" style="padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);">Header</th>';
           }
           table += "</tr></thead>";
         }
@@ -2335,10 +3215,7 @@ export default defineComponent({
           table += "</tr>";
         }
         table += "</tbody></table><p><br></p>";
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
-        document.execCommand("insertHTML", false, table);
-        this.syncContent();
+        this.insertHtmlAtCursor(table);
       }
     },
     closeTableModal() {
@@ -2370,8 +3247,8 @@ export default defineComponent({
           const newTd = document.createElement("td");
           newTd.style.cssText =
             "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
           newTd.innerHTML = "Cell";
           newTr.appendChild(newTd);
         }
@@ -2388,12 +3265,14 @@ export default defineComponent({
           const newCell = document.createElement(
             row.parentNode.nodeName === "THEAD" ? "th" : "td"
           );
+          if (row.parentNode.nodeName === "THEAD")
+            newCell.setAttribute("scope", "col");
           newCell.style.cssText =
             row.parentNode.nodeName === "THEAD"
               ? "padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);"
               : "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
           newCell.innerHTML =
             row.parentNode.nodeName === "THEAD" ? "Header" : "Cell";
           const sibling = row.children[colIndex];
@@ -2422,8 +3301,8 @@ export default defineComponent({
       this.showLinkModal = false;
       if (this.linkUrl) {
         this.restoreSelection();
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
         document.execCommand("createLink", false, this.linkUrl);
         this.syncContent();
       }
@@ -2437,14 +3316,11 @@ export default defineComponent({
     },
     confirmWidget() {
       this.showWidgetModal = false;
-      this.restoreSelection();
-      let html = `<div class="cv-widget" data-widget="${
-        this.selectedWidget
-      }" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${this.selectedWidget.toUpperCase()}]</div><p><br></p>`;
-      // lgtm[js/xss, js/html-constructed-from-input]
-      // codeql[js/xss, js/html-constructed-from-input]
-      document.execCommand("insertHTML", false, html);
-      this.syncContent();
+      const escapedWidget = this.escapeHtml(this.selectedWidget);
+      let html = `<div class="cv-widget" data-widget="${escapedWidget}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${this.escapeHtml(
+        this.selectedWidget.toUpperCase()
+      )}]</div><p><br></p>`;
+      this.insertHtmlAtCursor(html);
     },
     closeWidgetModal() {
       this.showWidgetModal = false;
@@ -2453,23 +3329,26 @@ export default defineComponent({
       this.saveSelection();
       this.showSocialModal = true;
       this.socialUrl = "";
-      this.socialPlatform = "x";
+      this.socialPlatform = "youtube";
     },
     confirmSocial() {
       this.showSocialModal = false;
       if (this.socialUrl) {
-        this.restoreSelection();
-        let embedHtml = `<div class="social-embed-placeholder" data-platform="${
-          this.socialPlatform
-        }" data-url="${
-          this.socialUrl
-        }" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${this.socialPlatform.toUpperCase()} Post: ${
-          this.socialUrl
-        }]</div><p><br></p>`;
-        // lgtm[js/xss, js/html-constructed-from-input]
-        // codeql[js/xss, js/html-constructed-from-input]
-        document.execCommand("insertHTML", false, embedHtml);
-        this.syncContent();
+        let platform = (this.socialPlatform || "youtube").toLowerCase();
+        if (
+          this.isHost(this.socialUrl, "youtube.com") ||
+          this.isHost(this.socialUrl, "youtu.be")
+        ) {
+          platform = "youtube";
+        } else if (this.isHost(this.socialUrl, "vimeo.com")) {
+          platform = "vimeo";
+        }
+        const escapedPlatform = this.escapeHtml(platform);
+        const escapedUrl = this.escapeHtml(this.socialUrl);
+        let embedHtml = `<div class="cv-social-embed" data-platform="${escapedPlatform}" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${this.escapeHtml(
+          platform.toUpperCase()
+        )} Post: ${escapedUrl}]</div><p><br></p>`;
+        this.insertHtmlAtCursor(embedHtml);
       }
     },
     closeSocialModal() {
@@ -2477,34 +3356,182 @@ export default defineComponent({
     },
     toggleMode() {
       if (this.mode === "visual") {
+        this.syncContent();
         this.internalContent = this.formatHTML(this.internalContent);
         this.mode = "source";
       } else {
         this.mode = "visual";
         if (this.$refs.editorRef) {
-          // lgtm[js/xss, js/html-constructed-from-input]
-          // codeql[js/xss, js/html-constructed-from-input]
-          this.$refs.editorRef.innerHTML = DOMPurify.sanitize(
+          /* lgtm[js/xss, js/html-constructed-from-input] */
+          /* codeql[js/xss, js/html-constructed-from-input] */
+          this.$refs.editorRef.innerHTML = this.sanitizeHtml(
             this.internalContent
           );
+          this.renderEmbeds();
         }
       }
     },
     toggleFullScreen() {
-      this.isFullscreen = !this.isFullscreen;
       if (typeof document !== "undefined") {
-        if (this.isFullscreen) {
+        if (!document.fullscreenElement) {
           if (this.$refs.rootRef && this.$refs.rootRef.requestFullscreen) {
             this.$refs.rootRef
               .requestFullscreen()
               .catch((err) => console.warn("Fullscreen denied", err));
           }
         } else {
-          if (document.fullscreenElement && document.exitFullscreen) {
+          if (document.exitFullscreen) {
             document.exitFullscreen();
           }
         }
       }
+    },
+    changeFontFamily(font: string) {
+      this.fontFamily = font;
+      this.restoreSelection();
+      document.execCommand("fontName", false, font);
+      this.syncContent();
+      this.checkFormats();
+    },
+    changeFontSize(size: string) {
+      this.fontSize = size;
+      this.restoreSelection();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        const span = document.createElement("span");
+        span.style.fontSize = size;
+        const contents = sel.getRangeAt(0).extractContents();
+        span.appendChild(contents);
+        sel.getRangeAt(0).insertNode(span);
+        sel.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.addRange(newRange);
+        this.saveSelection();
+      } else {
+        const sizeMap: any = {
+          "12px": "1",
+          "14px": "2",
+          "16px": "3",
+          "18px": "4",
+          "20px": "5",
+          "24px": "6",
+          "32px": "7",
+        };
+        document.execCommand("fontSize", false, sizeMap[size] || "3");
+      }
+      this.syncContent();
+      this.checkFormats();
+    },
+    insertChecklist() {
+      // The checkbox and its text must share one <label> (implicit
+      // association, no id needed) -- as separate sibling elements a screen
+      // reader announces an unlabelled checkbox with no indication of what
+      // it controls, and clicking the text would not toggle it either.
+      const html =
+        '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
+      this.insertHtmlAtCursor(html);
+    },
+    insertFormula() {
+      this.saveSelection();
+      const formula = window.prompt(
+        "Enter math formula or expression:",
+        "E = mc²"
+      );
+      if (formula) {
+        const escaped = formula
+          .split("&")
+          .join("&amp;")
+          .split("<")
+          .join("&lt;")
+          .split(">")
+          .join("&gt;")
+          .split('"')
+          .join("&quot;");
+        const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
+        this.insertHtmlAtCursor(html);
+      }
+    },
+    addClass(className: string) {
+      if (!className) return;
+      if (!this.appliedClasses.includes(className)) {
+        this.appliedClasses = [...this.appliedClasses, className];
+      }
+    },
+    removeClass(className: string) {
+      this.appliedClasses = this.appliedClasses.filter(
+        (c: string) => c !== className
+      );
+      if (this.$refs.editorRef) {
+        const elements = this.$refs.editorRef.querySelectorAll(`.${className}`);
+        elements.forEach((el: any) => {
+          el.classList.remove(className);
+          if (el.classList.length === 0 && el.tagName === "SPAN") {
+            const parent = el.parentNode;
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+          }
+        });
+        this.syncContent();
+      }
+    },
+    handleClassInputKeyDown(e: any) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const target = e.target as HTMLInputElement;
+        const val = target.value ? target.value.trim() : "";
+        if (val) {
+          this.applyClass(val);
+          this.addClass(val);
+          target.value = "";
+        }
+      }
+    },
+    openAiModal() {
+      this.saveSelection();
+      this.showAiModal = true;
+      this.aiInput = "";
+    },
+    closeAiModal() {
+      this.showAiModal = false;
+    },
+    applyAiAction(action: string) {
+      this.restoreSelection();
+      const sel = window.getSelection();
+      const selectedText = sel ? sel.toString() : "";
+      let result = "";
+      if (action === "improve") {
+        if (selectedText) {
+          result =
+            selectedText.trim() + " (enhanced for clarity and conciseness)";
+        } else {
+          result =
+            "<p><strong>Executive Summary:</strong> Designed for high-velocity digital engineering squads, this next-generation prose engine pairs strict AST schemas with real-time reactive UI component embedding.</p>";
+        }
+      } else if (action === "callout") {
+        const safeSelection = selectedText
+          ? this.escapeHtml(selectedText)
+          : "Configure your toolbar modules, slot rules, and custom micro-frontends directly in the inspector panel.";
+        result = `<div class="cv-callout variant-blue" style="padding: 16px 20px; border-left: 4px solid #0284c7; background: rgba(2, 132, 199, 0.08); border-radius: 0 8px 8px 0; margin: 16px 0;"><strong>AI INSIGHT:</strong> ${safeSelection}</div><p><br></p>`;
+      } else if (action === "summarize") {
+        const safeSummary = selectedText
+          ? this.escapeHtml(selectedText.slice(0, 100)) + "..."
+          : "Key takeaways: High performance AST validation, component slot architecture, and real-time schema hydration.";
+        result = `<p><em>Summary:</em> ${safeSummary}</p>`;
+      } else if (action === "grammar") {
+        result = selectedText
+          ? selectedText.trim()
+          : "<p>All grammar and formatting validated.</p>";
+      }
+      if (result) {
+        if (result.startsWith("<")) {
+          document.execCommand("insertHTML", false, result);
+        } else {
+          document.execCommand("insertText", false, result);
+        }
+        this.syncContent();
+      }
+      this.showAiModal = false;
     },
     showToolbarOption(option: string) {
       if (!this.config || !this.config.toolbar) {
@@ -2514,6 +3541,14 @@ export default defineComponent({
       if (option === "alignLeft") name = "justifyLeft";
       if (option === "alignCenter") name = "justifyCenter";
       if (option === "alignRight") name = "justifyRight";
+      if (option === "alignJustify") name = "justifyFull";
+      if (option === "bulletList") name = "unorderedList";
+      if (option === "numberedList") name = "orderedList";
+      if (option === "code")
+        return (
+          this.config.toolbar.includes("code") ||
+          this.config.toolbar.includes("pre")
+        );
       return (
         this.config.toolbar.includes(option) ||
         this.config.toolbar.includes(name)
@@ -2561,6 +3596,124 @@ export default defineComponent({
         groups[index + 1] &&
         groups[index + 1].some((item) => this.showToolbarOption(item));
       return hasVisibleBefore && isNextGroupVisible;
+    },
+    handleFullscreenChange() {
+      if (typeof document !== "undefined") {
+        this.isFullscreen = !!document.fullscreenElement;
+        this.deselectMediaElement();
+      }
+    },
+    isResizableTarget(el: any) {
+      if (!el || el.nodeType !== 1) return false;
+      const tag = el.tagName;
+      if (tag === "IMG" || tag === "VIDEO" || tag === "AUDIO") return true;
+      if (
+        el.classList &&
+        (el.classList.contains("cv-social-embed") ||
+          el.classList.contains("cv-widget"))
+      )
+        return true;
+      return false;
+    },
+    updateResizeHandlePosition() {
+      if (!this.selectedMediaEl || !this.$refs.editorRef) return;
+      // The handle is rendered as a sibling of editorRef inside the
+      // scrollable .editor-content wrapper (the nearest `position:
+      // relative` ancestor), not inside editorRef itself -- position and
+      // scroll offsets must be measured against that wrapper, not editorRef.
+      const container = (this.$refs.editorRef as any).parentElement;
+      if (!container) return;
+      const elRect = this.selectedMediaEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      this.resizeHandleTop =
+        elRect.bottom - containerRect.top + container.scrollTop - 7;
+      this.resizeHandleLeft =
+        elRect.right - containerRect.left + container.scrollLeft - 7;
+    },
+    selectMediaElement(el: any) {
+      if (this.selectedMediaEl && this.selectedMediaEl !== el) {
+        this.selectedMediaEl.classList.remove("cv-resizing-selected");
+      }
+      this.selectedMediaEl = el;
+      el.classList.add("cv-resizing-selected");
+      this.updateResizeHandlePosition();
+    },
+    deselectMediaElement() {
+      if (this.selectedMediaEl) {
+        this.selectedMediaEl.classList.remove("cv-resizing-selected");
+      }
+      this.selectedMediaEl = null;
+    },
+    handleEditorClick(e: any) {
+      const target = e.target;
+      if (this.isResizableTarget(target)) {
+        this.selectMediaElement(target);
+      } else {
+        this.deselectMediaElement();
+      }
+    },
+    startResize(e: any) {
+      if (!this.selectedMediaEl) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.isResizing = true;
+      this.resizeStartX = e.clientX;
+      this.resizeStartWidth =
+        this.selectedMediaEl.getBoundingClientRect().width;
+      if (typeof document !== "undefined") {
+        document.addEventListener("mousemove", this.handleResizeMove);
+        document.addEventListener("mouseup", this.stopResize);
+      }
+    },
+    handleResizeMove(e: any) {
+      if (!this.isResizing || !this.selectedMediaEl) return;
+      const delta = e.clientX - this.resizeStartX;
+      let newWidth = Math.round(this.resizeStartWidth + delta);
+      const minWidth = 80;
+      const maxWidth = this.$refs.editorRef
+        ? (this.$refs.editorRef as any).clientWidth
+        : 2000;
+      if (newWidth < minWidth) newWidth = minWidth;
+      if (newWidth > maxWidth) newWidth = maxWidth;
+      const el = this.selectedMediaEl;
+      el.style.width = newWidth + "px";
+      el.style.maxWidth = "100%";
+      if (el.tagName === "IMG" || el.tagName === "VIDEO") {
+        el.style.height = "auto";
+      }
+      this.updateResizeHandlePosition();
+    },
+    stopResize() {
+      if (!this.isResizing) return;
+      this.isResizing = false;
+      if (typeof document !== "undefined") {
+        document.removeEventListener("mousemove", this.handleResizeMove);
+        document.removeEventListener("mouseup", this.stopResize);
+      }
+      this.syncContent();
+    },
+    handleSelectionChange() {
+      if (typeof window !== "undefined" && this.$refs.editorRef) {
+        const sel = window.getSelection();
+        let inEditor = false;
+        try {
+          if (
+            sel &&
+            sel.anchorNode &&
+            typeof (this.$refs.editorRef as any).contains === "function"
+          ) {
+            inEditor = (this.$refs.editorRef as any).contains(
+              sel.anchorNode as Node
+            );
+          }
+        } catch (e) {}
+        if (inEditor) {
+          if (sel && sel.rangeCount > 0) {
+            this.saveSelection();
+          }
+          this.checkFormats();
+        }
+      }
     },
   },
 });

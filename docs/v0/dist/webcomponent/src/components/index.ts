@@ -1,6 +1,7 @@
 export * from './AlternatingSlider.js';
 export * from './AnnouncementBar.js';
 export * from './Banner.js';
+export * from './CustomContentBlock.js';
 export * from './GridBanner.js';
 export * from './MediaGrid.js';
 export * from './RichTextEditor.js';

@@ -2,6 +2,44 @@ const { Given, When, Then } = require('@cucumber/cucumber');
 const assert = require('node:assert/strict');
 const AxeBuilder = require('@axe-core/playwright').default;
 
+// Scoped to the modal overlay first (falling back to the whole component)
+// because some confirm-button labels ("Insert") collide with a toolbar
+// button's *accessible name* even though that button's own visible text
+// is "Insert" too (its title="Insert Options" only becomes an accessible
+// *description*, not part of the name, once there is already a text
+// name) -- an unscoped role lookup resolves to both and Playwright refuses
+// the click as ambiguous.
+When('I click the button labeled {string}', async function (label) {
+  const overlay = this.subject().locator('.fixed.inset-0');
+  const scope = (await overlay.count()) > 0 ? overlay : this.subject();
+  await scope.getByRole('button', { name: label, exact: true }).click();
+});
+
+When('I click on {string}', async function (selector) {
+  await this.subject().locator(selector).first().click();
+});
+
+// Scoped to the modal overlay (".fixed.inset-0", the wrapper every
+// RichTextEditor modal renders inside) rather than the whole component,
+// because the toolbar's own Paragraph/Font selects stay mounted underneath
+// an open modal -- an unscoped "select" locator would silently pick up the
+// wrong dropdown. The {string} dropdown-name argument documents intent in
+// the Gherkin but is not itself used to disambiguate, since none of the
+// modal selects carry an aria-label distinguishing them from one another
+// (each modal only ever has one select at a time).
+When('I select {string} from the {string} dropdown', async function (optionLabel, _dropdownName) {
+  await this.subject().locator('.fixed.inset-0 select').first().selectOption({ label: optionLabel });
+});
+
+When('I fill the {string} field with {string}', async function (ariaLabel, value) {
+  await this.subject().getByLabel(ariaLabel).fill(value);
+});
+
+Then('attribute {string} on {string} should contain {string}', async function (attr, selector, expectedSubstring) {
+  const value = await this.subject().locator(selector).first().getAttribute(attr);
+  assert.ok(value && value.includes(expectedSubstring), `Expected "${attr}" on "${selector}" to contain "${expectedSubstring}", got: ${value}`);
+});
+
 Given('I mount the {string} component as {string} with:', async function (tag, pascalName, dataTable) {
   const rows = dataTable.rowsHash();
   await this.mountComponent(tag, pascalName, rows);
