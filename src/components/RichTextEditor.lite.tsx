@@ -26,6 +26,37 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     isFullscreen: false,
     internalContent: props.content || props.initialContent || '',
     
+    // Every insert* function below builds its HTML by interpolating a value
+    // that ultimately came from a prompt()/input (image or video URL, social
+    // embed URL, button label/URL) straight into a template literal that
+    // then goes through insertHtmlAtCursor -> template.innerHTML. Without
+    // escaping, typing something like "><img src=x onerror=alert(1)> into
+    // any of those fields injects it as live markup rather than literal
+    // text/attribute content -- this is the one place that has to hold the
+    // line before the string becomes HTML.
+    // A substring check like url.includes('youtube.com') matches
+    // "evil.com/?x=youtube.com" and "youtube.com.evil.com" just as readily
+    // as a real YouTube link -- parse the actual hostname instead.
+    getHostname(url: string) {
+      try {
+        return new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost').hostname.toLowerCase();
+      } catch {
+        return '';
+      }
+    },
+    isHost(url: string, domain: string) {
+      const host = state.getHostname(url);
+      return host === domain || host.endsWith('.' + domain);
+    },
+    escapeHtml(value: string) {
+      return String(value == null ? '' : value)
+        .split('&').join('&amp;')
+        .split('<').join('&lt;')
+        .split('>').join('&gt;')
+        .split('"').join('&quot;')
+        .split("'").join('&#39;');
+    },
+
     sanitizeHtml(content: string) {
       return DOMPurify.sanitize(content, {
         ADD_TAGS: ['iframe', 'video', 'audio', 'source'],
@@ -100,7 +131,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 state.fontSize = computed.fontSize;
               }
               if (computed && computed.fontFamily) {
-                const primaryFont = computed.fontFamily.split(',')[0].replace('"', '').replace("'", '').trim();
+                const primaryFont = computed.fontFamily.split(',')[0].split('"').join('').split("'").join('').trim();
                 if (primaryFont) {
                   state.fontFamily = primaryFont;
                 }
@@ -367,20 +398,22 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           // meaningless generic label if the author skips it.
           const filenameGuess = (url.split('/').pop() || 'image').split('?')[0].split('.')[0].replace(/[-_]+/g, ' ').trim();
           const alt = (altText || '').trim() || filenameGuess || 'Image';
-          const escapedAlt = alt.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;');
-          html = `<img src="${url}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+          const escapedAlt = state.escapeHtml(alt);
+          const escapedUrl = state.escapeHtml(url);
+          html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
         } else if (type === 'video') {
           const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/);
           const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          const escapedUrl = state.escapeHtml(url);
           if (ytMatch) {
-            html = `<div class="cv-social-embed" data-platform="youtube" data-url="${url}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${url}]</div><p><br></p>`;
+            html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
           } else if (vimeoMatch) {
-            html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${url}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${url}]</div><p><br></p>`;
+            html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
           } else {
-            html = `<video src="${url}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+            html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
           }
         } else if (type === 'audio') {
-          html = `<audio src="${url}" controls style="margin: 16px 0;"></audio><p><br></p>`;
+          html = `<audio src="${state.escapeHtml(url)}" controls style="margin: 16px 0;"></audio><p><br></p>`;
         }
         state.insertHtmlAtCursor(html);
       };
@@ -464,8 +497,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         } else if (state.btnStyle === 'outline') {
           styleStr += ' background: transparent; color: var(--cv-color-primary-fill, #245066); border: 2px solid var(--cv-color-primary-fill, #245066);';
         }
-        const url = state.btnUrl || '#';
-        const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${state.btnText}</a>&nbsp;`;
+        const url = state.escapeHtml(state.btnUrl || '#');
+        const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${state.escapeHtml(state.btnText)}</a>&nbsp;`;
         state.insertHtmlAtCursor(html);
       }
     },
@@ -822,7 +855,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     confirmWidget() {
       state.showWidgetModal = false;
-      let html = `<div class="cv-widget" data-widget="${state.selectedWidget}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${state.selectedWidget.toUpperCase()}]</div><p><br></p>`;
+      const escapedWidget = state.escapeHtml(state.selectedWidget);
+      let html = `<div class="cv-widget" data-widget="${escapedWidget}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${state.escapeHtml(state.selectedWidget.toUpperCase())}]</div><p><br></p>`;
       state.insertHtmlAtCursor(html);
     },
     closeWidgetModal() {
@@ -839,12 +873,14 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.showSocialModal = false;
       if (state.socialUrl) {
         let platform = (state.socialPlatform || 'youtube').toLowerCase();
-        if (state.socialUrl.includes('youtube.com') || state.socialUrl.includes('youtu.be')) {
+        if (state.isHost(state.socialUrl, 'youtube.com') || state.isHost(state.socialUrl, 'youtu.be')) {
           platform = 'youtube';
-        } else if (state.socialUrl.includes('vimeo.com')) {
+        } else if (state.isHost(state.socialUrl, 'vimeo.com')) {
           platform = 'vimeo';
         }
-        let embedHtml = `<div class="cv-social-embed" data-platform="${platform}" data-url="${state.socialUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${platform.toUpperCase()} Post: ${state.socialUrl}]</div><p><br></p>`;
+        const escapedPlatform = state.escapeHtml(platform);
+        const escapedUrl = state.escapeHtml(state.socialUrl);
+        let embedHtml = `<div class="cv-social-embed" data-platform="${escapedPlatform}" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${state.escapeHtml(platform.toUpperCase())} Post: ${escapedUrl}]</div><p><br></p>`;
         state.insertHtmlAtCursor(embedHtml);
       }
     },
@@ -980,9 +1016,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           result = '<p><strong>Executive Summary:</strong> Designed for high-velocity digital engineering squads, this next-generation prose engine pairs strict AST schemas with real-time reactive UI component embedding.</p>';
         }
       } else if (action === 'callout') {
-        result = `<div class="cv-callout variant-blue" style="padding: 16px 20px; border-left: 4px solid #0284c7; background: rgba(2, 132, 199, 0.08); border-radius: 0 8px 8px 0; margin: 16px 0;"><strong>AI INSIGHT:</strong> ${selectedText || 'Configure your toolbar modules, slot rules, and custom micro-frontends directly in the inspector panel.'}</div><p><br></p>`;
+        const safeSelection = selectedText ? state.escapeHtml(selectedText) : 'Configure your toolbar modules, slot rules, and custom micro-frontends directly in the inspector panel.';
+        result = `<div class="cv-callout variant-blue" style="padding: 16px 20px; border-left: 4px solid #0284c7; background: rgba(2, 132, 199, 0.08); border-radius: 0 8px 8px 0; margin: 16px 0;"><strong>AI INSIGHT:</strong> ${safeSelection}</div><p><br></p>`;
       } else if (action === 'summarize') {
-        result = `<p><em>Summary:</em> ${selectedText ? selectedText.slice(0, 100) + '...' : 'Key takeaways: High performance AST validation, component slot architecture, and real-time schema hydration.'}</p>`;
+        const safeSummary = selectedText ? state.escapeHtml(selectedText.slice(0, 100)) + '...' : 'Key takeaways: High performance AST validation, component slot architecture, and real-time schema hydration.';
+        result = `<p><em>Summary:</em> ${safeSummary}</p>`;
       } else if (action === 'grammar') {
         result = selectedText ? selectedText.trim() : '<p>All grammar and formatting validated.</p>';
       }

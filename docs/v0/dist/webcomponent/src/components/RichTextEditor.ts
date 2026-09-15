@@ -41,6 +41,35 @@ class RichTextEditor extends HTMLElement {
       mode: "visual",
       isFullscreen: false,
       internalContent: self.props.content || self.props.initialContent || "",
+      getHostname(url: string) {
+        try {
+          return new URL(
+            url,
+            typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost"
+          ).hostname.toLowerCase();
+        } catch {
+          return "";
+        }
+      },
+      isHost(url: string, domain: string) {
+        const host = self.state.getHostname(url);
+        return host === domain || host.endsWith("." + domain);
+      },
+      escapeHtml(value: string) {
+        return String(value == null ? "" : value)
+          .split("&")
+          .join("&amp;")
+          .split("<")
+          .join("&lt;")
+          .split(">")
+          .join("&gt;")
+          .split('"')
+          .join("&quot;")
+          .split("'")
+          .join("&#39;");
+      },
       sanitizeHtml(content: string) {
         return DOMPurify.sanitize(content, {
           ADD_TAGS: ["iframe", "video", "audio", "source"],
@@ -133,8 +162,10 @@ class RichTextEditor extends HTMLElement {
                 if (computed && computed.fontFamily) {
                   const primaryFont = computed.fontFamily
                     .split(",")[0]
-                    .replace('"', "")
-                    .replace("'", "")
+                    .split('"')
+                    .join("")
+                    .split("'")
+                    .join("")
                     .trim();
                   if (primaryFont) {
                     self.state.fontFamily = primaryFont;
@@ -455,30 +486,26 @@ class RichTextEditor extends HTMLElement {
               .replace(/[-_]+/g, " ")
               .trim();
             const alt = (altText || "").trim() || filenameGuess || "Image";
-            const escapedAlt = alt
-              .split("&")
-              .join("&amp;")
-              .split("<")
-              .join("&lt;")
-              .split(">")
-              .join("&gt;")
-              .split('"')
-              .join("&quot;");
-            html = `<img src="${url}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+            const escapedAlt = self.state.escapeHtml(alt);
+            const escapedUrl = self.state.escapeHtml(url);
+            html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
           } else if (type === "video") {
             const ytMatch = url.match(
               /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
             );
             const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+            const escapedUrl = self.state.escapeHtml(url);
             if (ytMatch) {
-              html = `<div class="cv-social-embed" data-platform="youtube" data-url="${url}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${url}]</div><p><br></p>`;
+              html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
             } else if (vimeoMatch) {
-              html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${url}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${url}]</div><p><br></p>`;
+              html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
             } else {
-              html = `<video src="${url}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+              html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
             }
           } else if (type === "audio") {
-            html = `<audio src="${url}" controls style="margin: 16px 0;"></audio><p><br></p>`;
+            html = `<audio src="${self.state.escapeHtml(
+              url
+            )}" controls style="margin: 16px 0;"></audio><p><br></p>`;
           }
           self.state.insertHtmlAtCursor(html);
         };
@@ -578,8 +605,10 @@ class RichTextEditor extends HTMLElement {
             styleStr +=
               " background: transparent; color: var(--cv-color-primary-fill, #245066); border: 2px solid var(--cv-color-primary-fill, #245066);";
           }
-          const url = self.state.btnUrl || "#";
-          const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${self.state.btnText}</a>&nbsp;`;
+          const url = self.state.escapeHtml(self.state.btnUrl || "#");
+          const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${self.state.escapeHtml(
+            self.state.btnText
+          )}</a>&nbsp;`;
           self.state.insertHtmlAtCursor(html);
         }
       },
@@ -969,9 +998,10 @@ class RichTextEditor extends HTMLElement {
       confirmWidget() {
         self.state.showWidgetModal = false;
         self.update();
-        let html = `<div class="cv-widget" data-widget="${
-          self.state.selectedWidget
-        }" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${self.state.selectedWidget.toUpperCase()}]</div><p><br></p>`;
+        const escapedWidget = self.state.escapeHtml(self.state.selectedWidget);
+        let html = `<div class="cv-widget" data-widget="${escapedWidget}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${self.state.escapeHtml(
+          self.state.selectedWidget.toUpperCase()
+        )}]</div><p><br></p>`;
         self.state.insertHtmlAtCursor(html);
       },
       closeWidgetModal() {
@@ -993,18 +1023,18 @@ class RichTextEditor extends HTMLElement {
         if (self.state.socialUrl) {
           let platform = (self.state.socialPlatform || "youtube").toLowerCase();
           if (
-            self.state.socialUrl.includes("youtube.com") ||
-            self.state.socialUrl.includes("youtu.be")
+            self.state.isHost(self.state.socialUrl, "youtube.com") ||
+            self.state.isHost(self.state.socialUrl, "youtu.be")
           ) {
             platform = "youtube";
-          } else if (self.state.socialUrl.includes("vimeo.com")) {
+          } else if (self.state.isHost(self.state.socialUrl, "vimeo.com")) {
             platform = "vimeo";
           }
-          let embedHtml = `<div class="cv-social-embed" data-platform="${platform}" data-url="${
-            self.state.socialUrl
-          }" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${platform.toUpperCase()} Post: ${
-            self.state.socialUrl
-          }]</div><p><br></p>`;
+          const escapedPlatform = self.state.escapeHtml(platform);
+          const escapedUrl = self.state.escapeHtml(self.state.socialUrl);
+          let embedHtml = `<div class="cv-social-embed" data-platform="${escapedPlatform}" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${self.state.escapeHtml(
+            platform.toUpperCase()
+          )} Post: ${escapedUrl}]</div><p><br></p>`;
           self.state.insertHtmlAtCursor(embedHtml);
         }
       },
@@ -1179,16 +1209,15 @@ class RichTextEditor extends HTMLElement {
               "<p><strong>Executive Summary:</strong> Designed for high-velocity digital engineering squads, this next-generation prose engine pairs strict AST schemas with real-time reactive UI component embedding.</p>";
           }
         } else if (action === "callout") {
-          result = `<div class="cv-callout variant-blue" style="padding: 16px 20px; border-left: 4px solid #0284c7; background: rgba(2, 132, 199, 0.08); border-radius: 0 8px 8px 0; margin: 16px 0;"><strong>AI INSIGHT:</strong> ${
-            selectedText ||
-            "Configure your toolbar modules, slot rules, and custom micro-frontends directly in the inspector panel."
-          }</div><p><br></p>`;
+          const safeSelection = selectedText
+            ? self.state.escapeHtml(selectedText)
+            : "Configure your toolbar modules, slot rules, and custom micro-frontends directly in the inspector panel.";
+          result = `<div class="cv-callout variant-blue" style="padding: 16px 20px; border-left: 4px solid #0284c7; background: rgba(2, 132, 199, 0.08); border-radius: 0 8px 8px 0; margin: 16px 0;"><strong>AI INSIGHT:</strong> ${safeSelection}</div><p><br></p>`;
         } else if (action === "summarize") {
-          result = `<p><em>Summary:</em> ${
-            selectedText
-              ? selectedText.slice(0, 100) + "..."
-              : "Key takeaways: High performance AST validation, component slot architecture, and real-time schema hydration."
-          }</p>`;
+          const safeSummary = selectedText
+            ? self.state.escapeHtml(selectedText.slice(0, 100)) + "..."
+            : "Key takeaways: High performance AST validation, component slot architecture, and real-time schema hydration.";
+          result = `<p><em>Summary:</em> ${safeSummary}</p>`;
         } else if (action === "grammar") {
           result = selectedText
             ? selectedText.trim()
