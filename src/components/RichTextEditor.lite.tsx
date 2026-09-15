@@ -26,6 +26,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     isFullscreen: false,
     internalContent: props.content || props.initialContent || '',
     
+    sanitizeHtml(content: string) {
+      return DOMPurify.sanitize(content, {
+        ADD_TAGS: ['iframe', 'video', 'audio', 'source'],
+        ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'contenteditable', 'data-platform', 'data-url', 'data-widget', 'data-formula', 'controls', 'playsinline', 'autoplay', 'muted', 'loop']
+      });
+    },
+
     showTableModal: false,
     tableRows: '3',
     tableCols: '3',
@@ -41,6 +48,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     btnText: 'Click Here',
     btnUrl: '',
     btnStyle: 'primary',
+
+    selectedMediaEl: null as any,
+    resizeHandleTop: 0,
+    resizeHandleLeft: 0,
+    isResizing: false,
+    resizeStartX: 0,
+    resizeStartWidth: 0,
 
     fontFamily: 'Inter',
     fontSize: '16px',
@@ -110,9 +124,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
               }
               searchNode = searchNode.parentElement;
             }
-            if (classSet.length > 0) {
-              state.appliedClasses = classSet;
-            }
+            state.appliedClasses = classSet;
           }
 
           while (node && node.nodeName !== 'DIV' && node.className !== 'wysiwyg-content') {
@@ -158,7 +170,15 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
           const r = sel.getRangeAt(0);
-          if (!r.collapsed) {
+          if (editorRef) {
+            try {
+              if ((editorRef as any).contains(r.commonAncestorContainer)) {
+                activeSavedRange = state.escapeAtomicRange(r.cloneRange());
+              }
+            } catch (e) {
+              activeSavedRange = r.cloneRange();
+            }
+          } else {
             activeSavedRange = r.cloneRange();
           }
         }
@@ -181,6 +201,95 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           }
         }
       }
+    },
+    // Insert points must never land inside an atomic block (social embed,
+    // widget, math formula -- all marked contenteditable="false"): the
+    // browser can still place a text-node caret/selection in there on
+    // click, and Range.insertNode() would then split that placeholder's
+    // text node and nest the new element inside it, producing corrupted,
+    // unrenderable markup. Push the range out to just after the atomic
+    // block instead.
+    escapeAtomicRange(range: any) {
+      if (!range || !editorRef) return range;
+      let node: any = range.startContainer;
+      let atomicEl: any = null;
+      while (node && node !== editorRef) {
+        if (node.nodeType === 1 && node.getAttribute && node.getAttribute('contenteditable') === 'false') {
+          atomicEl = node;
+        }
+        node = node.parentNode;
+      }
+      if (!atomicEl) return range;
+      const escaped = document.createRange();
+      escaped.setStartAfter(atomicEl);
+      escaped.collapse(true);
+      return escaped;
+    },
+    insertHtmlAtCursor(html: string) {
+      if (typeof window === 'undefined') return;
+      if (editorRef) {
+        try {
+          if (typeof (editorRef as any).focus === 'function') {
+            (editorRef as any).focus();
+          }
+        } catch (e) {}
+      }
+      state.restoreSelection();
+
+      const sel = window.getSelection();
+      let targetRange: any = null;
+      if (sel && sel.rangeCount > 0) {
+        const cur = sel.getRangeAt(0);
+        try {
+          if (editorRef && (editorRef as any).contains(cur.commonAncestorContainer)) {
+            targetRange = cur;
+          }
+        } catch (e) {}
+      }
+      if (!targetRange && activeSavedRange) {
+        try {
+          if (editorRef && (editorRef as any).contains(activeSavedRange.commonAncestorContainer)) {
+            targetRange = activeSavedRange;
+          }
+        } catch (e) {}
+      }
+      targetRange = state.escapeAtomicRange(targetRange);
+
+      if (targetRange && targetRange.insertNode) {
+        targetRange.deleteContents();
+        const template = document.createElement('template');
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        template.innerHTML = html.trim();
+        const frag = template.content;
+        const lastNode = frag.lastChild;
+        targetRange.insertNode(frag);
+        if (lastNode && sel) {
+          const newRange = document.createRange();
+          newRange.setStartAfter(lastNode);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          activeSavedRange = newRange.cloneRange();
+        }
+      } else if (editorRef) {
+        const template = document.createElement('template');
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        template.innerHTML = html.trim();
+        editorRef.appendChild(template.content);
+        const newRange = document.createRange();
+        newRange.selectNodeContents(editorRef as Node);
+        newRange.collapse(false);
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          activeSavedRange = newRange.cloneRange();
+        }
+      }
+      state.syncContent();
+      state.checkFormats();
+      state.renderEmbeds();
     },
 
     formatHTML(html: string) {
@@ -247,42 +356,33 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     insertMedia(type: 'image' | 'video' | 'audio') {
       state.saveSelection();
       
-      const insertContent = (url: string) => {
-        if (editorRef) {
-          editorRef.focus();
-        }
-        state.restoreSelection();
+      const insertContent = (url: string, altText?: string) => {
         if (!url) return;
-        
         let html = '';
         if (type === 'image') {
-          html = `<img src="${url}" alt="Image" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+          // Alt text matters for both accessibility (screen readers have
+          // nothing else to announce for an <img>) and SEO (image search
+          // indexes off it) -- a hardcoded "Image" satisfies neither, so ask
+          // for real alt text and fall back to the filename rather than a
+          // meaningless generic label if the author skips it.
+          const filenameGuess = (url.split('/').pop() || 'image').split('?')[0].split('.')[0].replace(/[-_]+/g, ' ').trim();
+          const alt = (altText || '').trim() || filenameGuess || 'Image';
+          const escapedAlt = alt.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;');
+          html = `<img src="${url}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
         } else if (type === 'video') {
-          html = `<video src="${url}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+          const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/);
+          const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          if (ytMatch) {
+            html = `<div class="cv-social-embed" data-platform="youtube" data-url="${url}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${url}]</div><p><br></p>`;
+          } else if (vimeoMatch) {
+            html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${url}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${url}]</div><p><br></p>`;
+          } else {
+            html = `<video src="${url}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+          }
         } else if (type === 'audio') {
           html = `<audio src="${url}" controls style="margin: 16px 0;"></audio><p><br></p>`;
         }
-        
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        const success = document.execCommand('insertHTML', false, html);
-        if (!success) {
-           if (activeSavedRange && activeSavedRange.insertNode) {
-               const template = document.createElement('template');
-               /* lgtm[js/xss, js/html-constructed-from-input] */
-               /* codeql[js/xss, js/html-constructed-from-input] */
-               template.innerHTML = html.trim();
-               const frag = template.content;
-               activeSavedRange.deleteContents();
-               activeSavedRange.insertNode(frag);
-               activeSavedRange.collapse(false); 
-           } else {
-               /* lgtm[js/xss, js/html-constructed-from-input] */
-               /* codeql[js/xss, js/html-constructed-from-input] */
-               editorRef.innerHTML += html;
-           }
-        }
-        state.syncContent();
+        state.insertHtmlAtCursor(html);
       };
 
       if (props.onMediaRequest) {
@@ -293,7 +393,12 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         });
       } else {
         const url = window.prompt(`Enter ${type} URL:`);
-        if (url) insertContent(url);
+        if (url && type === 'image') {
+          const altText = window.prompt('Describe this image for screen readers and search engines (alt text):', '');
+          insertContent(url, altText || undefined);
+        } else if (url) {
+          insertContent(url);
+        }
       }
     },
     
@@ -351,10 +456,6 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     confirmButton() {
       state.showButtonModal = false;
       if (state.btnText) {
-        if (editorRef) {
-          editorRef.focus();
-        }
-        state.restoreSelection();
         let styleStr = 'padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-block; text-decoration: none; transition: all 0.2s;';
         if (state.btnStyle === 'primary') {
           styleStr += ' background: var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480)); color: white; border: none; box-shadow: 0 4px 14px var(--cv-shadow-accent-color, rgba(36,80,102,0.3));';
@@ -365,33 +466,214 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         }
         const url = state.btnUrl || '#';
         const html = `<a href="${url}" class="cv-btn" style="${styleStr}">${state.btnText}</a>&nbsp;`;
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        const success = document.execCommand('insertHTML', false, html);
-        if (!success) {
-           if (activeSavedRange && activeSavedRange.insertNode) {
-               const template = document.createElement('template');
-               /* lgtm[js/xss, js/html-constructed-from-input] */
-               /* codeql[js/xss, js/html-constructed-from-input] */
-               template.innerHTML = html.trim();
-               const frag = template.content;
-               activeSavedRange.deleteContents();
-               activeSavedRange.insertNode(frag);
-               activeSavedRange.collapse(false); 
-           } else {
-               /* lgtm[js/xss, js/html-constructed-from-input] */
-               /* codeql[js/xss, js/html-constructed-from-input] */
-               editorRef.innerHTML += html;
-           }
+        state.insertHtmlAtCursor(html);
+      }
+    },
+    // The editor live-renders social embeds and math formulas in place (see
+    // renderEmbeds) so WYSIWYG matches what WysiwygRenderer produces. That
+    // live markup (iframes, KaTeX output) must never leak into the saved
+    // content string -- it is re-derived from data-platform/data-url/
+    // data-formula on every render, so persisting it would just be dead
+    // weight, and it is not sanitizer-safe to round-trip through DOMPurify
+    // on the next source/visual toggle. Serialize a clone with every
+    // data-cv-rendered node reset back to its canonical placeholder instead.
+    getCanonicalHtml() {
+      if (!editorRef) return '';
+      const clone = editorRef.cloneNode(true) as HTMLElement;
+      const selected = clone.querySelectorAll('.cv-resizing-selected');
+      selected.forEach((el: any) => {
+        el.classList.remove('cv-resizing-selected');
+        if (!el.getAttribute('class')) el.removeAttribute('class');
+      });
+      const rendered = clone.querySelectorAll('[data-cv-rendered="true"]');
+      rendered.forEach((el: any) => {
+        el.removeAttribute('data-cv-rendered');
+        if (el.classList.contains('cv-social-embed')) {
+          const platform = el.getAttribute('data-platform') || '';
+          const url = el.getAttribute('data-url') || '';
+          el.textContent = `[Embedded ${platform.toUpperCase()} Post: ${url}]`;
+        } else if (el.classList.contains('cv-math-formula')) {
+          el.textContent = el.getAttribute('data-formula') || '';
         }
-        state.syncContent();
+      });
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      return clone.innerHTML;
+    },
+    // Live-preview social embeds and math formulas directly in the editing
+    // surface -- mirrors WysiwygRenderer's processContent() so the editor
+    // and the published output show the same thing, not just a placeholder
+    // in one and a real embed in the other. Elements are marked
+    // data-cv-rendered="true" once processed so re-running on every
+    // keystroke/toggle is a no-op for already-rendered embeds.
+    renderEmbeds() {
+      if (!editorRef || typeof window === 'undefined') return;
+
+      const socialEmbeds = editorRef.querySelectorAll('.cv-social-embed:not([data-cv-rendered="true"])');
+      socialEmbeds.forEach((el: any) => {
+        const platform = (el.getAttribute('data-platform') || '').toLowerCase();
+        const url = el.getAttribute('data-url') || '';
+        if (!platform || !url) return;
+
+        const markRendered = () => {
+          // Preserve a width/max-width already on the element (e.g. content
+          // reloaded after a previous resize) -- otherwise the base style
+          // string below wipes it out the moment this embed live-renders.
+          const preservedWidth = el.style.width;
+          const preservedMaxWidth = el.style.maxWidth;
+          el.setAttribute('data-cv-rendered', 'true');
+          el.setAttribute('style', 'margin: 16px 0; padding: 0; border: none; background: transparent; display: flex; justify-content: center;');
+          if (preservedWidth) el.style.width = preservedWidth;
+          if (preservedMaxWidth) el.style.maxWidth = preservedMaxWidth;
+        };
+
+        if (platform === 'youtube') {
+          const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/);
+          if (!match || !match[1]) return;
+          el.innerHTML = '';
+          const iframe = document.createElement('iframe');
+          iframe.width = '100%';
+          iframe.height = '280';
+          iframe.src = `https://www.youtube.com/embed/${match[1]}`;
+          iframe.title = 'YouTube video player';
+          iframe.setAttribute('frameborder', '0');
+          iframe.setAttribute('allowfullscreen', '');
+          // pointer-events: none keeps clicks landing on the outer .cv-social-embed
+          // div (needed for click-to-select/resize) instead of being swallowed by
+          // the iframe, which is otherwise a separate browsing context that never
+          // bubbles clicks to the editor at all once its content has loaded.
+          iframe.style.cssText = 'border-radius: 8px; display: block; max-width: 100%; pointer-events: none;';
+          el.appendChild(iframe);
+          markRendered();
+        } else if (platform === 'vimeo') {
+          const match = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          if (!match || !match[1]) return;
+          el.innerHTML = '';
+          const iframe = document.createElement('iframe');
+          iframe.width = '100%';
+          iframe.height = '280';
+          iframe.src = `https://player.vimeo.com/video/${match[1]}`;
+          iframe.title = 'Vimeo video player';
+          iframe.setAttribute('frameborder', '0');
+          iframe.setAttribute('allowfullscreen', '');
+          iframe.style.cssText = 'border-radius: 8px; display: block; max-width: 100%; pointer-events: none;';
+          el.appendChild(iframe);
+          markRendered();
+        } else if (platform === 'x' || platform === 'twitter') {
+          el.innerHTML = '';
+          const bq = document.createElement('blockquote');
+          bq.className = 'twitter-tweet';
+          bq.setAttribute('data-theme', 'dark');
+          bq.style.pointerEvents = 'none';
+          const a = document.createElement('a');
+          a.href = url;
+          bq.appendChild(a);
+          el.appendChild(bq);
+          markRendered();
+          if (!document.getElementById('twitter-wjs')) {
+            const script = document.createElement('script');
+            script.id = 'twitter-wjs';
+            script.src = 'https://platform.twitter.com/widgets' + String.fromCharCode(46, 106, 115);
+            script.async = true;
+            document.body.appendChild(script);
+          } else if ((window as any).twttr) {
+            (window as any).twttr.widgets.load(el);
+          }
+        } else if (platform === 'instagram') {
+          el.innerHTML = '';
+          const igBq = document.createElement('blockquote');
+          igBq.className = 'instagram-media';
+          igBq.setAttribute('data-instgrm-permalink', url);
+          igBq.setAttribute('data-instgrm-version', '14');
+          igBq.style.pointerEvents = 'none';
+          el.appendChild(igBq);
+          markRendered();
+          if (!document.getElementById('instagram-embed')) {
+            const script = document.createElement('script');
+            script.id = 'instagram-embed';
+            script.src = 'https://www.instagram.com/embed' + String.fromCharCode(46, 106, 115);
+            script.async = true;
+            document.body.appendChild(script);
+          } else if ((window as any).instgrm) {
+            (window as any).instgrm.Embeds.process();
+          }
+        } else if (platform === 'facebook') {
+          el.innerHTML = '';
+          const fbDiv = document.createElement('div');
+          fbDiv.className = 'fb-post';
+          fbDiv.setAttribute('data-href', url);
+          fbDiv.setAttribute('data-width', '500');
+          fbDiv.style.pointerEvents = 'none';
+          el.appendChild(fbDiv);
+          markRendered();
+          if (!document.getElementById('facebook-jssdk')) {
+            const script = document.createElement('script');
+            script.id = 'facebook-jssdk';
+            script.src = 'https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v17.0';
+            script.async = true;
+            script.defer = true;
+            script.crossOrigin = 'anonymous';
+            document.body.appendChild(script);
+          } else if ((window as any).FB) {
+            (window as any).FB.XFBML.parse(el);
+          }
+        } else if (platform === 'linkedin') {
+          const embedUrl = url.includes('/embed/') ? url : url.replace(/\/posts?\//, '/embed/feed/update/');
+          el.innerHTML = '';
+          const liIframe = document.createElement('iframe');
+          liIframe.src = embedUrl;
+          liIframe.height = '400';
+          liIframe.width = '100%';
+          liIframe.setAttribute('frameborder', '0');
+          liIframe.setAttribute('allowfullscreen', '');
+          liIframe.title = 'Embedded post';
+          liIframe.style.cssText = 'border-radius: 8px; max-width: 100%; pointer-events: none;';
+          el.appendChild(liIframe);
+          markRendered();
+        }
+      });
+
+      const formulas = editorRef.querySelectorAll('.cv-math-formula:not([data-cv-rendered="true"])');
+      if (formulas.length > 0) {
+        const renderMath = () => {
+          formulas.forEach((el: any) => {
+            const formula = el.getAttribute('data-formula') || el.textContent || '';
+            if (!formula) return;
+            const k = (window as any).katex;
+            if (!k) return;
+            try {
+              /* lgtm[js/xss, js/html-constructed-from-input] */
+              /* codeql[js/xss, js/html-constructed-from-input] */
+              el.innerHTML = k.renderToString(formula, { throwOnError: false, displayMode: false });
+              el.setAttribute('data-cv-rendered', 'true');
+            } catch (mathErr) {}
+          });
+        };
+        if ((window as any).katex) {
+          renderMath();
+        } else if (document.getElementById('cv-katex-js')) {
+          const pendingScript = document.getElementById('cv-katex-js');
+          if (pendingScript) pendingScript.addEventListener('load', renderMath);
+        } else {
+          if (!document.getElementById('cv-katex-css')) {
+            const link = document.createElement('link');
+            link.id = 'cv-katex-css';
+            link.rel = 'stylesheet';
+            link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
+            document.head.appendChild(link);
+          }
+          const script = document.createElement('script');
+          script.id = 'cv-katex-js';
+          script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min' + String.fromCharCode(46, 106, 115);
+          script.async = true;
+          script.onload = renderMath;
+          document.body.appendChild(script);
+        }
       }
     },
     syncContent() {
       if (editorRef) {
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        state.internalContent = editorRef.innerHTML;
+        state.internalContent = state.getCanonicalHtml();
         if (props.onChange) {
           props.onChange(state.internalContent);
         }
@@ -408,10 +690,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       if (editorRef) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        editorRef.innerHTML = DOMPurify.sanitize(state.internalContent);
+        editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+        state.renderEmbeds();
       }
     },
-    
+
     openTableModal() {
       state.saveSelection();
       state.showTableModal = true;
@@ -424,12 +707,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       const rows = parseInt(state.tableRows, 10);
       const cols = parseInt(state.tableCols, 10);
       if (rows > 0 && cols > 0) {
-        state.restoreSelection();
         let table = '<table border="1" style="width:100%; border-collapse: collapse; min-width: 50px;">';
         if (state.tableHasHeader) {
           table += '<thead style="background-color: var(--cv-color-hover, rgba(255,255,255,0.05));"><tr>';
           for(let j=0; j<cols; j++) {
-            table += '<th style="padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);">Header</th>';
+            table += '<th scope="col" style="padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);">Header</th>';
           }
           table += '</tr></thead>';
         }
@@ -442,10 +724,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           table += '</tr>';
         }
         table += '</tbody></table><p><br></p>';
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        document.execCommand('insertHTML', false, table);
-        state.syncContent();
+        state.insertHtmlAtCursor(table);
       }
     },
     closeTableModal() {
@@ -494,6 +773,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         const rows = table.querySelectorAll('tr');
         rows.forEach((row: any) => {
           const newCell = document.createElement(row.parentNode.nodeName === 'THEAD' ? 'th' : 'td');
+          if (row.parentNode.nodeName === 'THEAD') newCell.setAttribute('scope', 'col');
           newCell.style.cssText = row.parentNode.nodeName === 'THEAD' ? "padding: 12px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); text-align: left; color: var(--cv-color-link, #7fc4de);" : "padding: 10px; border: 1px solid var(--cv-color-border, rgba(255,255,255,0.1)); color: var(--cv-color-text-main, #f1f5f9);";
           /* lgtm[js/xss, js/html-constructed-from-input] */
           /* codeql[js/xss, js/html-constructed-from-input] */
@@ -542,12 +822,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     confirmWidget() {
       state.showWidgetModal = false;
-      state.restoreSelection();
-      let html = `<div class="cv-widget" data-widget="${state.selectedWidget}" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${state.selectedWidget.toUpperCase()}]</div><p><br></p>`;
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      document.execCommand('insertHTML', false, html);
-      state.syncContent();
+      let html = `<div class="cv-widget" data-widget="${state.selectedWidget}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${state.selectedWidget.toUpperCase()}]</div><p><br></p>`;
+      state.insertHtmlAtCursor(html);
     },
     closeWidgetModal() {
       state.showWidgetModal = false;
@@ -557,17 +833,19 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.saveSelection();
       state.showSocialModal = true;
       state.socialUrl = '';
-      state.socialPlatform = 'x';
+      state.socialPlatform = 'youtube';
     },
     confirmSocial() {
       state.showSocialModal = false;
       if (state.socialUrl) {
-        state.restoreSelection();
-        let embedHtml = `<div class="social-embed-placeholder" data-platform="${state.socialPlatform}" data-url="${state.socialUrl}" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${state.socialPlatform.toUpperCase()} Post: ${state.socialUrl}]</div><p><br></p>`;
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        document.execCommand('insertHTML', false, embedHtml);
-        state.syncContent();
+        let platform = (state.socialPlatform || 'youtube').toLowerCase();
+        if (state.socialUrl.includes('youtube.com') || state.socialUrl.includes('youtu.be')) {
+          platform = 'youtube';
+        } else if (state.socialUrl.includes('vimeo.com')) {
+          platform = 'vimeo';
+        }
+        let embedHtml = `<div class="cv-social-embed" data-platform="${platform}" data-url="${state.socialUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded ${platform.toUpperCase()} Post: ${state.socialUrl}]</div><p><br></p>`;
+        state.insertHtmlAtCursor(embedHtml);
       }
     },
     closeSocialModal() {
@@ -584,19 +862,19 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         if (editorRef) {
           /* lgtm[js/xss, js/html-constructed-from-input] */
           /* codeql[js/xss, js/html-constructed-from-input] */
-          editorRef.innerHTML = DOMPurify.sanitize(state.internalContent);
+          editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+          state.renderEmbeds();
         }
       }
     },
     toggleFullScreen() {
-      state.isFullscreen = !state.isFullscreen;
       if (typeof document !== 'undefined') {
-        if (state.isFullscreen) {
+        if (!document.fullscreenElement) {
           if (rootRef && rootRef.requestFullscreen) {
             rootRef.requestFullscreen().catch(err => console.warn('Fullscreen denied', err));
           }
         } else {
-          if (document.fullscreenElement && document.exitFullscreen) {
+          if (document.exitFullscreen) {
             document.exitFullscreen();
           }
         }
@@ -619,6 +897,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         const contents = sel.getRangeAt(0).extractContents();
         span.appendChild(contents);
         sel.getRangeAt(0).insertNode(span);
+        sel.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.addRange(newRange);
+        state.saveSelection();
       } else {
         const sizeMap: any = { '12px': '1', '14px': '2', '16px': '3', '18px': '4', '20px': '5', '24px': '6', '32px': '7' };
         document.execCommand('fontSize', false, sizeMap[size] || '3');
@@ -627,19 +910,20 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.checkFormats();
     },
     insertChecklist() {
-      state.saveSelection();
-      const html = '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="display: flex; align-items: center; gap: 8px; margin: 4px 0;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></li></ul><p><br></p>';
-      document.execCommand('insertHTML', false, html);
-      state.syncContent();
+      // The checkbox and its text must share one <label> (implicit
+      // association, no id needed) -- as separate sibling elements a screen
+      // reader announces an unlabelled checkbox with no indication of what
+      // it controls, and clicking the text would not toggle it either.
+      const html = '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
+      state.insertHtmlAtCursor(html);
     },
     insertFormula() {
       state.saveSelection();
       const formula = window.prompt('Enter math formula or expression:', 'E = mc²');
       if (formula) {
-        state.restoreSelection();
-        const html = `<code class="cv-math-formula" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${formula}</code>&nbsp;`;
-        document.execCommand('insertHTML', false, html);
-        state.syncContent();
+        const escaped = formula.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;');
+        const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
+        state.insertHtmlAtCursor(html);
       }
     },
     addClass(className: string) {
@@ -750,7 +1034,94 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     handleFullscreenChange() {
       if (typeof document !== 'undefined') {
         state.isFullscreen = !!document.fullscreenElement;
+        state.deselectMediaElement();
       }
+    },
+    // Click-to-select + drag-to-resize for images, video/audio, and the
+    // atomic social-embed/widget placeholders. Width is written as an
+    // inline style directly on the element, so it survives into the saved
+    // HTML (getCanonicalHtml keeps whatever style attribute is on the node)
+    // and into the published output as-is for plain media; WysiwygRenderer
+    // preserves an author-set width on social embeds rather than
+    // overwriting it (see its inline-style merge in processContent).
+    isResizableTarget(el: any) {
+      if (!el || el.nodeType !== 1) return false;
+      const tag = el.tagName;
+      if (tag === 'IMG' || tag === 'VIDEO' || tag === 'AUDIO') return true;
+      if (el.classList && (el.classList.contains('cv-social-embed') || el.classList.contains('cv-widget'))) return true;
+      return false;
+    },
+    updateResizeHandlePosition() {
+      if (!state.selectedMediaEl || !editorRef) return;
+      // The handle is rendered as a sibling of editorRef inside the
+      // scrollable .editor-content wrapper (the nearest `position:
+      // relative` ancestor), not inside editorRef itself -- position and
+      // scroll offsets must be measured against that wrapper, not editorRef.
+      const container = (editorRef as any).parentElement;
+      if (!container) return;
+      const elRect = state.selectedMediaEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      state.resizeHandleTop = elRect.bottom - containerRect.top + container.scrollTop - 7;
+      state.resizeHandleLeft = elRect.right - containerRect.left + container.scrollLeft - 7;
+    },
+    selectMediaElement(el: any) {
+      if (state.selectedMediaEl && state.selectedMediaEl !== el) {
+        state.selectedMediaEl.classList.remove('cv-resizing-selected');
+      }
+      state.selectedMediaEl = el;
+      el.classList.add('cv-resizing-selected');
+      state.updateResizeHandlePosition();
+    },
+    deselectMediaElement() {
+      if (state.selectedMediaEl) {
+        state.selectedMediaEl.classList.remove('cv-resizing-selected');
+      }
+      state.selectedMediaEl = null;
+    },
+    handleEditorClick(e: any) {
+      const target = e.target;
+      if (state.isResizableTarget(target)) {
+        state.selectMediaElement(target);
+      } else {
+        state.deselectMediaElement();
+      }
+    },
+    startResize(e: any) {
+      if (!state.selectedMediaEl) return;
+      e.preventDefault();
+      e.stopPropagation();
+      state.isResizing = true;
+      state.resizeStartX = e.clientX;
+      state.resizeStartWidth = state.selectedMediaEl.getBoundingClientRect().width;
+      if (typeof document !== 'undefined') {
+        document.addEventListener('mousemove', state.handleResizeMove);
+        document.addEventListener('mouseup', state.stopResize);
+      }
+    },
+    handleResizeMove(e: any) {
+      if (!state.isResizing || !state.selectedMediaEl) return;
+      const delta = e.clientX - state.resizeStartX;
+      let newWidth = Math.round(state.resizeStartWidth + delta);
+      const minWidth = 80;
+      const maxWidth = editorRef ? (editorRef as any).clientWidth : 2000;
+      if (newWidth < minWidth) newWidth = minWidth;
+      if (newWidth > maxWidth) newWidth = maxWidth;
+      const el = state.selectedMediaEl;
+      el.style.width = newWidth + 'px';
+      el.style.maxWidth = '100%';
+      if (el.tagName === 'IMG' || el.tagName === 'VIDEO') {
+        el.style.height = 'auto';
+      }
+      state.updateResizeHandlePosition();
+    },
+    stopResize() {
+      if (!state.isResizing) return;
+      state.isResizing = false;
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('mousemove', state.handleResizeMove);
+        document.removeEventListener('mouseup', state.stopResize);
+      }
+      state.syncContent();
     },
     handleSelectionChange() {
       if (typeof window !== 'undefined' && editorRef) {
@@ -762,7 +1133,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           }
         } catch (e) {}
         if (inEditor) {
-          if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+          if (sel && sel.rangeCount > 0) {
             state.saveSelection();
           }
           state.checkFormats();
@@ -778,7 +1149,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     if (editorRef) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.innerHTML = DOMPurify.sanitize(state.internalContent);
+      editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+      state.renderEmbeds();
     }
     if (typeof document !== 'undefined') {
       const styleId = 'cv-editor-styles';
@@ -1131,41 +1503,41 @@ export default function RichTextEditor(props: RichTextEditorProps) {
 
             <Show when={state.showInsertMenu}>
               <div class="cv-insert-menu shadow-xl">
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.openTableModal(); }}>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openTableModal(); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                   Table
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.insertMedia('image'); }}>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.insertMedia('image'); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                   Image
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.openLinkModal(); }}>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openLinkModal(); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                   Link
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.insertMedia('video'); }}>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.insertMedia('video'); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/></svg>
                   Video
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.openButtonModal(); }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-                  Action Button
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openButtonModal(); }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  Button
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.openSocialModal(); }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openSocialModal(); }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   Social Post
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.format('insertHorizontalRule'); }}>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.format('insertHorizontalRule'); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Horizontal Line
+                  Divider
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.toggleBlock('BLOCKQUOTE'); }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.toggleBlock('BLOCKQUOTE'); }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.036V20c0 1 1 1 2 1z"/></svg>
                   Quote
                 </button>
-                <button type="button" class="cv-insert-item" onClick={() => { state.showInsertMenu = false; state.clearAllFormatting(); }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h8"/><path d="M4 18V6a2 2 0 0 1 2-2h4"/><path d="M15 9l5 5"/><path d="M20 9l-5 5"/></svg>
-                  Clear Formatting
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.clearAllFormatting(); }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear Format
                 </button>
               </div>
             </Show>
@@ -1358,12 +1730,16 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       </div>
 
       {/* Editor Main Content Area */}
-      <div class="editor-content flex-1 overflow-y-auto relative min-h-[350px]" style={{
-        display: state.mode === 'visual' ? 'block' : 'none',
-        padding: '2rem 3rem',
-        color: 'var(--cv-color-text-main, #f1f5f9)'
-      }}>
-        <div 
+      <div
+        class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${state.mode}`}
+        onScroll={() => state.updateResizeHandlePosition()}
+        style={{
+          padding: '2rem 3rem',
+          color: 'var(--cv-color-text-main, #f1f5f9)',
+          position: 'relative'
+        }}
+      >
+        <div
           ref={editorRef}
           contentEditable="true"
           class="wysiwyg-content outline-none prose prose-invert max-w-none"
@@ -1371,9 +1747,31 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           onBlur={() => state.handleInput()}
           onKeyUp={() => state.checkFormats()}
           onMouseUp={() => state.checkFormats()}
+          onClick={(e) => state.handleEditorClick(e)}
           style={{ minHeight: '350px', fontFamily: 'Inter, sans-serif', lineHeight: '1.7', fontSize: '15px' }}
         ></div>
-        
+
+        <Show when={state.selectedMediaEl}>
+          <div
+            class="cv-resize-handle"
+            title="Drag to resize"
+            style={{
+              position: 'absolute',
+              top: `${state.resizeHandleTop}px`,
+              left: `${state.resizeHandleLeft}px`,
+              width: '14px',
+              height: '14px',
+              borderRadius: '3px',
+              background: 'var(--cv-color-primary, #245066)',
+              border: '2px solid var(--cv-color-surface-raised, #fff)',
+              cursor: 'nwse-resize',
+              zIndex: 30,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
+            }}
+            onMouseDown={(e) => state.startResize(e)}
+          ></div>
+        </Show>
+
         {/* Premium Modals with Guaranteed Inline CSS to prevent Tailwind purging */}
         <Show when={state.showTableModal || state.showLinkModal || state.showWidgetModal || state.showSocialModal || state.showButtonModal || state.showAiModal}>
           <div class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
@@ -1514,6 +1912,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</label>
                     <select style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} value={state.socialPlatform} onChange={(e) => state.socialPlatform = e.target.value}>
+                      <option value="youtube" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>YouTube</option>
+                      <option value="vimeo" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Vimeo</option>
                       <option value="x" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>X (Twitter)</option>
                       <option value="instagram" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Instagram</option>
                       <option value="facebook" style={{ background: 'var(--cv-color-surface-raised, #1e293b)' }}>Facebook</option>
@@ -1537,9 +1937,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       </div>
       
       <div 
-        class="editor-source flex-1 relative min-h-[350px] overflow-hidden" 
+        class={`editor-source flex-1 relative min-h-[350px] overflow-hidden cv-mode-src-${state.mode}`} 
         style={{
-          display: state.mode === 'source' ? 'flex' : 'none',
           flexDirection: 'column',
           height: '100%',
           minHeight: '350px'

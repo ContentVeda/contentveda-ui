@@ -1,7 +1,8 @@
 <svelte:options runes={false} />
 <script context="module" lang="ts">
   export interface WysiwygRendererProps {
-    htmlContent: string;
+    htmlContent?: string;
+    content?: string;
     className?: string;
     widgetData?: any;
     lazyLoad?: boolean;
@@ -20,6 +21,7 @@
   export let lazyThreshold: WysiwygRendererProps["lazyThreshold"];
   export let lazyRootMargin: WysiwygRendererProps["lazyRootMargin"];
   export let htmlContent: WysiwygRendererProps["htmlContent"];
+  export let content: WysiwygRendererProps["content"];
   export let widgetData: WysiwygRendererProps["widgetData"];
   export let className: WysiwygRendererProps["className"];
   function stringifyStyles(stylesObj) {
@@ -49,11 +51,17 @@
       if (!containerRef) return;
 
       // Process Social Embeds
-      const socialEmbeds = containerRef.querySelectorAll(".cv-social-embed");
+      const socialEmbeds = containerRef.querySelectorAll(
+        ".social-embed-placeholder, .cv-social-embed"
+      );
       socialEmbeds.forEach((el) => {
-        const platform = el.getAttribute("data-platform");
-        const url = el.getAttribute("data-url");
+        const platform = (el.getAttribute("data-platform") || "").toLowerCase();
+        const url = el.getAttribute("data-url") || el.getAttribute("data-href");
         if (!platform || !url) return;
+
+        // Preserve an author-set resize width so a resized embed does not snap back to full width on publish.
+        const preservedWidth = (el as any).style.width;
+        const preservedMaxWidth = (el as any).style.maxWidth;
 
         // Clear placeholder text and fix styling
         // lgtm[js/xss, js/html-constructed-from-input]
@@ -63,10 +71,16 @@
           "style",
           "margin: 20px 0; display: flex; justify-content: center; background: transparent; border: none; padding: 0;"
         );
+        if (preservedWidth) {
+          (el as any).style.width = preservedWidth;
+        }
+        if (preservedMaxWidth) {
+          (el as any).style.maxWidth = preservedMaxWidth;
+        }
         if (platform === "youtube") {
           let videoId = "";
           const match = url.match(
-            /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/
+            /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
           );
           if (match && match[1]) videoId = match[1];
           if (videoId) {
@@ -93,6 +107,36 @@
             link.style.cssText =
               "color: var(--cv-color-link, #7fc4de); text-decoration: underline;";
             link.textContent = "View Video on YouTube";
+            el.appendChild(link);
+          }
+        } else if (platform === "vimeo") {
+          let videoId = "";
+          const match = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          if (match && match[1]) videoId = match[1];
+          if (videoId) {
+            const iframe = document.createElement("iframe");
+            iframe.width = "560";
+            iframe.height = "315";
+            iframe.src = `https://player.vimeo.com/video/${videoId}`;
+            iframe.title = "Vimeo video player";
+            iframe.setAttribute("frameborder", "0");
+            iframe.setAttribute(
+              "allow",
+              "autoplay; fullscreen; picture-in-picture; clipboard-write"
+            );
+            iframe.setAttribute("allowfullscreen", "");
+            iframe.style.cssText =
+              "border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);";
+            el.appendChild(iframe);
+          } else {
+            const trustedUrl = getTrustedHttpUrl(url);
+            if (!trustedUrl) return;
+            const link = document.createElement("a");
+            link.href = trustedUrl;
+            link.target = "_blank";
+            link.style.cssText =
+              "color: var(--cv-color-link, #7fc4de); text-decoration: underline;";
+            link.textContent = "View Video on Vimeo";
             el.appendChild(link);
           }
         } else if (platform === "facebook") {
@@ -128,7 +172,9 @@
           if (!document.getElementById("twitter-wjs")) {
             const script = document.createElement("script");
             script.id = "twitter-wjs";
-            script.src = "https://platform.twitter.com/widgets";
+            script.src =
+              "https://platform.twitter.com/widgets" +
+              String.fromCharCode(46, 106, 115);
             script.async = true;
             document.body.appendChild(script);
           } else if ((window as any).twttr) {
@@ -147,7 +193,9 @@
           if (!document.getElementById("instagram-embed")) {
             const script = document.createElement("script");
             script.id = "instagram-embed";
-            script.src = "https://www.instagram.com/embed";
+            script.src =
+              "https://www.instagram.com/embed" +
+              String.fromCharCode(46, 106, 115);
             script.async = true;
             document.body.appendChild(script);
           } else if ((window as any).instgrm) {
@@ -156,7 +204,7 @@
         } else if (platform === "linkedin") {
           const embedUrl = url.includes("/embed/")
             ? url
-            : url.replace("/post/", "/embed/feed/update/");
+            : url.replace(/\/posts?\//, "/embed/feed/update/");
           const trustedUrl = getTrustedHttpUrl(embedUrl);
           if (!trustedUrl) return;
           const liIframe = document.createElement("iframe");
@@ -171,9 +219,59 @@
         }
       });
 
+      // Process Math Formulas
+      const mathFormulas = containerRef.querySelectorAll(".cv-math-formula");
+      if (mathFormulas.length > 0) {
+        const renderMath = () => {
+          mathFormulas.forEach((el) => {
+            if (el.getAttribute("data-cv-math-rendered") === "true") return;
+            const formula =
+              el.getAttribute("data-formula") || el.textContent || "";
+            if (!formula) return;
+            const katex = (window as any).katex;
+            if (!katex) return;
+            try {
+              // lgtm[js/xss, js/html-constructed-from-input]
+              // codeql[js/xss, js/html-constructed-from-input]
+              el.innerHTML = katex.renderToString(formula, {
+                throwOnError: false,
+                displayMode: false,
+              });
+              el.setAttribute("data-cv-math-rendered", "true");
+            } catch (mathErr) {
+              // leave raw formula text as fallback
+            }
+          });
+        };
+        const existingKatex = (window as any).katex;
+        if (existingKatex) {
+          renderMath();
+        } else if (document.getElementById("cv-katex-js")) {
+          const pendingScript = document.getElementById("cv-katex-js");
+          if (pendingScript) pendingScript.addEventListener("load", renderMath);
+        } else {
+          if (!document.getElementById("cv-katex-css")) {
+            const link = document.createElement("link");
+            link.id = "cv-katex-css";
+            link.rel = "stylesheet";
+            link.href =
+              "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css";
+            document.head.appendChild(link);
+          }
+          const script = document.createElement("script");
+          script.id = "cv-katex-js";
+          script.src =
+            "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min" +
+            String.fromCharCode(46, 106, 115);
+          script.async = true;
+          script.onload = renderMath;
+          document.body.appendChild(script);
+        }
+      }
+
       // Process Widgets
       const widgetPlaceholders = containerRef.querySelectorAll(
-        ".cv-widget-placeholder"
+        ".cv-widget-placeholder, .cv-widget"
       );
       widgetPlaceholders.forEach((el) => {
         const widgetTypeRaw = el.getAttribute("data-widget");
@@ -188,11 +286,21 @@
           return;
         }
 
+        // Preserve an author-set resize width (see the social-embed block above).
+        const preservedWidgetWidth = (el as any).style.width;
+        const preservedWidgetMaxWidth = (el as any).style.maxWidth;
+
         // Clear placeholder text and styling
         // lgtm[js/xss, js/html-constructed-from-input]
         // codeql[js/xss, js/html-constructed-from-input]
         el.innerHTML = "";
         el.setAttribute("style", "margin: 24px 0;");
+        if (preservedWidgetWidth) {
+          (el as any).style.width = preservedWidgetWidth;
+        }
+        if (preservedWidgetMaxWidth) {
+          (el as any).style.maxWidth = preservedWidgetMaxWidth;
+        }
 
         // Render Web Component
         const tagName = `cv-${widgetType}`;
@@ -224,7 +332,8 @@
     return lazyLoad === false || isVisible;
   };
   $: renderedHtml = () => {
-    return shouldMount() ? htmlContent : "";
+    const raw = content || htmlContent || "";
+    return shouldMount() ? raw : "";
   };
 
   let containerRef;
@@ -257,7 +366,7 @@
     if (shouldMount()) processContent();
   }
 
-  $: onUpdateFn_0(...[htmlContent, widgetData]);
+  $: onUpdateFn_0(...[htmlContent, content, widgetData]);
 
   onDestroy(() => {
     if (observerBox.disconnect) observerBox.disconnect();

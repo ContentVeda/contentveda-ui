@@ -67,13 +67,11 @@
 .cv-rich-text-editor .cv-toolbar-row {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 6px 14px;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .cv-rich-text-editor .cv-toolbar-row-1 {
@@ -514,6 +512,7 @@
 .fixed { position: fixed !important; }
 .inset-0 { top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important; }
 .z-\[100\] { z-index: 100 !important; }
+.z-\[9999\] { z-index: 9999 !important; }
 .backdrop-blur-md { backdrop-filter: blur(12px) !important; }
 
 /* Source Code Editor Area */
@@ -547,4 +546,24 @@
   box-sizing: border-box !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
+}
+
+/* Editor Mode Toggles */
+/* These must outrank ".cv-rich-text-editor .editor-source" (specificity 0,2,0)
+   above, which unconditionally sets display:flex !important -- without the
+   ".editor-source" qualifier here, .cv-mode-src-visual (0,1,0) loses the
+   specificity tie despite both using !important, and the source textarea
+   stays visible at the same time as the visual editor. */
+.cv-mode-source { display: none !important; }
+.cv-mode-visual { display: block; }
+.cv-rich-text-editor .editor-source.cv-mode-src-visual { display: none !important; }
+.cv-rich-text-editor .editor-source.cv-mode-src-source { display: flex !important; }
+
+/* Resizable media selection (image/video/audio/social-embed/widget) */
+.cv-rich-text-editor .cv-resizing-selected {
+  outline: 2px solid var(--cv-color-primary, #245066) !important;
+  outline-offset: 2px !important;
+}
+.cv-rich-text-editor .cv-resize-handle:hover {
+  transform: scale(1.15);
 }
