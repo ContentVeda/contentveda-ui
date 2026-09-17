@@ -1190,7 +1190,7 @@ let activeSavedRange: any = null;
       </div>
       <div
         [class]="'editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-' + (mode)"
-        (scroll)="updateResizeHandlePosition()"
+        (scroll)="handleEditorScroll()"
         (click)="handleEditorContentClick($event)"
         [ngStyle]="{
           padding: '2rem 3rem',
@@ -1203,21 +1203,11 @@ let activeSavedRange: any = null;
           #editorRef
           [attr.contentEditable]='isReadOnly() ? "false" : "true"'
           [class]="'wysiwyg-content outline-none prose prose-invert max-w-none ' + (isReadOnly() ? 'cv-readonly' : '')"
-          (input)="
-          handleInput();
-          checkFormats();
-          normalizeSelection();
-        "
-          (blur)="handleInput()"
-          (keyup)="
-          checkFormats();
-          normalizeSelection();
-        "
+          (input)="handleInput()"
+          (blur)="handleBlur()"
+          (keyup)="checkFormats()"
           (keydown)="handleKeyDown($event)"
-          (mouseup)="
-          checkFormats();
-          normalizeSelection();
-        "
+          (mouseup)="checkFormats()"
           (click)="handleEditorClick($event)"
           [ngStyle]="{
           minHeight: '350px',
@@ -2522,7 +2512,18 @@ export default class RichTextEditor {
     return host === domain || host.endsWith("." + domain);
   }
   escapeHtml(value: string) {
-    return String(value == null ? "" : value)
+    if (value == null) return "";
+    const str = String(value);
+    if (
+      str.indexOf("&") === -1 &&
+      str.indexOf("<") === -1 &&
+      str.indexOf(">") === -1 &&
+      str.indexOf('"') === -1 &&
+      str.indexOf("'") === -1
+    ) {
+      return str;
+    }
+    return str
       .split("&")
       .join("&amp;")
       .split("<")
@@ -2609,6 +2610,9 @@ export default class RichTextEditor {
       let isQuote = false;
       let isCode = false;
       let inTable = false;
+      let nextFontSize = this.fontSize;
+      let nextFontFamily = this.fontFamily;
+      let nextAppliedClasses = this.appliedClasses;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
@@ -2618,7 +2622,7 @@ export default class RichTextEditor {
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              this.fontSize = computed.fontSize;
+              nextFontSize = computed.fontSize;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -2629,7 +2633,7 @@ export default class RichTextEditor {
                 .join("")
                 .trim();
               if (primaryFont) {
-                this.fontFamily = primaryFont;
+                nextFontFamily = primaryFont;
               }
             }
           } catch (err) {}
@@ -2658,7 +2662,7 @@ export default class RichTextEditor {
             }
             searchNode = searchNode.parentElement;
           }
-          this.appliedClasses = classSet;
+          nextAppliedClasses = classSet;
         }
         while (
           node &&
@@ -2672,7 +2676,23 @@ export default class RichTextEditor {
           node = node.parentNode;
         }
       }
-      this.activeFormats = {
+      let nextHeadingFormat = "P";
+      const formatBlock = document.queryCommandValue("formatBlock");
+      if (formatBlock) {
+        if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+        else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+        else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+        else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+        else if (formatBlock.toLowerCase().includes("blockquote")) {
+          isQuote = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.toLowerCase().includes("pre")) {
+          isCode = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+        else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+      }
+      const nextActiveFormats = {
         bold: document.queryCommandState("bold"),
         italic: document.queryCommandState("italic"),
         underline: document.queryCommandState("underline"),
@@ -2687,20 +2707,25 @@ export default class RichTextEditor {
         code: isCode,
         inTable: inTable,
       };
-      const formatBlock = document.queryCommandValue("formatBlock");
-      if (formatBlock) {
-        if (formatBlock.includes("1")) this.headingFormat = "H1";
-        else if (formatBlock.includes("2")) this.headingFormat = "H2";
-        else if (formatBlock.includes("3")) this.headingFormat = "H3";
-        else if (formatBlock.includes("4")) this.headingFormat = "H4";
-        else if (formatBlock.toLowerCase().includes("blockquote")) {
-          this.activeFormats.quote = true;
-          this.headingFormat = "P";
-        } else if (formatBlock.toLowerCase().includes("pre")) {
-          this.activeFormats.code = true;
-          this.headingFormat = "P";
-        } else if (formatBlock.includes("p")) this.headingFormat = "P";
-        else if (formatBlock.includes("div")) this.headingFormat = "P";
+      if (this.fontSize !== nextFontSize) this.fontSize = nextFontSize;
+      if (this.fontFamily !== nextFontFamily) this.fontFamily = nextFontFamily;
+      if (this.headingFormat !== nextHeadingFormat)
+        this.headingFormat = nextHeadingFormat;
+      if (
+        this.appliedClasses.length !== nextAppliedClasses.length ||
+        this.appliedClasses.some((c, i) => c !== nextAppliedClasses[i])
+      ) {
+        this.appliedClasses = nextAppliedClasses;
+      }
+      let formatsChanged = false;
+      for (const k in nextActiveFormats) {
+        if ((this.activeFormats as any)[k] !== (nextActiveFormats as any)[k]) {
+          formatsChanged = true;
+          break;
+        }
+      }
+      if (formatsChanged) {
+        this.activeFormats = nextActiveFormats;
       }
     }
   }
@@ -2713,7 +2738,9 @@ export default class RichTextEditor {
         if (el) {
           try {
             if ((el as any).contains(r.commonAncestorContainer)) {
-              activeSavedRange = this.escapeAtomicRange(r.cloneRange());
+              const escaped = this.escapeAtomicRange(r.cloneRange());
+              activeSavedRange = escaped;
+              (el as any).__cv_savedRange = escaped;
             }
           } catch (e) {}
         }
@@ -2729,15 +2756,14 @@ export default class RichTextEditor {
             (el as any).focus();
           }
         } catch (e) {}
-        if (activeSavedRange) {
+        const target = (el as any).__cv_savedRange || activeSavedRange;
+        if (target) {
           try {
-            if (
-              (el as any).contains(activeSavedRange.commonAncestorContainer)
-            ) {
+            if ((el as any).contains(target.commonAncestorContainer)) {
               const sel = window.getSelection();
               if (sel) {
                 sel.removeAllRanges();
-                sel.addRange(activeSavedRange.cloneRange());
+                sel.addRange(target.cloneRange());
               }
             }
           } catch (e) {}
@@ -2787,13 +2813,13 @@ export default class RichTextEditor {
         }
       } catch (e) {}
     }
-    if (!targetRange && activeSavedRange) {
+    const targetSaved = el
+      ? (el as any).__cv_savedRange || activeSavedRange
+      : activeSavedRange;
+    if (!targetRange && targetSaved) {
       try {
-        if (
-          el &&
-          (el as any).contains(activeSavedRange.commonAncestorContainer)
-        ) {
-          targetRange = activeSavedRange;
+        if (el && (el as any).contains(targetSaved.commonAncestorContainer)) {
+          targetRange = targetSaved;
         }
       } catch (e) {}
     }
@@ -2816,7 +2842,9 @@ export default class RichTextEditor {
         newRange.collapse(true);
         sel.removeAllRanges();
         sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       if (resizableEl) {
         this.selectMediaElement(resizableEl);
@@ -2836,7 +2864,9 @@ export default class RichTextEditor {
       if (sel) {
         sel.removeAllRanges();
         sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       if (resizableEl) {
         this.selectMediaElement(resizableEl);
@@ -2845,7 +2875,12 @@ export default class RichTextEditor {
     this.ensureEditableStructure();
     this.syncContent();
     this.checkFormats();
-    this.renderEmbeds();
+    if (
+      html.indexOf("cv-social-embed") !== -1 ||
+      html.indexOf("cv-math-formula") !== -1
+    ) {
+      this.renderEmbeds();
+    }
   }
   formatHTML(html: string) {
     if (!html) return "";
@@ -3319,7 +3354,26 @@ export default class RichTextEditor {
     }
   }
   handleInput() {
-    this.syncContent();
+    const el = this.getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+      }
+      (el as any).__cv_inputTimer = setTimeout(() => {
+        (el as any).__cv_inputTimer = null;
+        this.syncContent();
+      }, 250);
+    } else {
+      this.syncContent();
+    }
+  }
+  handleBlur() {
+    const el = this.getEditorElement();
+    if (el && (el as any).__cv_inputTimer) {
+      clearTimeout((el as any).__cv_inputTimer);
+      (el as any).__cv_inputTimer = null;
+      this.syncContent();
+    }
   }
   handleSourceInput(e: any) {
     this.internalContent = e.target.value;
@@ -3785,6 +3839,16 @@ export default class RichTextEditor {
     this.resizeToolbarTop = tbTop;
     this.resizeToolbarLeft = tbLeft;
   }
+  handleEditorScroll() {
+    if (!this.selectedMediaEl) return;
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        this.updateResizeHandlePosition();
+      });
+    } else {
+      this.updateResizeHandlePosition();
+    }
+  }
   selectMediaElement(el: any) {
     if (this.selectedMediaEl && this.selectedMediaEl !== el) {
       this.selectedMediaEl.classList.remove("cv-resizing-selected");
@@ -3870,9 +3934,19 @@ export default class RichTextEditor {
   ensureEditableStructure() {
     const el = this.getEditorElement();
     if (!el) return;
-    const html = (el.innerHTML || "").trim();
-    if (!html || html === "<br>" || html === "<p></p>") {
+    if (!el.hasChildNodes()) {
       el.innerHTML = "<p><br></p>";
+      return;
+    }
+    const first = el.firstElementChild;
+    if (
+      el.childNodes.length === 1 &&
+      first &&
+      first.tagName === "P" &&
+      !first.textContent &&
+      !first.children.length
+    ) {
+      first.innerHTML = "<br>";
       return;
     }
     const last = el.lastElementChild;
@@ -3888,7 +3962,6 @@ export default class RichTextEditor {
       p.innerHTML = "<br>";
       el.appendChild(p);
     }
-    const first = el.firstElementChild;
     if (
       first &&
       (first.getAttribute("contenteditable") === "false" ||
@@ -3948,7 +4021,9 @@ export default class RichTextEditor {
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      activeSavedRange = newRange.cloneRange();
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
   }
   focusEditorAtEnd() {
@@ -3968,7 +4043,9 @@ export default class RichTextEditor {
       range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
-      activeSavedRange = range.cloneRange();
+      const cloned = range.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
   }
   handleEditorContentClick(e: any) {
@@ -4076,8 +4153,14 @@ export default class RichTextEditor {
         if (sel && sel.rangeCount > 0) {
           this.saveSelection();
         }
-        this.checkFormats();
-        this.normalizeSelection();
+        if ((editor as any).__cv_selectionTimer) {
+          clearTimeout((editor as any).__cv_selectionTimer);
+        }
+        (editor as any).__cv_selectionTimer = setTimeout(() => {
+          (editor as any).__cv_selectionTimer = null;
+          this.checkFormats();
+          this.normalizeSelection();
+        }, 50);
       }
     }
   }
@@ -4149,6 +4232,17 @@ export default class RichTextEditor {
   }
 
   ngOnDestroy() {
+    const el = this.getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+        (el as any).__cv_inputTimer = null;
+      }
+      if ((el as any).__cv_selectionTimer) {
+        clearTimeout((el as any).__cv_selectionTimer);
+        (el as any).__cv_selectionTimer = null;
+      }
+    }
     if (typeof document !== "undefined") {
       document.removeEventListener(
         "fullscreenchange",

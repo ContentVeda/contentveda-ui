@@ -85,7 +85,18 @@
     return host === domain || host.endsWith("." + domain);
   }
   function escapeHtml(value: string) {
-    return String(value == null ? "" : value)
+    if (value == null) return "";
+    const str = String(value);
+    if (
+      str.indexOf("&") === -1 &&
+      str.indexOf("<") === -1 &&
+      str.indexOf(">") === -1 &&
+      str.indexOf('"') === -1 &&
+      str.indexOf("'") === -1
+    ) {
+      return str;
+    }
+    return str
       .split("&")
       .join("&amp;")
       .split("<")
@@ -124,6 +135,9 @@
       let isQuote = false;
       let isCode = false;
       let inTable = false;
+      let nextFontSize = fontSize;
+      let nextFontFamily = fontFamily;
+      let nextAppliedClasses = appliedClasses;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
@@ -133,7 +147,7 @@
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              fontSize = computed.fontSize;
+              nextFontSize = computed.fontSize;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -144,7 +158,7 @@
                 .join("")
                 .trim();
               if (primaryFont) {
-                fontFamily = primaryFont;
+                nextFontFamily = primaryFont;
               }
             }
           } catch (err) {}
@@ -173,7 +187,7 @@
             }
             searchNode = searchNode.parentElement;
           }
-          appliedClasses = classSet;
+          nextAppliedClasses = classSet;
         }
         while (
           node &&
@@ -187,7 +201,23 @@
           node = node.parentNode;
         }
       }
-      activeFormats = {
+      let nextHeadingFormat = "P";
+      const formatBlock = document.queryCommandValue("formatBlock");
+      if (formatBlock) {
+        if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+        else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+        else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+        else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+        else if (formatBlock.toLowerCase().includes("blockquote")) {
+          isQuote = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.toLowerCase().includes("pre")) {
+          isCode = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+        else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+      }
+      const nextActiveFormats = {
         bold: document.queryCommandState("bold"),
         italic: document.queryCommandState("italic"),
         underline: document.queryCommandState("underline"),
@@ -202,20 +232,25 @@
         code: isCode,
         inTable: inTable,
       };
-      const formatBlock = document.queryCommandValue("formatBlock");
-      if (formatBlock) {
-        if (formatBlock.includes("1")) headingFormat = "H1";
-        else if (formatBlock.includes("2")) headingFormat = "H2";
-        else if (formatBlock.includes("3")) headingFormat = "H3";
-        else if (formatBlock.includes("4")) headingFormat = "H4";
-        else if (formatBlock.toLowerCase().includes("blockquote")) {
-          activeFormats.quote = true;
-          headingFormat = "P";
-        } else if (formatBlock.toLowerCase().includes("pre")) {
-          activeFormats.code = true;
-          headingFormat = "P";
-        } else if (formatBlock.includes("p")) headingFormat = "P";
-        else if (formatBlock.includes("div")) headingFormat = "P";
+      if (fontSize !== nextFontSize) fontSize = nextFontSize;
+      if (fontFamily !== nextFontFamily) fontFamily = nextFontFamily;
+      if (headingFormat !== nextHeadingFormat)
+        headingFormat = nextHeadingFormat;
+      if (
+        appliedClasses.length !== nextAppliedClasses.length ||
+        appliedClasses.some((c, i) => c !== nextAppliedClasses[i])
+      ) {
+        appliedClasses = nextAppliedClasses;
+      }
+      let formatsChanged = false;
+      for (const k in nextActiveFormats) {
+        if ((activeFormats as any)[k] !== (nextActiveFormats as any)[k]) {
+          formatsChanged = true;
+          break;
+        }
+      }
+      if (formatsChanged) {
+        activeFormats = nextActiveFormats;
       }
     }
   }
@@ -228,7 +263,9 @@
         if (el) {
           try {
             if ((el as any).contains(r.commonAncestorContainer)) {
-              activeSavedRange = escapeAtomicRange(r.cloneRange());
+              const escaped = escapeAtomicRange(r.cloneRange());
+              activeSavedRange = escaped;
+              (el as any).__cv_savedRange = escaped;
             }
           } catch (e) {}
         }
@@ -244,15 +281,14 @@
             (el as any).focus();
           }
         } catch (e) {}
-        if (activeSavedRange) {
+        const target = (el as any).__cv_savedRange || activeSavedRange;
+        if (target) {
           try {
-            if (
-              (el as any).contains(activeSavedRange.commonAncestorContainer)
-            ) {
+            if ((el as any).contains(target.commonAncestorContainer)) {
               const sel = window.getSelection();
               if (sel) {
                 sel.removeAllRanges();
-                sel.addRange(activeSavedRange.cloneRange());
+                sel.addRange(target.cloneRange());
               }
             }
           } catch (e) {}
@@ -302,13 +338,13 @@
         }
       } catch (e) {}
     }
-    if (!targetRange && activeSavedRange) {
+    const targetSaved = el
+      ? (el as any).__cv_savedRange || activeSavedRange
+      : activeSavedRange;
+    if (!targetRange && targetSaved) {
       try {
-        if (
-          el &&
-          (el as any).contains(activeSavedRange.commonAncestorContainer)
-        ) {
-          targetRange = activeSavedRange;
+        if (el && (el as any).contains(targetSaved.commonAncestorContainer)) {
+          targetRange = targetSaved;
         }
       } catch (e) {}
     }
@@ -331,7 +367,9 @@
         newRange.collapse(true);
         sel.removeAllRanges();
         sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       if (resizableEl) {
         selectMediaElement(resizableEl);
@@ -351,7 +389,9 @@
       if (sel) {
         sel.removeAllRanges();
         sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       if (resizableEl) {
         selectMediaElement(resizableEl);
@@ -360,7 +400,12 @@
     ensureEditableStructure();
     syncContent();
     checkFormats();
-    renderEmbeds();
+    if (
+      html.indexOf("cv-social-embed") !== -1 ||
+      html.indexOf("cv-math-formula") !== -1
+    ) {
+      renderEmbeds();
+    }
   }
   function formatHTML(html: string) {
     if (!html) return "";
@@ -832,7 +877,26 @@
     }
   }
   function handleInput() {
-    syncContent();
+    const el = getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+      }
+      (el as any).__cv_inputTimer = setTimeout(() => {
+        (el as any).__cv_inputTimer = null;
+        syncContent();
+      }, 250);
+    } else {
+      syncContent();
+    }
+  }
+  function handleBlur() {
+    const el = getEditorElement();
+    if (el && (el as any).__cv_inputTimer) {
+      clearTimeout((el as any).__cv_inputTimer);
+      (el as any).__cv_inputTimer = null;
+      syncContent();
+    }
   }
   function handleSourceInput(e: any) {
     internalContent = e.target.value;
@@ -1281,6 +1345,16 @@
     resizeToolbarTop = tbTop;
     resizeToolbarLeft = tbLeft;
   }
+  function handleEditorScroll() {
+    if (!selectedMediaEl) return;
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        updateResizeHandlePosition();
+      });
+    } else {
+      updateResizeHandlePosition();
+    }
+  }
   function selectMediaElement(el: any) {
     if (selectedMediaEl && selectedMediaEl !== el) {
       selectedMediaEl.classList.remove("cv-resizing-selected");
@@ -1366,9 +1440,19 @@
   function ensureEditableStructure() {
     const el = getEditorElement();
     if (!el) return;
-    const html = (el.innerHTML || "").trim();
-    if (!html || html === "<br>" || html === "<p></p>") {
+    if (!el.hasChildNodes()) {
       el.innerHTML = "<p><br></p>";
+      return;
+    }
+    const first = el.firstElementChild;
+    if (
+      el.childNodes.length === 1 &&
+      first &&
+      first.tagName === "P" &&
+      !first.textContent &&
+      !first.children.length
+    ) {
+      first.innerHTML = "<br>";
       return;
     }
     const last = el.lastElementChild;
@@ -1384,7 +1468,6 @@
       p.innerHTML = "<br>";
       el.appendChild(p);
     }
-    const first = el.firstElementChild;
     if (
       first &&
       (first.getAttribute("contenteditable") === "false" ||
@@ -1444,7 +1527,9 @@
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      activeSavedRange = newRange.cloneRange();
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
   }
   function focusEditorAtEnd() {
@@ -1464,7 +1549,9 @@
       range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
-      activeSavedRange = range.cloneRange();
+      const cloned = range.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
   }
   function handleEditorContentClick(e: any) {
@@ -1572,8 +1659,14 @@
         if (sel && sel.rangeCount > 0) {
           saveSelection();
         }
-        checkFormats();
-        normalizeSelection();
+        if ((editor as any).__cv_selectionTimer) {
+          clearTimeout((editor as any).__cv_selectionTimer);
+        }
+        (editor as any).__cv_selectionTimer = setTimeout(() => {
+          (editor as any).__cv_selectionTimer = null;
+          checkFormats();
+          normalizeSelection();
+        }, 50);
       }
     }
   }
@@ -1681,6 +1774,17 @@
   $: onUpdateFn_0(...[content]);
 
   onDestroy(() => {
+    const el = getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+        (el as any).__cv_inputTimer = null;
+      }
+      if ((el as any).__cv_selectionTimer) {
+        clearTimeout((el as any).__cv_selectionTimer);
+        (el as any).__cv_selectionTimer = null;
+      }
+    }
     if (typeof document !== "undefined") {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("selectionchange", handleSelectionChange);
@@ -2960,7 +3064,7 @@
     })}
     class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode}`}
     on:scroll={(event) => {
-      updateResizeHandlePosition();
+      handleEditorScroll();
     }}
     on:click={(e) => {
       handleEditorContentClick(e);
@@ -2980,22 +3084,18 @@
       }`}
       on:input={(event) => {
         handleInput();
-        checkFormats();
-        normalizeSelection();
       }}
       on:blur={(event) => {
-        handleInput();
+        handleBlur();
       }}
       on:keyup={(event) => {
         checkFormats();
-        normalizeSelection();
       }}
       on:keydown={(e) => {
         handleKeyDown(e);
       }}
       on:mouseup={(event) => {
         checkFormats();
-        normalizeSelection();
       }}
       on:click={(e) => {
         handleEditorClick(e);

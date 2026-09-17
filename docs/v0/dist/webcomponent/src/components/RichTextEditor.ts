@@ -88,7 +88,18 @@ class RichTextEditor extends HTMLElement {
         return host === domain || host.endsWith("." + domain);
       },
       escapeHtml(value: string) {
-        return String(value == null ? "" : value)
+        if (value == null) return "";
+        const str = String(value);
+        if (
+          str.indexOf("&") === -1 &&
+          str.indexOf("<") === -1 &&
+          str.indexOf(">") === -1 &&
+          str.indexOf('"') === -1 &&
+          str.indexOf("'") === -1
+        ) {
+          return str;
+        }
+        return str
           .split("&")
           .join("&amp;")
           .split("<")
@@ -175,6 +186,9 @@ class RichTextEditor extends HTMLElement {
           let isQuote = false;
           let isCode = false;
           let inTable = false;
+          let nextFontSize = self.state.fontSize;
+          let nextFontFamily = self.state.fontFamily;
+          let nextAppliedClasses = self.state.appliedClasses;
           const sel = window.getSelection();
           if (sel && sel.rangeCount > 0) {
             let node = sel.getRangeAt(0).startContainer as any;
@@ -188,8 +202,7 @@ class RichTextEditor extends HTMLElement {
               try {
                 const computed = window.getComputedStyle(currentEl);
                 if (computed && computed.fontSize) {
-                  self.state.fontSize = computed.fontSize;
-                  self.update();
+                  nextFontSize = computed.fontSize;
                 }
                 if (computed && computed.fontFamily) {
                   const primaryFont = computed.fontFamily
@@ -200,8 +213,7 @@ class RichTextEditor extends HTMLElement {
                     .join("")
                     .trim();
                   if (primaryFont) {
-                    self.state.fontFamily = primaryFont;
-                    self.update();
+                    nextFontFamily = primaryFont;
                   }
                 }
               } catch (err) {}
@@ -230,8 +242,7 @@ class RichTextEditor extends HTMLElement {
                 }
                 searchNode = searchNode.parentElement;
               }
-              self.state.appliedClasses = classSet;
-              self.update();
+              nextAppliedClasses = classSet;
             }
             while (
               node &&
@@ -246,7 +257,23 @@ class RichTextEditor extends HTMLElement {
               node = node.parentNode;
             }
           }
-          self.state.activeFormats = {
+          let nextHeadingFormat = "P";
+          const formatBlock = document.queryCommandValue("formatBlock");
+          if (formatBlock) {
+            if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+            else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+            else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+            else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+            else if (formatBlock.toLowerCase().includes("blockquote")) {
+              isQuote = true;
+              nextHeadingFormat = "P";
+            } else if (formatBlock.toLowerCase().includes("pre")) {
+              isCode = true;
+              nextHeadingFormat = "P";
+            } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+            else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+          }
+          const nextActiveFormats = {
             bold: document.queryCommandState("bold"),
             italic: document.queryCommandState("italic"),
             underline: document.queryCommandState("underline"),
@@ -261,42 +288,43 @@ class RichTextEditor extends HTMLElement {
             code: isCode,
             inTable: inTable,
           };
-          self.update();
-          const formatBlock = document.queryCommandValue("formatBlock");
-          if (formatBlock) {
-            if (formatBlock.includes("1")) {
-              self.state.headingFormat = "H1";
-              self.update();
-              self.update();
-            } else if (formatBlock.includes("2")) {
-              self.state.headingFormat = "H2";
-              self.update();
-              self.update();
-            } else if (formatBlock.includes("3")) {
-              self.state.headingFormat = "H3";
-              self.update();
-              self.update();
-            } else if (formatBlock.includes("4")) {
-              self.state.headingFormat = "H4";
-              self.update();
-              self.update();
-            } else if (formatBlock.toLowerCase().includes("blockquote")) {
-              self.state.activeFormats.quote = true;
-              self.state.headingFormat = "P";
-              self.update();
-            } else if (formatBlock.toLowerCase().includes("pre")) {
-              self.state.activeFormats.code = true;
-              self.state.headingFormat = "P";
-              self.update();
-            } else if (formatBlock.includes("p")) {
-              self.state.headingFormat = "P";
-              self.update();
-              self.update();
-            } else if (formatBlock.includes("div")) {
-              self.state.headingFormat = "P";
-              self.update();
-              self.update();
+          if (self.state.fontSize !== nextFontSize) {
+            self.state.fontSize = nextFontSize;
+            self.update();
+            self.update();
+          }
+          if (self.state.fontFamily !== nextFontFamily) {
+            self.state.fontFamily = nextFontFamily;
+            self.update();
+            self.update();
+          }
+          if (self.state.headingFormat !== nextHeadingFormat) {
+            self.state.headingFormat = nextHeadingFormat;
+            self.update();
+            self.update();
+          }
+          if (
+            self.state.appliedClasses.length !== nextAppliedClasses.length ||
+            self.state.appliedClasses.some(
+              (c, i) => c !== nextAppliedClasses[i]
+            )
+          ) {
+            self.state.appliedClasses = nextAppliedClasses;
+            self.update();
+          }
+          let formatsChanged = false;
+          for (const k in nextActiveFormats) {
+            if (
+              (self.state.activeFormats as any)[k] !==
+              (nextActiveFormats as any)[k]
+            ) {
+              formatsChanged = true;
+              break;
             }
+          }
+          if (formatsChanged) {
+            self.state.activeFormats = nextActiveFormats;
+            self.update();
           }
         }
       },
@@ -309,9 +337,9 @@ class RichTextEditor extends HTMLElement {
             if (el) {
               try {
                 if ((el as any).contains(r.commonAncestorContainer)) {
-                  activeSavedRange = self.state.escapeAtomicRange(
-                    r.cloneRange()
-                  );
+                  const escaped = self.state.escapeAtomicRange(r.cloneRange());
+                  activeSavedRange = escaped;
+                  (el as any).__cv_savedRange = escaped;
                 }
               } catch (e) {}
             }
@@ -327,15 +355,14 @@ class RichTextEditor extends HTMLElement {
                 (el as any).focus();
               }
             } catch (e) {}
-            if (activeSavedRange) {
+            const target = (el as any).__cv_savedRange || activeSavedRange;
+            if (target) {
               try {
-                if (
-                  (el as any).contains(activeSavedRange.commonAncestorContainer)
-                ) {
+                if ((el as any).contains(target.commonAncestorContainer)) {
                   const sel = window.getSelection();
                   if (sel) {
                     sel.removeAllRanges();
-                    sel.addRange(activeSavedRange.cloneRange());
+                    sel.addRange(target.cloneRange());
                   }
                 }
               } catch (e) {}
@@ -385,13 +412,16 @@ class RichTextEditor extends HTMLElement {
             }
           } catch (e) {}
         }
-        if (!targetRange && activeSavedRange) {
+        const targetSaved = el
+          ? (el as any).__cv_savedRange || activeSavedRange
+          : activeSavedRange;
+        if (!targetRange && targetSaved) {
           try {
             if (
               el &&
-              (el as any).contains(activeSavedRange.commonAncestorContainer)
+              (el as any).contains(targetSaved.commonAncestorContainer)
             ) {
-              targetRange = activeSavedRange;
+              targetRange = targetSaved;
             }
           } catch (e) {}
         }
@@ -414,7 +444,9 @@ class RichTextEditor extends HTMLElement {
             newRange.collapse(true);
             sel.removeAllRanges();
             sel.addRange(newRange);
-            activeSavedRange = newRange.cloneRange();
+            const cloned = newRange.cloneRange();
+            activeSavedRange = cloned;
+            if (el) (el as any).__cv_savedRange = cloned;
           }
           if (resizableEl) {
             self.state.selectMediaElement(resizableEl);
@@ -434,7 +466,9 @@ class RichTextEditor extends HTMLElement {
           if (sel) {
             sel.removeAllRanges();
             sel.addRange(newRange);
-            activeSavedRange = newRange.cloneRange();
+            const cloned = newRange.cloneRange();
+            activeSavedRange = cloned;
+            if (el) (el as any).__cv_savedRange = cloned;
           }
           if (resizableEl) {
             self.state.selectMediaElement(resizableEl);
@@ -443,7 +477,12 @@ class RichTextEditor extends HTMLElement {
         self.state.ensureEditableStructure();
         self.state.syncContent();
         self.state.checkFormats();
-        self.state.renderEmbeds();
+        if (
+          html.indexOf("cv-social-embed") !== -1 ||
+          html.indexOf("cv-math-formula") !== -1
+        ) {
+          self.state.renderEmbeds();
+        }
       },
       formatHTML(html: string) {
         if (!html) return "";
@@ -936,7 +975,26 @@ class RichTextEditor extends HTMLElement {
         }
       },
       handleInput() {
-        self.state.syncContent();
+        const el = self.state.getEditorElement();
+        if (el) {
+          if ((el as any).__cv_inputTimer) {
+            clearTimeout((el as any).__cv_inputTimer);
+          }
+          (el as any).__cv_inputTimer = setTimeout(() => {
+            (el as any).__cv_inputTimer = null;
+            self.state.syncContent();
+          }, 250);
+        } else {
+          self.state.syncContent();
+        }
+      },
+      handleBlur() {
+        const el = self.state.getEditorElement();
+        if (el && (el as any).__cv_inputTimer) {
+          clearTimeout((el as any).__cv_inputTimer);
+          (el as any).__cv_inputTimer = null;
+          self.state.syncContent();
+        }
       },
       handleSourceInput(e: any) {
         self.state.internalContent = e.target.value;
@@ -1444,6 +1502,16 @@ class RichTextEditor extends HTMLElement {
         self.state.resizeToolbarLeft = tbLeft;
         self.update();
       },
+      handleEditorScroll() {
+        if (!self.state.selectedMediaEl) return;
+        if (typeof window !== "undefined" && window.requestAnimationFrame) {
+          window.requestAnimationFrame(() => {
+            self.state.updateResizeHandlePosition();
+          });
+        } else {
+          self.state.updateResizeHandlePosition();
+        }
+      },
       selectMediaElement(el: any) {
         if (self.state.selectedMediaEl && self.state.selectedMediaEl !== el) {
           self.state.selectedMediaEl.classList.remove("cv-resizing-selected");
@@ -1537,9 +1605,19 @@ class RichTextEditor extends HTMLElement {
       ensureEditableStructure() {
         const el = self.state.getEditorElement();
         if (!el) return;
-        const html = (el.innerHTML || "").trim();
-        if (!html || html === "<br>" || html === "<p></p>") {
+        if (!el.hasChildNodes()) {
           el.innerHTML = "<p><br></p>";
+          return;
+        }
+        const first = el.firstElementChild;
+        if (
+          el.childNodes.length === 1 &&
+          first &&
+          first.tagName === "P" &&
+          !first.textContent &&
+          !first.children.length
+        ) {
+          first.innerHTML = "<br>";
           return;
         }
         const last = el.lastElementChild;
@@ -1555,7 +1633,6 @@ class RichTextEditor extends HTMLElement {
           p.innerHTML = "<br>";
           el.appendChild(p);
         }
-        const first = el.firstElementChild;
         if (
           first &&
           (first.getAttribute("contenteditable") === "false" ||
@@ -1615,7 +1692,9 @@ class RichTextEditor extends HTMLElement {
           newRange.collapse(true);
           sel.removeAllRanges();
           sel.addRange(newRange);
-          activeSavedRange = newRange.cloneRange();
+          const cloned = newRange.cloneRange();
+          activeSavedRange = cloned;
+          if (el) (el as any).__cv_savedRange = cloned;
         }
       },
       focusEditorAtEnd() {
@@ -1635,7 +1714,9 @@ class RichTextEditor extends HTMLElement {
           range.collapse(false);
           sel.removeAllRanges();
           sel.addRange(range);
-          activeSavedRange = range.cloneRange();
+          const cloned = range.cloneRange();
+          activeSavedRange = cloned;
+          if (el) (el as any).__cv_savedRange = cloned;
         }
       },
       handleEditorContentClick(e: any) {
@@ -1754,8 +1835,14 @@ class RichTextEditor extends HTMLElement {
             if (sel && sel.rangeCount > 0) {
               self.state.saveSelection();
             }
-            self.state.checkFormats();
-            self.state.normalizeSelection();
+            if ((editor as any).__cv_selectionTimer) {
+              clearTimeout((editor as any).__cv_selectionTimer);
+            }
+            (editor as any).__cv_selectionTimer = setTimeout(() => {
+              (editor as any).__cv_selectionTimer = null;
+              self.state.checkFormats();
+              self.state.normalizeSelection();
+            }, 50);
           }
         }
       },
@@ -2265,7 +2352,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'scroll' event on div-rich-text-editor-5
     this.onDivRichTextEditor5Scroll = (event) => {
-      this.state.updateResizeHandlePosition();
+      this.state.handleEditorScroll();
     };
 
     // Event handler for 'click' event on div-rich-text-editor-5
@@ -2276,19 +2363,16 @@ class RichTextEditor extends HTMLElement {
     // Event handler for 'input' event on div-rich-text-editor-6
     this.onDivRichTextEditor6Input = (event) => {
       this.state.handleInput();
-      this.state.checkFormats();
-      this.state.normalizeSelection();
     };
 
     // Event handler for 'blur' event on div-rich-text-editor-6
     this.onDivRichTextEditor6Blur = (event) => {
-      this.state.handleInput();
+      this.state.handleBlur();
     };
 
     // Event handler for 'keyup' event on div-rich-text-editor-6
     this.onDivRichTextEditor6Keyup = (event) => {
       this.state.checkFormats();
-      this.state.normalizeSelection();
     };
 
     // Event handler for 'keydown' event on div-rich-text-editor-6
@@ -2299,7 +2383,6 @@ class RichTextEditor extends HTMLElement {
     // Event handler for 'mouseup' event on div-rich-text-editor-6
     this.onDivRichTextEditor6Mouseup = (event) => {
       this.state.checkFormats();
-      this.state.normalizeSelection();
     };
 
     // Event handler for 'click' event on div-rich-text-editor-6
@@ -2549,6 +2632,17 @@ class RichTextEditor extends HTMLElement {
 
   disconnectedCallback() {
     // onUnMount
+    const el = this.state.getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+        (el as any).__cv_inputTimer = null;
+      }
+      if ((el as any).__cv_selectionTimer) {
+        clearTimeout((el as any).__cv_selectionTimer);
+        (el as any).__cv_selectionTimer = null;
+      }
+    }
     if (typeof document !== "undefined") {
       document.removeEventListener(
         "fullscreenchange",

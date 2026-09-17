@@ -168,7 +168,18 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function escapeHtml(value: string) {
-    return String(value == null ? "" : value)
+    if (value == null) return "";
+    const str = String(value);
+    if (
+      str.indexOf("&") === -1 &&
+      str.indexOf("<") === -1 &&
+      str.indexOf(">") === -1 &&
+      str.indexOf('"') === -1 &&
+      str.indexOf("'") === -1
+    ) {
+      return str;
+    }
+    return str
       .split("&")
       .join("&amp;")
       .split("<")
@@ -209,6 +220,9 @@ function RichTextEditor(props: RichTextEditorProps) {
       let isQuote = false;
       let isCode = false;
       let inTable = false;
+      let nextFontSize = fontSize();
+      let nextFontFamily = fontFamily();
+      let nextAppliedClasses = appliedClasses();
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
@@ -218,7 +232,7 @@ function RichTextEditor(props: RichTextEditorProps) {
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              setFontSize(computed.fontSize);
+              nextFontSize = computed.fontSize;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -229,7 +243,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                 .join("")
                 .trim();
               if (primaryFont) {
-                setFontFamily(primaryFont);
+                nextFontFamily = primaryFont;
               }
             }
           } catch (err) {}
@@ -258,7 +272,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             }
             searchNode = searchNode.parentElement;
           }
-          setAppliedClasses(classSet);
+          nextAppliedClasses = classSet;
         }
         while (
           node &&
@@ -272,7 +286,23 @@ function RichTextEditor(props: RichTextEditorProps) {
           node = node.parentNode;
         }
       }
-      setActiveFormats({
+      let nextHeadingFormat = "P";
+      const formatBlock = document.queryCommandValue("formatBlock");
+      if (formatBlock) {
+        if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+        else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+        else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+        else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+        else if (formatBlock.toLowerCase().includes("blockquote")) {
+          isQuote = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.toLowerCase().includes("pre")) {
+          isCode = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+        else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+      }
+      const nextActiveFormats = {
         bold: document.queryCommandState("bold"),
         italic: document.queryCommandState("italic"),
         underline: document.queryCommandState("underline"),
@@ -286,21 +316,26 @@ function RichTextEditor(props: RichTextEditorProps) {
         quote: isQuote,
         code: isCode,
         inTable: inTable,
-      });
-      const formatBlock = document.queryCommandValue("formatBlock");
-      if (formatBlock) {
-        if (formatBlock.includes("1")) setHeadingFormat("H1");
-        else if (formatBlock.includes("2")) setHeadingFormat("H2");
-        else if (formatBlock.includes("3")) setHeadingFormat("H3");
-        else if (formatBlock.includes("4")) setHeadingFormat("H4");
-        else if (formatBlock.toLowerCase().includes("blockquote")) {
-          activeFormats().quote = true;
-          setHeadingFormat("P");
-        } else if (formatBlock.toLowerCase().includes("pre")) {
-          activeFormats().code = true;
-          setHeadingFormat("P");
-        } else if (formatBlock.includes("p")) setHeadingFormat("P");
-        else if (formatBlock.includes("div")) setHeadingFormat("P");
+      };
+      if (fontSize() !== nextFontSize) setFontSize(nextFontSize);
+      if (fontFamily() !== nextFontFamily) setFontFamily(nextFontFamily);
+      if (headingFormat() !== nextHeadingFormat)
+        setHeadingFormat(nextHeadingFormat);
+      if (
+        appliedClasses().length !== nextAppliedClasses.length ||
+        appliedClasses().some((c, i) => c !== nextAppliedClasses[i])
+      ) {
+        setAppliedClasses(nextAppliedClasses);
+      }
+      let formatsChanged = false;
+      for (const k in nextActiveFormats) {
+        if ((activeFormats() as any)[k] !== (nextActiveFormats as any)[k]) {
+          formatsChanged = true;
+          break;
+        }
+      }
+      if (formatsChanged) {
+        setActiveFormats(nextActiveFormats);
       }
     }
   }
@@ -314,7 +349,9 @@ function RichTextEditor(props: RichTextEditorProps) {
         if (el) {
           try {
             if ((el as any).contains(r.commonAncestorContainer)) {
-              activeSavedRange = escapeAtomicRange(r.cloneRange());
+              const escaped = escapeAtomicRange(r.cloneRange());
+              activeSavedRange = escaped;
+              (el as any).__cv_savedRange = escaped;
             }
           } catch (e) {}
         }
@@ -331,15 +368,14 @@ function RichTextEditor(props: RichTextEditorProps) {
             (el as any).focus();
           }
         } catch (e) {}
-        if (activeSavedRange) {
+        const target = (el as any).__cv_savedRange || activeSavedRange;
+        if (target) {
           try {
-            if (
-              (el as any).contains(activeSavedRange.commonAncestorContainer)
-            ) {
+            if ((el as any).contains(target.commonAncestorContainer)) {
               const sel = window.getSelection();
               if (sel) {
                 sel.removeAllRanges();
-                sel.addRange(activeSavedRange.cloneRange());
+                sel.addRange(target.cloneRange());
               }
             }
           } catch (e) {}
@@ -391,13 +427,13 @@ function RichTextEditor(props: RichTextEditorProps) {
         }
       } catch (e) {}
     }
-    if (!targetRange && activeSavedRange) {
+    const targetSaved = el
+      ? (el as any).__cv_savedRange || activeSavedRange
+      : activeSavedRange;
+    if (!targetRange && targetSaved) {
       try {
-        if (
-          el &&
-          (el as any).contains(activeSavedRange.commonAncestorContainer)
-        ) {
-          targetRange = activeSavedRange;
+        if (el && (el as any).contains(targetSaved.commonAncestorContainer)) {
+          targetRange = targetSaved;
         }
       } catch (e) {}
     }
@@ -420,7 +456,9 @@ function RichTextEditor(props: RichTextEditorProps) {
         newRange.collapse(true);
         sel.removeAllRanges();
         sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       if (resizableEl) {
         selectMediaElement(resizableEl);
@@ -440,7 +478,9 @@ function RichTextEditor(props: RichTextEditorProps) {
       if (sel) {
         sel.removeAllRanges();
         sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       if (resizableEl) {
         selectMediaElement(resizableEl);
@@ -449,7 +489,12 @@ function RichTextEditor(props: RichTextEditorProps) {
     ensureEditableStructure();
     syncContent();
     checkFormats();
-    renderEmbeds();
+    if (
+      html.indexOf("cv-social-embed") !== -1 ||
+      html.indexOf("cv-math-formula") !== -1
+    ) {
+      renderEmbeds();
+    }
   }
 
   function formatHTML(html: string) {
@@ -939,7 +984,27 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function handleInput() {
-    syncContent();
+    const el = getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+      }
+      (el as any).__cv_inputTimer = setTimeout(() => {
+        (el as any).__cv_inputTimer = null;
+        syncContent();
+      }, 250);
+    } else {
+      syncContent();
+    }
+  }
+
+  function handleBlur() {
+    const el = getEditorElement();
+    if (el && (el as any).__cv_inputTimer) {
+      clearTimeout((el as any).__cv_inputTimer);
+      (el as any).__cv_inputTimer = null;
+      syncContent();
+    }
   }
 
   function handleSourceInput(e: any) {
@@ -1431,6 +1496,17 @@ function RichTextEditor(props: RichTextEditorProps) {
     setResizeToolbarLeft(tbLeft);
   }
 
+  function handleEditorScroll() {
+    if (!selectedMediaEl()) return;
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        updateResizeHandlePosition();
+      });
+    } else {
+      updateResizeHandlePosition();
+    }
+  }
+
   function selectMediaElement(el: any) {
     if (selectedMediaEl() && selectedMediaEl() !== el) {
       selectedMediaEl().classList.remove("cv-resizing-selected");
@@ -1524,9 +1600,19 @@ function RichTextEditor(props: RichTextEditorProps) {
   function ensureEditableStructure() {
     const el = getEditorElement();
     if (!el) return;
-    const html = (el.innerHTML || "").trim();
-    if (!html || html === "<br>" || html === "<p></p>") {
+    if (!el.hasChildNodes()) {
       el.innerHTML = "<p><br></p>";
+      return;
+    }
+    const first = el.firstElementChild;
+    if (
+      el.childNodes.length === 1 &&
+      first &&
+      first.tagName === "P" &&
+      !first.textContent &&
+      !first.children.length
+    ) {
+      first.innerHTML = "<br>";
       return;
     }
     const last = el.lastElementChild;
@@ -1542,7 +1628,6 @@ function RichTextEditor(props: RichTextEditorProps) {
       p.innerHTML = "<br>";
       el.appendChild(p);
     }
-    const first = el.firstElementChild;
     if (
       first &&
       (first.getAttribute("contenteditable") === "false" ||
@@ -1603,7 +1688,9 @@ function RichTextEditor(props: RichTextEditorProps) {
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      activeSavedRange = newRange.cloneRange();
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
   }
 
@@ -1624,7 +1711,9 @@ function RichTextEditor(props: RichTextEditorProps) {
       range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
-      activeSavedRange = range.cloneRange();
+      const cloned = range.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
   }
 
@@ -1740,8 +1829,14 @@ function RichTextEditor(props: RichTextEditorProps) {
         if (sel && sel.rangeCount > 0) {
           saveSelection();
         }
-        checkFormats();
-        normalizeSelection();
+        if ((editor as any).__cv_selectionTimer) {
+          clearTimeout((editor as any).__cv_selectionTimer);
+        }
+        (editor as any).__cv_selectionTimer = setTimeout(() => {
+          (editor as any).__cv_selectionTimer = null;
+          checkFormats();
+          normalizeSelection();
+        }, 50);
       }
     }
   }
@@ -3029,7 +3124,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         </div>
         <div
           class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode()}`}
-          onScroll={(event) => updateResizeHandlePosition()}
+          onScroll={(event) => handleEditorScroll()}
           onClick={(e) => handleEditorContentClick(e)}
           style={{
             padding: "2rem 3rem",
@@ -3044,21 +3139,11 @@ function RichTextEditor(props: RichTextEditorProps) {
             }`}
             ref={editorRef!}
             contentEditable={isReadOnly() ? "false" : "true"}
-            onInput={(event) => {
-              handleInput();
-              checkFormats();
-              normalizeSelection();
-            }}
-            onBlur={(event) => handleInput()}
-            onKeyUp={(event) => {
-              checkFormats();
-              normalizeSelection();
-            }}
+            onInput={(event) => handleInput()}
+            onBlur={(event) => handleBlur()}
+            onKeyUp={(event) => checkFormats()}
             onKeyDown={(e) => handleKeyDown(e)}
-            onMouseUp={(event) => {
-              checkFormats();
-              normalizeSelection();
-            }}
+            onMouseUp={(event) => checkFormats()}
             onClick={(e) => handleEditorClick(e)}
             style={{
               "min-height": "350px",
