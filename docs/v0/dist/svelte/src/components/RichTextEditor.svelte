@@ -147,7 +147,8 @@
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              nextFontSize = computed.fontSize;
+              const pxVal = Math.round(parseFloat(computed.fontSize));
+              nextFontSize = `${pxVal}px`;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -319,6 +320,7 @@
   }
   function insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
+    if (mode === "source") return;
     const el = getEditorElement();
     if (el) {
       try {
@@ -433,6 +435,7 @@
     return html;
   }
   function format(cmd: string, val?: string) {
+    if (mode === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -443,6 +446,7 @@
   }
   function applyColorPreview(cmd: string, color: string) {
     if (!color) return;
+    if (mode === "source") return;
     const previewEl = getEditorElement();
     if (previewEl) {
       try {
@@ -462,6 +466,7 @@
   }
   function applyColor(cmd: string, color: string) {
     if (!color) return;
+    if (mode === "source") return;
     const colorEl = getEditorElement();
     if (colorEl) {
       try {
@@ -484,6 +489,7 @@
     checkFormats();
   }
   function formatHeading(level: string) {
+    if (mode === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -499,6 +505,7 @@
     }
   }
   function insertMedia(type: "image" | "video" | "audio") {
+    if (mode === "source") return;
     saveSelection();
     const insertContent = (url: string, altText?: string) => {
       if (!url) return;
@@ -560,6 +567,7 @@
     }
   }
   function clearAllFormatting() {
+    if (mode === "source") return;
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("removeFormat", false, undefined);
@@ -573,6 +581,7 @@
     checkFormats();
   }
   function toggleBlock(type: string) {
+    if (mode === "source") return;
     checkFormats();
     const isActive = type === "PRE" ? activeFormats.code : activeFormats.quote;
     if (isActive) {
@@ -589,6 +598,7 @@
   }
   function applyClass(className: string) {
     if (!className) return;
+    if (mode === "source") return;
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
@@ -600,6 +610,7 @@
     }
   }
   function openButtonModal() {
+    if (mode === "source") return;
     saveSelection();
     showButtonModal = true;
     btnText = "Click Here";
@@ -911,6 +922,7 @@
     }
   }
   function openTableModal() {
+    if (mode === "source") return;
     saveSelection();
     showTableModal = true;
     tableRows = "3";
@@ -952,6 +964,7 @@
   function modifyTable(
     action: "addRow" | "removeRow" | "addCol" | "removeCol"
   ) {
+    if (mode === "source") return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let node = sel.getRangeAt(0).startContainer as any;
@@ -1023,6 +1036,7 @@
     syncContent();
   }
   function openLinkModal() {
+    if (mode === "source") return;
     saveSelection();
     showLinkModal = true;
     linkUrl = "";
@@ -1041,6 +1055,7 @@
     showLinkModal = false;
   }
   function openWidgetModal() {
+    if (mode === "source") return;
     saveSelection();
     showWidgetModal = true;
   }
@@ -1056,6 +1071,7 @@
     showWidgetModal = false;
   }
   function openSocialModal() {
+    if (mode === "source") return;
     saveSelection();
     showSocialModal = true;
     socialUrl = "";
@@ -1112,6 +1128,7 @@
     }
   }
   function changeFontFamily(font: string) {
+    if (mode === "source") return;
     fontFamily = font;
     restoreSelection();
     document.execCommand("fontName", false, font);
@@ -1119,6 +1136,7 @@
     checkFormats();
   }
   function changeFontSize(size: string) {
+    if (mode === "source") return;
     fontSize = size;
     restoreSelection();
     const sel = window.getSelection();
@@ -1137,6 +1155,7 @@
       const sizeMap: any = {
         "12px": "1",
         "14px": "2",
+        "15px": "2",
         "16px": "3",
         "18px": "4",
         "20px": "5",
@@ -1149,15 +1168,108 @@
     checkFormats();
   }
   function insertChecklist() {
-    // The checkbox and its text must share one <label> (implicit
-    // association, no id needed) -- as separate sibling elements a screen
-    // reader announces an unlabelled checkbox with no indication of what
-    // it controls, and clicking the text would not toggle it either.
-    const html =
-      '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-    insertHtmlAtCursor(html);
+    if (mode === "source") return;
+    restoreSelection();
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const editor = getEditorElement();
+    if (!sel || !editor) return;
+    let node: any =
+      sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+    let currentLi: HTMLElement | null = null;
+    let currentUl: HTMLElement | null = null;
+    let currentP: HTMLElement | null = null;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        if (node.tagName === "LI") currentLi = node;
+        if (node.tagName === "UL" && node.classList.contains("task-list"))
+          currentUl = node;
+        if (node.tagName === "P" || node.tagName === "DIV") currentP = node;
+      }
+      node = node.parentNode;
+    }
+
+    // 1. If currently inside a task list: append a new <li> to the existing <ul>
+    if (currentUl) {
+      const li = document.createElement("li");
+      li.style.cssText = "margin: 4px 0;";
+      li.innerHTML =
+        '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      if (currentLi && currentLi.parentNode === currentUl) {
+        currentLi.after(li);
+      } else {
+        currentUl.appendChild(li);
+      }
+      const span = li.querySelector("span");
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+      }
+      syncContent();
+      checkFormats();
+      return;
+    }
+
+    // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+    if (currentP) {
+      const prev = currentP.previousElementSibling;
+      if (
+        prev &&
+        prev.tagName === "UL" &&
+        prev.classList.contains("task-list")
+      ) {
+        const text = currentP.textContent ? currentP.textContent.trim() : "";
+        const li = document.createElement("li");
+        li.style.cssText = "margin: 4px 0;";
+        const itemText = text && text !== "" ? escapeHtml(text) : "Task item";
+        li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+        prev.appendChild(li);
+        currentP.remove();
+        const span = li.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        syncContent();
+        checkFormats();
+        return;
+      }
+    }
+
+    // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+    const ul = document.createElement("ul");
+    ul.className = "task-list";
+    ul.style.cssText = "list-style: none; padding-left: 0.25rem;";
+    const li = document.createElement("li");
+    li.style.cssText = "margin: 4px 0;";
+    li.innerHTML =
+      '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+    ul.appendChild(li);
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(ul);
+    } else {
+      editor.appendChild(ul);
+    }
+    const span = li.querySelector("span");
+    if (span) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveSelection();
+    }
+    syncContent();
+    checkFormats();
   }
   function insertFormula() {
+    if (mode === "source") return;
     saveSelection();
     const formula = window.prompt(
       "Enter math formula or expression:",
@@ -1179,11 +1291,13 @@
   }
   function addClass(className: string) {
     if (!className) return;
+    if (mode === "source") return;
     if (!appliedClasses.includes(className)) {
       appliedClasses = [...appliedClasses, className];
     }
   }
   function removeClass(className: string) {
+    if (mode === "source") return;
     appliedClasses = appliedClasses.filter((c: string) => c !== className);
     if (editorRef) {
       const elements = editorRef.querySelectorAll(`.${className}`);
@@ -1564,6 +1678,7 @@
       e.preventDefault();
       return;
     }
+    if (mode === "source") return;
     if (e.key === "Escape") {
       deselectMediaElement();
       closeAllModals();
@@ -1579,6 +1694,118 @@
       ensureEditableStructure();
       syncContent();
       return;
+    }
+    if (e.key === "Backspace") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            e.preventDefault();
+            const prevLi = taskLi.previousElementSibling;
+            taskLi.remove();
+            if (prevLi) {
+              const span = prevLi.querySelector("span");
+              if (span) {
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                saveSelection();
+              }
+            } else if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              saveSelection();
+            }
+            syncContent();
+            return;
+          }
+        }
+      }
+    }
+    if (e.key === "Enter") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          e.preventDefault();
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            taskLi.remove();
+            if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              saveSelection();
+              syncContent();
+              return;
+            }
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            taskUl.after(p);
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+            syncContent();
+            return;
+          }
+          const newLi = document.createElement("li");
+          newLi.style.cssText = "margin: 4px 0;";
+          newLi.innerHTML =
+            '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+          taskLi.after(newLi);
+          const span = newLi.querySelector("span");
+          if (span) {
+            const newRange = document.createRange();
+            newRange.setStart(span, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+          syncContent();
+          return;
+        }
+      }
     }
     normalizeSelection();
   }
@@ -1702,7 +1929,7 @@
   let resizeStartX = 0;
   let resizeStartWidth = 0;
   let fontFamily = "Inter";
-  let fontSize = "16px";
+  let fontSize = "15px";
   let textColor = "#0f172a";
   let highlightColor = "#fde047";
   let appliedClasses = ["cv-callout", "variant-blue"];
@@ -1809,7 +2036,7 @@
     isFullscreen
       ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none"
       : "w-full"
-  } ${className || ""}`}
+  } ${mode === "source" ? "cv-source-mode" : ""} ${className || ""}`}
 >
   <div
     class={`editor-toolbar select-none sticky top-0 z-10 w-full ${
@@ -1965,9 +2192,10 @@
             changeFontSize(e.target.value);
           }}
           ><option value="12px">12px</option><option value="14px">14px</option
-          ><option value="16px">16px</option><option value="18px">18px</option
-          ><option value="20px">20px</option><option value="24px">24px</option
-          ><option value="32px">32px</option></select
+          ><option value="15px">15px</option><option value="16px">16px</option
+          ><option value="18px">18px</option><option value="20px">20px</option
+          ><option value="24px">24px</option><option value="32px">32px</option
+          ></select
         ><span class="cv-toolbar-select-chevron"
           ><svg
             xmlns="http://www.w3.org/2000/svg"
@@ -2973,7 +3201,9 @@
           <button
             type="button"
             title="View HTML Source Code"
-            class={`cv-toolbar-btn ${mode === "source" ? "is-active" : ""}`}
+            class={`cv-toolbar-btn cv-source-toggle-btn ${
+              mode === "source" ? "is-active" : ""
+            }`}
             on:mousedown={(e) => {
               e.preventDefault();
             }}

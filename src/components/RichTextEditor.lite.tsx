@@ -119,7 +119,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     resizeStartWidth: 0,
 
     fontFamily: 'Inter',
-    fontSize: '16px',
+    fontSize: '15px',
     textColor: '#0f172a',
     highlightColor: '#fde047',
     appliedClasses: ['cv-callout', 'variant-blue'],
@@ -162,7 +162,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             try {
               const computed = window.getComputedStyle(currentEl);
               if (computed && computed.fontSize) {
-                nextFontSize = computed.fontSize;
+                const pxVal = Math.round(parseFloat(computed.fontSize));
+                nextFontSize = `${pxVal}px`;
               }
               if (computed && computed.fontFamily) {
                 const primaryFont = computed.fontFamily.split(',')[0].split('"').join('').split("'").join('').trim();
@@ -318,6 +319,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     insertHtmlAtCursor(html: string) {
       if (typeof window === 'undefined') return;
+      if (state.mode === 'source') return;
       const el = state.getEditorElement();
       if (el) {
         try {
@@ -421,6 +423,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
 
     format(cmd: string, val?: string) {
+      if (state.mode === 'source') return;
       state.restoreSelection();
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
@@ -436,6 +439,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     // savedRange -- so all subsequent inserts silently fail.
     applyColorPreview(cmd: string, color: string) {
       if (!color) return;
+      if (state.mode === 'source') return;
       const previewEl = state.getEditorElement();
       if (previewEl) {
         try { (previewEl as any).focus(); } catch (focusErr) {}
@@ -456,6 +460,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     // committed to the DOM before the re-render can touch contenteditable.
     applyColor(cmd: string, color: string) {
       if (!color) return;
+      if (state.mode === 'source') return;
       const colorEl = state.getEditorElement();
       if (colorEl) {
         try { (colorEl as any).focus(); } catch (focusErr2) {}
@@ -476,6 +481,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.checkFormats();
     },
     formatHeading(level: string) {
+      if (state.mode === 'source') return;
       state.restoreSelection();
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
@@ -492,6 +498,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     
     insertMedia(type: 'image' | 'video' | 'audio') {
+      if (state.mode === 'source') return;
       state.saveSelection();
       
       const insertContent = (url: string, altText?: string) => {
@@ -543,6 +550,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     
     clearAllFormatting() {
+      if (state.mode === 'source') return;
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand('removeFormat', false, undefined);
@@ -556,6 +564,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.checkFormats();
     },
     toggleBlock(type: string) {
+      if (state.mode === 'source') return;
       state.checkFormats();
       const isActive = type === 'PRE' ? state.activeFormats.code : state.activeFormats.quote;
       if (isActive) {
@@ -572,6 +581,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     applyClass(className: string) {
       if (!className) return;
+      if (state.mode === 'source') return;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
@@ -584,6 +594,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     
     openButtonModal() {
+      if (state.mode === 'source') return;
       state.saveSelection();
       state.showButtonModal = true;
       state.btnText = 'Click Here';
@@ -875,6 +886,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
 
     openTableModal() {
+      if (state.mode === 'source') return;
       state.saveSelection();
       state.showTableModal = true;
       state.tableRows = '3';
@@ -911,6 +923,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     
     modifyTable(action: 'addRow' | 'removeRow' | 'addCol' | 'removeCol') {
+      if (state.mode === 'source') return;
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       
@@ -977,6 +990,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
 
     openLinkModal() {
+      if (state.mode === 'source') return;
       state.saveSelection();
       state.showLinkModal = true;
       state.linkUrl = '';
@@ -996,6 +1010,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
 
     openWidgetModal() {
+      if (state.mode === 'source') return;
       state.saveSelection();
       state.showWidgetModal = true;
     },
@@ -1010,6 +1025,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
 
     openSocialModal() {
+      if (state.mode === 'source') return;
       state.saveSelection();
       state.showSocialModal = true;
       state.socialUrl = '';
@@ -1063,6 +1079,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       }
     },
     changeFontFamily(font: string) {
+      if (state.mode === 'source') return;
       state.fontFamily = font;
       state.restoreSelection();
       document.execCommand('fontName', false, font);
@@ -1070,6 +1087,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.checkFormats();
     },
     changeFontSize(size: string) {
+      if (state.mode === 'source') return;
       state.fontSize = size;
       state.restoreSelection();
       const sel = window.getSelection();
@@ -1085,21 +1103,111 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         sel.addRange(newRange);
         state.saveSelection();
       } else {
-        const sizeMap: any = { '12px': '1', '14px': '2', '16px': '3', '18px': '4', '20px': '5', '24px': '6', '32px': '7' };
+        const sizeMap: any = { '12px': '1', '14px': '2', '15px': '2', '16px': '3', '18px': '4', '20px': '5', '24px': '6', '32px': '7' };
         document.execCommand('fontSize', false, sizeMap[size] || '3');
       }
       state.syncContent();
       state.checkFormats();
     },
     insertChecklist() {
-      // The checkbox and its text must share one <label> (implicit
-      // association, no id needed) -- as separate sibling elements a screen
-      // reader announces an unlabelled checkbox with no indication of what
-      // it controls, and clicking the text would not toggle it either.
-      const html = '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-      state.insertHtmlAtCursor(html);
+      if (state.mode === 'source') return;
+      state.restoreSelection();
+      const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+      const editor = state.getEditorElement();
+      if (!sel || !editor) return;
+
+      let node: any = sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+      let currentLi: HTMLElement | null = null;
+      let currentUl: HTMLElement | null = null;
+      let currentP: HTMLElement | null = null;
+
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          if (node.tagName === 'LI') currentLi = node;
+          if (node.tagName === 'UL' && node.classList.contains('task-list')) currentUl = node;
+          if (node.tagName === 'P' || node.tagName === 'DIV') currentP = node;
+        }
+        node = node.parentNode;
+      }
+
+      // 1. If currently inside a task list: append a new <li> to the existing <ul>
+      if (currentUl) {
+        const li = document.createElement('li');
+        li.style.cssText = 'margin: 4px 0;';
+        li.innerHTML = '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+        if (currentLi && currentLi.parentNode === currentUl) {
+          currentLi.after(li);
+        } else {
+          currentUl.appendChild(li);
+        }
+        const span = li.querySelector('span');
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          state.saveSelection();
+        }
+        state.syncContent();
+        state.checkFormats();
+        return;
+      }
+
+      // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+      if (currentP) {
+        const prev = currentP.previousElementSibling;
+        if (prev && prev.tagName === 'UL' && prev.classList.contains('task-list')) {
+          const text = currentP.textContent ? currentP.textContent.trim() : '';
+          const li = document.createElement('li');
+          li.style.cssText = 'margin: 4px 0;';
+          const itemText = text && text !== '' ? state.escapeHtml(text) : 'Task item';
+          li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+          prev.appendChild(li);
+          currentP.remove();
+          const span = li.querySelector('span');
+          if (span) {
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            state.saveSelection();
+          }
+          state.syncContent();
+          state.checkFormats();
+          return;
+        }
+      }
+
+      // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+      const ul = document.createElement('ul');
+      ul.className = 'task-list';
+      ul.style.cssText = 'list-style: none; padding-left: 0.25rem;';
+      const li = document.createElement('li');
+      li.style.cssText = 'margin: 4px 0;';
+      li.innerHTML = '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      ul.appendChild(li);
+
+      if (sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(ul);
+      } else {
+        editor.appendChild(ul);
+      }
+
+      const span = li.querySelector('span');
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        state.saveSelection();
+      }
+      state.syncContent();
+      state.checkFormats();
     },
     insertFormula() {
+      if (state.mode === 'source') return;
       state.saveSelection();
       const formula = window.prompt('Enter math formula or expression:', 'E = mc²');
       if (formula) {
@@ -1110,11 +1218,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     addClass(className: string) {
       if (!className) return;
+      if (state.mode === 'source') return;
       if (!state.appliedClasses.includes(className)) {
         state.appliedClasses = [...state.appliedClasses, className];
       }
     },
     removeClass(className: string) {
+      if (state.mode === 'source') return;
       state.appliedClasses = state.appliedClasses.filter((c: string) => c !== className);
       if (editorRef) {
         const elements = editorRef.querySelectorAll(`.${className}`);
@@ -1439,6 +1549,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         e.preventDefault();
         return;
       }
+      if (state.mode === 'source') return;
       if (e.key === 'Escape') {
         state.deselectMediaElement();
         state.closeAllModals();
@@ -1454,6 +1565,115 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         state.ensureEditableStructure();
         state.syncContent();
         return;
+      }
+      if (e.key === 'Backspace') {
+        const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+        const editor = state.getEditorElement();
+        if (sel && sel.rangeCount > 0 && editor) {
+          let node: any = sel.getRangeAt(0).startContainer;
+          let taskLi: HTMLElement | null = null;
+          let taskUl: HTMLElement | null = null;
+          while (node && node !== editor) {
+            if (node.nodeType === 1) {
+              if (node.tagName === 'LI') taskLi = node;
+              if (node.tagName === 'UL' && node.classList.contains('task-list')) taskUl = node;
+            }
+            node = node.parentNode;
+          }
+          if (taskUl && taskLi) {
+            const text = taskLi.textContent ? taskLi.textContent.trim() : '';
+            if (!text || text === '') {
+              e.preventDefault();
+              const prevLi = taskLi.previousElementSibling;
+              taskLi.remove();
+              if (prevLi) {
+                const span = prevLi.querySelector('span');
+                if (span) {
+                  const newRange = document.createRange();
+                  newRange.selectNodeContents(span);
+                  newRange.collapse(false);
+                  sel.removeAllRanges();
+                  sel.addRange(newRange);
+                  state.saveSelection();
+                }
+              } else if (taskUl.children.length === 0) {
+                const p = document.createElement('p');
+                p.innerHTML = '<br>';
+                taskUl.replaceWith(p);
+                const newRange = document.createRange();
+                newRange.setStart(p, 0);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                state.saveSelection();
+              }
+              state.syncContent();
+              return;
+            }
+          }
+        }
+      }
+      if (e.key === 'Enter') {
+        const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+        const editor = state.getEditorElement();
+        if (sel && sel.rangeCount > 0 && editor) {
+          let node: any = sel.getRangeAt(0).startContainer;
+          let taskLi: HTMLElement | null = null;
+          let taskUl: HTMLElement | null = null;
+          while (node && node !== editor) {
+            if (node.nodeType === 1) {
+              if (node.tagName === 'LI') taskLi = node;
+              if (node.tagName === 'UL' && node.classList.contains('task-list')) taskUl = node;
+            }
+            node = node.parentNode;
+          }
+          if (taskUl && taskLi) {
+            e.preventDefault();
+            const text = taskLi.textContent ? taskLi.textContent.trim() : '';
+            if (!text || text === '') {
+              taskLi.remove();
+              if (taskUl.children.length === 0) {
+                const p = document.createElement('p');
+                p.innerHTML = '<br>';
+                taskUl.replaceWith(p);
+                const newRange = document.createRange();
+                newRange.setStart(p, 0);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                state.saveSelection();
+                state.syncContent();
+                return;
+              }
+              const p = document.createElement('p');
+              p.innerHTML = '<br>';
+              taskUl.after(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              state.saveSelection();
+              state.syncContent();
+              return;
+            }
+            const newLi = document.createElement('li');
+            newLi.style.cssText = 'margin: 4px 0;';
+            newLi.innerHTML = '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+            taskLi.after(newLi);
+            const span = newLi.querySelector('span');
+            if (span) {
+              const newRange = document.createRange();
+              newRange.setStart(span, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              state.saveSelection();
+            }
+            state.syncContent();
+            return;
+          }
+        }
       }
       state.normalizeSelection();
     },
@@ -1608,7 +1828,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
   return (
     <div 
       ref={rootRef}
-      class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${state.isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full'} ${props.className || ''}`}
+      class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${state.isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full'} ${state.mode === 'source' ? 'cv-source-mode' : ''} ${props.className || ''}`}
       style={{
         boxSizing: 'border-box',
         background: 'var(--cv-color-surface-sunken, #0f172a)',
@@ -1708,6 +1928,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             >
               <option value="12px">12px</option>
               <option value="14px">14px</option>
+              <option value="15px">15px</option>
               <option value="16px">16px</option>
               <option value="18px">18px</option>
               <option value="20px">20px</option>
@@ -2124,7 +2345,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             <Show when={state.showToolbarOption('source')}>
               <button
                 type="button"
-                class={`cv-toolbar-btn ${state.mode === 'source' ? 'is-active' : ''}`}
+                class={`cv-toolbar-btn cv-source-toggle-btn ${state.mode === 'source' ? 'is-active' : ''}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => state.toggleMode()}
                 title="View HTML Source Code"

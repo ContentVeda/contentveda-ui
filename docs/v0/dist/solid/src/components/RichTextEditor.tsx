@@ -85,7 +85,7 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [fontFamily, setFontFamily] = createSignal("Inter");
 
-  const [fontSize, setFontSize] = createSignal("16px");
+  const [fontSize, setFontSize] = createSignal("15px");
 
   const [textColor, setTextColor] = createSignal("#0f172a");
 
@@ -232,7 +232,8 @@ function RichTextEditor(props: RichTextEditorProps) {
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              nextFontSize = computed.fontSize;
+              const pxVal = Math.round(parseFloat(computed.fontSize));
+              nextFontSize = `${pxVal}px`;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -408,6 +409,7 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
+    if (mode() === "source") return;
     const el = getEditorElement();
     if (el) {
       try {
@@ -524,6 +526,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function format(cmd: string, val?: string) {
+    if (mode() === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -535,6 +538,7 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function applyColorPreview(cmd: string, color: string) {
     if (!color) return;
+    if (mode() === "source") return;
     const previewEl = getEditorElement();
     if (previewEl) {
       try {
@@ -555,6 +559,7 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function applyColor(cmd: string, color: string) {
     if (!color) return;
+    if (mode() === "source") return;
     const colorEl = getEditorElement();
     if (colorEl) {
       try {
@@ -578,6 +583,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function formatHeading(level: string) {
+    if (mode() === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -594,6 +600,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function insertMedia(type: "image" | "video" | "audio") {
+    if (mode() === "source") return;
     saveSelection();
     const insertContent = (url: string, altText?: string) => {
       if (!url) return;
@@ -657,6 +664,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function clearAllFormatting() {
+    if (mode() === "source") return;
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("removeFormat", false, undefined);
@@ -671,6 +679,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function toggleBlock(type: string) {
+    if (mode() === "source") return;
     checkFormats();
     const isActive =
       type === "PRE" ? activeFormats().code : activeFormats().quote;
@@ -689,6 +698,7 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function applyClass(className: string) {
     if (!className) return;
+    if (mode() === "source") return;
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
@@ -701,6 +711,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openButtonModal() {
+    if (mode() === "source") return;
     saveSelection();
     setShowButtonModal(true);
     setBtnText("Click Here");
@@ -1021,6 +1032,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openTableModal() {
+    if (mode() === "source") return;
     saveSelection();
     setShowTableModal(true);
     setTableRows("3");
@@ -1065,6 +1077,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   function modifyTable(
     action: "addRow" | "removeRow" | "addCol" | "removeCol"
   ) {
+    if (mode() === "source") return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let node = sel.getRangeAt(0).startContainer as any;
@@ -1137,6 +1150,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openLinkModal() {
+    if (mode() === "source") return;
     saveSelection();
     setShowLinkModal(true);
     setLinkUrl("");
@@ -1158,6 +1172,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openWidgetModal() {
+    if (mode() === "source") return;
     saveSelection();
     setShowWidgetModal(true);
   }
@@ -1176,6 +1191,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openSocialModal() {
+    if (mode() === "source") return;
     saveSelection();
     setShowSocialModal(true);
     setSocialUrl("");
@@ -1240,6 +1256,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function changeFontFamily(font: string) {
+    if (mode() === "source") return;
     setFontFamily(font);
     restoreSelection();
     document.execCommand("fontName", false, font);
@@ -1248,6 +1265,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function changeFontSize(size: string) {
+    if (mode() === "source") return;
     setFontSize(size);
     restoreSelection();
     const sel = window.getSelection();
@@ -1266,6 +1284,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       const sizeMap: any = {
         "12px": "1",
         "14px": "2",
+        "15px": "2",
         "16px": "3",
         "18px": "4",
         "20px": "5",
@@ -1279,16 +1298,109 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function insertChecklist() {
-    // The checkbox and its text must share one <label> (implicit
-    // association, no id needed) -- as separate sibling elements a screen
-    // reader announces an unlabelled checkbox with no indication of what
-    // it controls, and clicking the text would not toggle it either.
-    const html =
-      '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-    insertHtmlAtCursor(html);
+    if (mode() === "source") return;
+    restoreSelection();
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const editor = getEditorElement();
+    if (!sel || !editor) return;
+    let node: any =
+      sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+    let currentLi: HTMLElement | null = null;
+    let currentUl: HTMLElement | null = null;
+    let currentP: HTMLElement | null = null;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        if (node.tagName === "LI") currentLi = node;
+        if (node.tagName === "UL" && node.classList.contains("task-list"))
+          currentUl = node;
+        if (node.tagName === "P" || node.tagName === "DIV") currentP = node;
+      }
+      node = node.parentNode;
+    }
+
+    // 1. If currently inside a task list: append a new <li> to the existing <ul>
+    if (currentUl) {
+      const li = document.createElement("li");
+      li.style.cssText = "margin: 4px 0;";
+      li.innerHTML =
+        '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      if (currentLi && currentLi.parentNode === currentUl) {
+        currentLi.after(li);
+      } else {
+        currentUl.appendChild(li);
+      }
+      const span = li.querySelector("span");
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+      }
+      syncContent();
+      checkFormats();
+      return;
+    }
+
+    // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+    if (currentP) {
+      const prev = currentP.previousElementSibling;
+      if (
+        prev &&
+        prev.tagName === "UL" &&
+        prev.classList.contains("task-list")
+      ) {
+        const text = currentP.textContent ? currentP.textContent.trim() : "";
+        const li = document.createElement("li");
+        li.style.cssText = "margin: 4px 0;";
+        const itemText = text && text !== "" ? escapeHtml(text) : "Task item";
+        li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+        prev.appendChild(li);
+        currentP.remove();
+        const span = li.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        syncContent();
+        checkFormats();
+        return;
+      }
+    }
+
+    // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+    const ul = document.createElement("ul");
+    ul.className = "task-list";
+    ul.style.cssText = "list-style: none; padding-left: 0.25rem;";
+    const li = document.createElement("li");
+    li.style.cssText = "margin: 4px 0;";
+    li.innerHTML =
+      '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+    ul.appendChild(li);
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(ul);
+    } else {
+      editor.appendChild(ul);
+    }
+    const span = li.querySelector("span");
+    if (span) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveSelection();
+    }
+    syncContent();
+    checkFormats();
   }
 
   function insertFormula() {
+    if (mode() === "source") return;
     saveSelection();
     const formula = window.prompt(
       "Enter math formula or expression:",
@@ -1311,12 +1423,14 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function addClass(className: string) {
     if (!className) return;
+    if (mode() === "source") return;
     if (!appliedClasses().includes(className)) {
       setAppliedClasses([...appliedClasses(), className]);
     }
   }
 
   function removeClass(className: string) {
+    if (mode() === "source") return;
     setAppliedClasses(appliedClasses().filter((c: string) => c !== className));
     if (editorRef) {
       const elements = editorRef.querySelectorAll(`.${className}`);
@@ -1728,6 +1842,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       e.preventDefault();
       return;
     }
+    if (mode() === "source") return;
     if (e.key === "Escape") {
       deselectMediaElement();
       closeAllModals();
@@ -1743,6 +1858,118 @@ function RichTextEditor(props: RichTextEditorProps) {
       ensureEditableStructure();
       syncContent();
       return;
+    }
+    if (e.key === "Backspace") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            e.preventDefault();
+            const prevLi = taskLi.previousElementSibling;
+            taskLi.remove();
+            if (prevLi) {
+              const span = prevLi.querySelector("span");
+              if (span) {
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                saveSelection();
+              }
+            } else if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              saveSelection();
+            }
+            syncContent();
+            return;
+          }
+        }
+      }
+    }
+    if (e.key === "Enter") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          e.preventDefault();
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            taskLi.remove();
+            if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              saveSelection();
+              syncContent();
+              return;
+            }
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            taskUl.after(p);
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+            syncContent();
+            return;
+          }
+          const newLi = document.createElement("li");
+          newLi.style.cssText = "margin: 4px 0;";
+          newLi.innerHTML =
+            '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+          taskLi.after(newLi);
+          const span = newLi.querySelector("span");
+          if (span) {
+            const newRange = document.createRange();
+            newRange.setStart(span, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+          syncContent();
+          return;
+        }
+      }
     }
     normalizeSelection();
   }
@@ -1900,7 +2127,9 @@ function RichTextEditor(props: RichTextEditorProps) {
           isFullscreen()
             ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none"
             : "w-full"
-        } ${props.className || ""}`}
+        } ${mode() === "source" ? "cv-source-mode" : ""} ${
+          props.className || ""
+        }`}
         ref={rootRef!}
         style={{
           "box-sizing": "border-box",
@@ -2060,6 +2289,7 @@ function RichTextEditor(props: RichTextEditorProps) {
               >
                 <option value="12px">12px</option>
                 <option value="14px">14px</option>
+                <option value="15px">15px</option>
                 <option value="16px">16px</option>
                 <option value="18px">18px</option>
                 <option value="20px">20px</option>
@@ -3047,7 +3277,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             <div class="ml-auto flex items-center gap-1.5 flex-shrink-0">
               <Show when={showToolbarOption("source")}>
                 <button
-                  class={`cv-toolbar-btn ${
+                  class={`cv-toolbar-btn cv-source-toggle-btn ${
                     mode() === "source" ? "is-active" : ""
                   }`}
                   type="button"

@@ -5,7 +5,7 @@
       isFullscreen
         ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none'
         : 'w-full'
-    } ${className || ''}`"
+    } ${mode === 'source' ? 'cv-source-mode' : ''} ${className || ''}`"
     :style="{
       boxSizing: 'border-box',
       background: 'var(--cv-color-surface-sunken, #0f172a)',
@@ -162,6 +162,7 @@
           >
             <option value="12px">12px</option>
             <option value="14px">14px</option>
+            <option value="15px">15px</option>
             <option value="16px">16px</option>
             <option value="18px">18px</option>
             <option value="20px">20px</option>
@@ -1124,7 +1125,9 @@
             <button
               type="button"
               title="View HTML Source Code"
-              :class="`cv-toolbar-btn ${mode === 'source' ? 'is-active' : ''}`"
+              :class="`cv-toolbar-btn cv-source-toggle-btn ${
+                mode === 'source' ? 'is-active' : ''
+              }`"
               @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => toggleMode()"
             >
@@ -2523,7 +2526,7 @@ export default defineComponent({
       resizeStartX: 0,
       resizeStartWidth: 0,
       fontFamily: "Inter",
-      fontSize: "16px",
+      fontSize: "15px",
       textColor: "#0f172a",
       highlightColor: "#fde047",
       appliedClasses: ["cv-callout", "variant-blue"],
@@ -2750,7 +2753,8 @@ export default defineComponent({
             try {
               const computed = window.getComputedStyle(currentEl);
               if (computed && computed.fontSize) {
-                nextFontSize = computed.fontSize;
+                const pxVal = Math.round(parseFloat(computed.fontSize));
+                nextFontSize = `${pxVal}px`;
               }
               if (computed && computed.fontFamily) {
                 const primaryFont = computed.fontFamily
@@ -2926,6 +2930,7 @@ export default defineComponent({
     },
     insertHtmlAtCursor(html: string) {
       if (typeof window === "undefined") return;
+      if (this.mode === "source") return;
       const el = this.getEditorElement();
       if (el) {
         try {
@@ -3040,6 +3045,7 @@ export default defineComponent({
       return html;
     },
     format(cmd: string, val?: string) {
+      if (this.mode === "source") return;
       this.restoreSelection();
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
@@ -3050,6 +3056,7 @@ export default defineComponent({
     },
     applyColorPreview(cmd: string, color: string) {
       if (!color) return;
+      if (this.mode === "source") return;
       const previewEl = this.getEditorElement();
       if (previewEl) {
         try {
@@ -3069,6 +3076,7 @@ export default defineComponent({
     },
     applyColor(cmd: string, color: string) {
       if (!color) return;
+      if (this.mode === "source") return;
       const colorEl = this.getEditorElement();
       if (colorEl) {
         try {
@@ -3091,6 +3099,7 @@ export default defineComponent({
       this.checkFormats();
     },
     formatHeading(level: string) {
+      if (this.mode === "source") return;
       this.restoreSelection();
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
@@ -3106,6 +3115,7 @@ export default defineComponent({
       }
     },
     insertMedia(type: "image" | "video" | "audio") {
+      if (this.mode === "source") return;
       this.saveSelection();
       const insertContent = (url: string, altText?: string) => {
         if (!url) return;
@@ -3167,6 +3177,7 @@ export default defineComponent({
       }
     },
     clearAllFormatting() {
+      if (this.mode === "source") return;
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       document.execCommand("removeFormat", false, undefined);
@@ -3180,6 +3191,7 @@ export default defineComponent({
       this.checkFormats();
     },
     toggleBlock(type: string) {
+      if (this.mode === "source") return;
       this.checkFormats();
       const isActive =
         type === "PRE" ? this.activeFormats.code : this.activeFormats.quote;
@@ -3197,6 +3209,7 @@ export default defineComponent({
     },
     applyClass(className: string) {
       if (!className) return;
+      if (this.mode === "source") return;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
@@ -3208,6 +3221,7 @@ export default defineComponent({
       }
     },
     openButtonModal() {
+      if (this.mode === "source") return;
       this.saveSelection();
       this.showButtonModal = true;
       this.btnText = "Click Here";
@@ -3521,6 +3535,7 @@ export default defineComponent({
       }
     },
     openTableModal() {
+      if (this.mode === "source") return;
       this.saveSelection();
       this.showTableModal = true;
       this.tableRows = "3";
@@ -3560,6 +3575,7 @@ export default defineComponent({
       this.showTableModal = false;
     },
     modifyTable(action: "addRow" | "removeRow" | "addCol" | "removeCol") {
+      if (this.mode === "source") return;
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       let node = sel.getRangeAt(0).startContainer as any;
@@ -3631,6 +3647,7 @@ export default defineComponent({
       this.syncContent();
     },
     openLinkModal() {
+      if (this.mode === "source") return;
       this.saveSelection();
       this.showLinkModal = true;
       this.linkUrl = "";
@@ -3649,6 +3666,7 @@ export default defineComponent({
       this.showLinkModal = false;
     },
     openWidgetModal() {
+      if (this.mode === "source") return;
       this.saveSelection();
       this.showWidgetModal = true;
     },
@@ -3664,6 +3682,7 @@ export default defineComponent({
       this.showWidgetModal = false;
     },
     openSocialModal() {
+      if (this.mode === "source") return;
       this.saveSelection();
       this.showSocialModal = true;
       this.socialUrl = "";
@@ -3725,6 +3744,7 @@ export default defineComponent({
       }
     },
     changeFontFamily(font: string) {
+      if (this.mode === "source") return;
       this.fontFamily = font;
       this.restoreSelection();
       document.execCommand("fontName", false, font);
@@ -3732,6 +3752,7 @@ export default defineComponent({
       this.checkFormats();
     },
     changeFontSize(size: string) {
+      if (this.mode === "source") return;
       this.fontSize = size;
       this.restoreSelection();
       const sel = window.getSelection();
@@ -3750,6 +3771,7 @@ export default defineComponent({
         const sizeMap: any = {
           "12px": "1",
           "14px": "2",
+          "15px": "2",
           "16px": "3",
           "18px": "4",
           "20px": "5",
@@ -3762,15 +3784,109 @@ export default defineComponent({
       this.checkFormats();
     },
     insertChecklist() {
-      // The checkbox and its text must share one <label> (implicit
-      // association, no id needed) -- as separate sibling elements a screen
-      // reader announces an unlabelled checkbox with no indication of what
-      // it controls, and clicking the text would not toggle it either.
-      const html =
-        '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-      this.insertHtmlAtCursor(html);
+      if (this.mode === "source") return;
+      this.restoreSelection();
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = this.getEditorElement();
+      if (!sel || !editor) return;
+      let node: any =
+        sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+      let currentLi: HTMLElement | null = null;
+      let currentUl: HTMLElement | null = null;
+      let currentP: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          if (node.tagName === "LI") currentLi = node;
+          if (node.tagName === "UL" && node.classList.contains("task-list"))
+            currentUl = node;
+          if (node.tagName === "P" || node.tagName === "DIV") currentP = node;
+        }
+        node = node.parentNode;
+      }
+
+      // 1. If currently inside a task list: append a new <li> to the existing <ul>
+      if (currentUl) {
+        const li = document.createElement("li");
+        li.style.cssText = "margin: 4px 0;";
+        li.innerHTML =
+          '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+        if (currentLi && currentLi.parentNode === currentUl) {
+          currentLi.after(li);
+        } else {
+          currentUl.appendChild(li);
+        }
+        const span = li.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          this.saveSelection();
+        }
+        this.syncContent();
+        this.checkFormats();
+        return;
+      }
+
+      // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+      if (currentP) {
+        const prev = currentP.previousElementSibling;
+        if (
+          prev &&
+          prev.tagName === "UL" &&
+          prev.classList.contains("task-list")
+        ) {
+          const text = currentP.textContent ? currentP.textContent.trim() : "";
+          const li = document.createElement("li");
+          li.style.cssText = "margin: 4px 0;";
+          const itemText =
+            text && text !== "" ? this.escapeHtml(text) : "Task item";
+          li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+          prev.appendChild(li);
+          currentP.remove();
+          const span = li.querySelector("span");
+          if (span) {
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            this.saveSelection();
+          }
+          this.syncContent();
+          this.checkFormats();
+          return;
+        }
+      }
+
+      // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+      const ul = document.createElement("ul");
+      ul.className = "task-list";
+      ul.style.cssText = "list-style: none; padding-left: 0.25rem;";
+      const li = document.createElement("li");
+      li.style.cssText = "margin: 4px 0;";
+      li.innerHTML =
+        '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      ul.appendChild(li);
+      if (sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(ul);
+      } else {
+        editor.appendChild(ul);
+      }
+      const span = li.querySelector("span");
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        this.saveSelection();
+      }
+      this.syncContent();
+      this.checkFormats();
     },
     insertFormula() {
+      if (this.mode === "source") return;
       this.saveSelection();
       const formula = window.prompt(
         "Enter math formula or expression:",
@@ -3792,11 +3908,13 @@ export default defineComponent({
     },
     addClass(className: string) {
       if (!className) return;
+      if (this.mode === "source") return;
       if (!this.appliedClasses.includes(className)) {
         this.appliedClasses = [...this.appliedClasses, className];
       }
     },
     removeClass(className: string) {
+      if (this.mode === "source") return;
       this.appliedClasses = this.appliedClasses.filter(
         (c: string) => c !== className
       );
@@ -4192,6 +4310,7 @@ export default defineComponent({
         e.preventDefault();
         return;
       }
+      if (this.mode === "source") return;
       if (e.key === "Escape") {
         this.deselectMediaElement();
         this.closeAllModals();
@@ -4210,6 +4329,120 @@ export default defineComponent({
         this.ensureEditableStructure();
         this.syncContent();
         return;
+      }
+      if (e.key === "Backspace") {
+        const sel =
+          typeof window !== "undefined" ? window.getSelection() : null;
+        const editor = this.getEditorElement();
+        if (sel && sel.rangeCount > 0 && editor) {
+          let node: any = sel.getRangeAt(0).startContainer;
+          let taskLi: HTMLElement | null = null;
+          let taskUl: HTMLElement | null = null;
+          while (node && node !== editor) {
+            if (node.nodeType === 1) {
+              if (node.tagName === "LI") taskLi = node;
+              if (node.tagName === "UL" && node.classList.contains("task-list"))
+                taskUl = node;
+            }
+            node = node.parentNode;
+          }
+          if (taskUl && taskLi) {
+            const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+            if (!text || text === "") {
+              e.preventDefault();
+              const prevLi = taskLi.previousElementSibling;
+              taskLi.remove();
+              if (prevLi) {
+                const span = prevLi.querySelector("span");
+                if (span) {
+                  const newRange = document.createRange();
+                  newRange.selectNodeContents(span);
+                  newRange.collapse(false);
+                  sel.removeAllRanges();
+                  sel.addRange(newRange);
+                  this.saveSelection();
+                }
+              } else if (taskUl.children.length === 0) {
+                const p = document.createElement("p");
+                p.innerHTML = "<br>";
+                taskUl.replaceWith(p);
+                const newRange = document.createRange();
+                newRange.setStart(p, 0);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                this.saveSelection();
+              }
+              this.syncContent();
+              return;
+            }
+          }
+        }
+      }
+      if (e.key === "Enter") {
+        const sel =
+          typeof window !== "undefined" ? window.getSelection() : null;
+        const editor = this.getEditorElement();
+        if (sel && sel.rangeCount > 0 && editor) {
+          let node: any = sel.getRangeAt(0).startContainer;
+          let taskLi: HTMLElement | null = null;
+          let taskUl: HTMLElement | null = null;
+          while (node && node !== editor) {
+            if (node.nodeType === 1) {
+              if (node.tagName === "LI") taskLi = node;
+              if (node.tagName === "UL" && node.classList.contains("task-list"))
+                taskUl = node;
+            }
+            node = node.parentNode;
+          }
+          if (taskUl && taskLi) {
+            e.preventDefault();
+            const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+            if (!text || text === "") {
+              taskLi.remove();
+              if (taskUl.children.length === 0) {
+                const p = document.createElement("p");
+                p.innerHTML = "<br>";
+                taskUl.replaceWith(p);
+                const newRange = document.createRange();
+                newRange.setStart(p, 0);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                this.saveSelection();
+                this.syncContent();
+                return;
+              }
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.after(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              this.saveSelection();
+              this.syncContent();
+              return;
+            }
+            const newLi = document.createElement("li");
+            newLi.style.cssText = "margin: 4px 0;";
+            newLi.innerHTML =
+              '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+            taskLi.after(newLi);
+            const span = newLi.querySelector("span");
+            if (span) {
+              const newRange = document.createRange();
+              newRange.setStart(span, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              this.saveSelection();
+            }
+            this.syncContent();
+            return;
+          }
+        }
       }
       this.normalizeSelection();
     },

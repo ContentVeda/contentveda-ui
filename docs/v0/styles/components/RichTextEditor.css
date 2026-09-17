@@ -559,6 +559,28 @@
 .cv-rich-text-editor .editor-source.cv-mode-src-visual { display: none !important; }
 .cv-rich-text-editor .editor-source.cv-mode-src-source { display: flex !important; }
 
+/* Disabled toolbar state in source code mode */
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-1,
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-2 > *:not(.ml-auto),
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-2 .ml-auto > *:not(.cv-source-toggle-btn) {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.5);
+  cursor: not-allowed !important;
+}
+
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-2 .ml-auto {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+.cv-rich-text-editor.cv-source-mode .cv-source-toggle-btn {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  filter: none !important;
+}
+
 /* Resizable media selection (image/video/audio/social-embed/widget) */
 .cv-rich-text-editor .cv-resizing-selected {
   outline: 2px solid var(--cv-color-primary, #245066) !important;
