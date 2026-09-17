@@ -1,9 +1,6 @@
-"use strict";
 // Shared IntersectionObserver registry used by contentveda-ui widgets for lazy/deferred
 // mounting. Widgets on the same page that request the same threshold+rootMargin share
 // a single IntersectionObserver instance instead of each creating their own.
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.observeLazyMount = observeLazyMount;
 const registry = new Map();
 function keyFor(threshold, rootMargin) {
     return `${threshold}|${rootMargin}`;
@@ -32,7 +29,7 @@ function getOrCreateObserver(threshold, rootMargin) {
 }
 // Observes `el` and invokes `onVisible` once, the first time it crosses `threshold`
 // (with `rootMargin` applied), then automatically stops observing it.
-function observeLazyMount(el, onVisible, threshold = 0.1, rootMargin = "200px") {
+export function observeLazyMount(el, onVisible, threshold = 0.1, rootMargin = "200px") {
     if (typeof IntersectionObserver === "undefined") {
         // No IO support (e.g. SSR/old browser) — mount immediately, real fallback not a suppression.
         onVisible();

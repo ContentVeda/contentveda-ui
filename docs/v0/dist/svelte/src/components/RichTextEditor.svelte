@@ -926,6 +926,13 @@
       syncContent();
     }
   }
+  function handleFocus() {
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
+  }
   function handleBlur() {
     const el = getEditorElement();
     if (el && (el as any).__cv_inputTimer) {
@@ -1908,51 +1915,84 @@
     if (e.key === "Enter") {
       const sel = typeof window !== "undefined" ? window.getSelection() : null;
       const editor = getEditorElement();
-      if (sel && sel.rangeCount > 0 && editor) {
-        let node: any = sel.getRangeAt(0).startContainer;
-        let taskLi: HTMLElement | null = null;
-        let taskUl: HTMLElement | null = null;
-        let atomicEl: HTMLElement | null = null;
-        while (node && node !== editor) {
-          if (node.nodeType === 1) {
-            if (node.tagName === "LI") taskLi = node;
-            if (node.tagName === "UL" && node.classList.contains("task-list"))
-              taskUl = node;
-            if (
-              node.getAttribute &&
-              node.getAttribute("contenteditable") === "false"
-            )
-              atomicEl = node;
-            if (
-              node.tagName === "IMG" ||
-              node.tagName === "VIDEO" ||
-              node.tagName === "AUDIO"
-            )
-              atomicEl = node;
-          }
-          node = node.parentNode;
-        }
-        if (taskUl && taskLi) {
-          e.preventDefault();
-          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
-          if (!text || text === "") {
-            taskLi.remove();
-            if (taskUl.children.length === 0) {
-              const p = document.createElement("p");
-              p.innerHTML = "<br>";
-              taskUl.replaceWith(p);
-              const newRange = document.createRange();
-              newRange.setStart(p, 0);
-              newRange.collapse(true);
-              sel.removeAllRanges();
-              sel.addRange(newRange);
-              saveSelection();
-              syncContent();
-              return;
+      if (!sel || sel.rangeCount === 0 || !editor) return;
+      const range = sel.getRangeAt(0);
+
+      // Soft line break on Shift+Enter
+      if (e.shiftKey) {
+        e.preventDefault();
+        const br = document.createElement("br");
+        range.deleteContents();
+        range.insertNode(br);
+        const newRange = document.createRange();
+        newRange.setStartAfter(br);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+      let node: any = range.startContainer;
+      let taskLi: HTMLElement | null = null;
+      let taskUl: HTMLElement | null = null;
+      let listLi: HTMLElement | null = null;
+      let listParent: HTMLElement | null = null;
+      let headingEl: HTMLElement | null = null;
+      let quoteEl: HTMLElement | null = null;
+      let preEl: HTMLElement | null = null;
+      let calloutEl: HTMLElement | null = null;
+      let tableCell: HTMLElement | null = null;
+      let atomicEl: HTMLElement | null = null;
+      let blockP: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          const tag = node.tagName;
+          if (tag === "LI") {
+            if (node.closest && node.closest("ul.task-list")) {
+              taskLi = node;
+              taskUl = node.closest("ul.task-list");
+            } else {
+              listLi = node;
+              listParent = node.parentElement;
             }
+          }
+          if (/^H[1-6]$/.test(tag)) headingEl = node;
+          if (tag === "BLOCKQUOTE") quoteEl = node;
+          if (tag === "PRE" || tag === "CODE") preEl = node;
+          if (tag === "TD" || tag === "TH") tableCell = node;
+          if (tag === "P" || tag === "DIV") {
+            if (
+              node.classList &&
+              (node.classList.contains("cv-callout") ||
+                node.classList.contains("cv-widget"))
+            ) {
+              calloutEl = node;
+            } else if (!blockP && node !== editor) {
+              blockP = node;
+            }
+          }
+          if (
+            node.getAttribute &&
+            node.getAttribute("contenteditable") === "false"
+          )
+            atomicEl = node;
+          if (tag === "IMG" || tag === "VIDEO" || tag === "AUDIO")
+            atomicEl = node;
+        }
+        node = node.parentNode;
+      }
+
+      // 1. Task List Items
+      if (taskUl && taskLi) {
+        e.preventDefault();
+        const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+        if (!text || text === "") {
+          taskLi.remove();
+          if (taskUl.children.length === 0) {
             const p = document.createElement("p");
             p.innerHTML = "<br>";
-            taskUl.after(p);
+            taskUl.replaceWith(p);
             const newRange = document.createRange();
             newRange.setStart(p, 0);
             newRange.collapse(true);
@@ -1962,36 +2002,9 @@
             syncContent();
             return;
           }
-          const newLi = document.createElement("li");
-          newLi.style.cssText = "margin: 4px 0;";
-          newLi.innerHTML =
-            '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
-          taskLi.after(newLi);
-          const span = newLi.querySelector("span");
-          if (span) {
-            const newRange = document.createRange();
-            newRange.setStart(span, 0);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-            saveSelection();
-          }
-          syncContent();
-          return;
-        }
-        if (atomicEl) {
-          e.preventDefault();
-          let block: any = atomicEl;
-          while (block && block.parentNode && block.parentNode !== editor) {
-            block = block.parentNode;
-          }
           const p = document.createElement("p");
           p.innerHTML = "<br>";
-          if (block && block.parentNode) {
-            block.after(p);
-          } else {
-            editor.appendChild(p);
-          }
+          taskUl.after(p);
           const newRange = document.createRange();
           newRange.setStart(p, 0);
           newRange.collapse(true);
@@ -2001,7 +2014,253 @@
           syncContent();
           return;
         }
+        const newLi = document.createElement("li");
+        newLi.style.cssText = "margin: 4px 0;";
+        newLi.innerHTML =
+          '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+        taskLi.after(newLi);
+        const span = newLi.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.setStart(span, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        syncContent();
+        return;
       }
+
+      // 2. Atomic Elements (Embeds, Widgets, Media)
+      if (atomicEl) {
+        e.preventDefault();
+        let block: any = atomicEl;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (block && block.parentNode) {
+          block.after(p);
+        } else {
+          editor.appendChild(p);
+        }
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+
+      // 3. Headings: exit to standard paragraph <p> when at end of heading
+      if (headingEl) {
+        e.preventDefault();
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(headingEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remainingText = endRange.toString();
+        const newP = document.createElement("p");
+        newP.innerHTML = "<br>";
+        if (!remainingText || remainingText.trim() === "") {
+          headingEl.after(newP);
+        } else {
+          const extracted = endRange.extractContents();
+          newP.innerHTML = "";
+          newP.appendChild(extracted);
+          if (!newP.textContent || !newP.textContent.trim()) {
+            newP.innerHTML = "<br>";
+          }
+          headingEl.after(newP);
+        }
+        const newRange = document.createRange();
+        newRange.setStart(newP, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        headingFormat = "P";
+        saveSelection();
+        syncContent();
+        checkFormats();
+        return;
+      }
+
+      // 4. Blockquotes: break out on empty line, otherwise insert clean <br>
+      if (quoteEl) {
+        const quoteText = quoteEl.textContent ? quoteEl.textContent.trim() : "";
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(quoteEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remaining = endRange.toString().trim();
+        if (
+          !quoteText ||
+          quoteText === "" ||
+          quoteEl.innerHTML === "<br>" ||
+          (!remaining && quoteEl.innerHTML.endsWith("<br>"))
+        ) {
+          e.preventDefault();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (!quoteText || quoteText === "") {
+            quoteEl.replaceWith(p);
+          } else {
+            quoteEl.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          syncContent();
+          checkFormats();
+          return;
+        }
+        e.preventDefault();
+        const br = document.createElement("br");
+        range.deleteContents();
+        range.insertNode(br);
+        const newRange = document.createRange();
+        newRange.setStartAfter(br);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+
+      // 5. Code / Pre Blocks
+      if (preEl) {
+        e.preventDefault();
+        const textNode = document.createTextNode(String.fromCharCode(10));
+        range.deleteContents();
+        range.insertNode(textNode);
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+
+      // 6. Regular Lists (UL/OL items)
+      if (listLi && listParent) {
+        const itemText = listLi.textContent ? listLi.textContent.trim() : "";
+        if (!itemText || itemText === "") {
+          e.preventDefault();
+          listLi.remove();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (listParent.children.length === 0) {
+            listParent.replaceWith(p);
+          } else {
+            listParent.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          syncContent();
+          checkFormats();
+          return;
+        }
+        e.preventDefault();
+        const nextLi = document.createElement("li");
+        nextLi.innerHTML = "<br>";
+        listLi.after(nextLi);
+        const newRange = document.createRange();
+        newRange.setStart(nextLi, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+
+      // 7. Callouts / Widgets
+      if (calloutEl) {
+        e.preventDefault();
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        calloutEl.after(p);
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+
+      // 8. Table Cells
+      if (tableCell) {
+        e.preventDefault();
+        const br = document.createElement("br");
+        range.deleteContents();
+        range.insertNode(br);
+        const newRange = document.createRange();
+        newRange.setStartAfter(br);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        syncContent();
+        return;
+      }
+
+      // 9. Standard Paragraphs: Explicitly create semantic <p><br></p>
+      e.preventDefault();
+      let targetBlock: HTMLElement | null = blockP;
+      if (!targetBlock || targetBlock === editor) {
+        let n: any = range.startContainer;
+        while (n && n.parentNode && n.parentNode !== editor) {
+          n = n.parentNode;
+        }
+        if (n && n !== editor && n.nodeType === 1) {
+          targetBlock = n as HTMLElement;
+        }
+      }
+      const newP = document.createElement("p");
+      newP.innerHTML = "<br>";
+      if (targetBlock && targetBlock !== editor && targetBlock.parentNode) {
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(targetBlock);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remainingText = endRange.toString();
+        if (!remainingText || remainingText.trim() === "") {
+          targetBlock.after(newP);
+        } else {
+          const extracted = endRange.extractContents();
+          newP.innerHTML = "";
+          newP.appendChild(extracted);
+          if (!newP.textContent || !newP.textContent.trim()) {
+            newP.innerHTML = "<br>";
+          }
+          targetBlock.after(newP);
+        }
+      } else {
+        range.deleteContents();
+        range.insertNode(newP);
+      }
+      const newRange = document.createRange();
+      newRange.setStart(newP, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveSelection();
+      syncContent();
+      checkFormats();
+      return;
     }
   }
   function handleGlobalKeyDown(e: any) {
@@ -2156,6 +2415,11 @@
 
   onMount(() => {
     isMounted = true;
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
     if (!internalContent) {
       internalContent = content || initialContent || "";
     }
@@ -3514,6 +3778,9 @@
       }`}
       on:input={(event) => {
         handleInput();
+      }}
+      on:focus={(event) => {
+        handleFocus();
       }}
       on:blur={(event) => {
         handleBlur();
