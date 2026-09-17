@@ -1541,6 +1541,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       return !!(props.readOnly || props.disabled);
     },
     closeAllModals() {
+      state.showInsertMenu = false;
       state.showTableModal = false;
       state.showLinkModal = false;
       state.showWidgetModal = false;
@@ -2132,11 +2133,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     },
     handleGlobalKeyDown(e: any) {
       if (e.key === 'Escape') {
+        state.showInsertMenu = false;
         state.closeAllModals();
         state.deselectMediaElement();
       }
     },
     handleEditorClick(e: any) {
+      state.showInsertMenu = false;
       if (state.isReadOnly()) return;
       const target = e.target;
       const resizable = target && target.closest ? target.closest('img, video, audio, .cv-social-embed, .cv-widget') : null;
@@ -2598,7 +2601,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           <div class="cv-toolbar-divider"></div>
 
           {/* Insert Dropdown & Direct Insert Actions */}
-          <div class="cv-toolbar-group relative">
+          <div class="cv-toolbar-group cv-insert-dropdown relative" style={{ position: 'relative', display: 'inline-flex' }}>
             <button
               type="button"
               class="cv-toolbar-action-btn"
@@ -2612,7 +2615,16 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             </button>
 
             <Show when={state.showInsertMenu}>
-              <div class="cv-insert-menu shadow-xl">
+              <div 
+                class="cv-insert-menu shadow-xl"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: '0',
+                  zIndex: 50,
+                  minWidth: '170px'
+                }}
+              >
                 <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openTableModal(); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                   Table

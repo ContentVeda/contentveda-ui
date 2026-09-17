@@ -527,7 +527,13 @@ let activeSavedRange: any = null;
             </button>
           </div>
           <div class="cv-toolbar-divider"></div>
-          <div class="cv-toolbar-group relative">
+          <div
+            class="cv-toolbar-group cv-insert-dropdown relative"
+            [ngStyle]="{
+          position: 'relative',
+          display: 'inline-flex'
+        }"
+          >
             <button
               type="button"
               class="cv-toolbar-action-btn"
@@ -568,7 +574,16 @@ let activeSavedRange: any = null;
               </svg>
             </button>
             <ng-container *ngIf="showInsertMenu"
-              ><div class="cv-insert-menu shadow-xl">
+              ><div
+                class="cv-insert-menu shadow-xl"
+                [ngStyle]="{
+          position: 'absolute',
+          top: 'calc(100% + 4px)',
+          left: '0',
+          zIndex: 50,
+          minWidth: '170px'
+        }"
+              >
                 <button
                   type="button"
                   class="cv-insert-item"
@@ -4598,6 +4613,7 @@ export default class RichTextEditor {
     return !!(this.readOnly || this.disabled);
   }
   closeAllModals() {
+    this.showInsertMenu = false;
     this.showTableModal = false;
     this.showLinkModal = false;
     this.showWidgetModal = false;
@@ -5238,11 +5254,13 @@ export default class RichTextEditor {
   }
   handleGlobalKeyDown(e: any) {
     if (e.key === "Escape") {
+      this.showInsertMenu = false;
       this.closeAllModals();
       this.deselectMediaElement();
     }
   }
   handleEditorClick(e: any) {
+    this.showInsertMenu = false;
     if (this.isReadOnly()) return;
     const target = e.target;
     const resizable =

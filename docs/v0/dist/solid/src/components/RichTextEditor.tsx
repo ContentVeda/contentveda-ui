@@ -1812,6 +1812,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function closeAllModals() {
+    setShowInsertMenu(false);
     setShowTableModal(false);
     setShowLinkModal(false);
     setShowWidgetModal(false);
@@ -2459,12 +2460,14 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function handleGlobalKeyDown(e: any) {
     if (e.key === "Escape") {
+      setShowInsertMenu(false);
       closeAllModals();
       deselectMediaElement();
     }
   }
 
   function handleEditorClick(e: any) {
+    setShowInsertMenu(false);
     if (isReadOnly()) return;
     const target = e.target;
     const resizable =
@@ -3183,7 +3186,13 @@ function RichTextEditor(props: RichTextEditorProps) {
               </button>
             </div>
             <div class="cv-toolbar-divider"></div>
-            <div class="cv-toolbar-group relative">
+            <div
+              class="cv-toolbar-group cv-insert-dropdown relative"
+              style={{
+                position: "relative",
+                display: "inline-flex",
+              }}
+            >
               <button
                 class="cv-toolbar-action-btn"
                 type="button"
@@ -3224,7 +3233,16 @@ function RichTextEditor(props: RichTextEditorProps) {
                 </svg>
               </button>
               <Show when={showInsertMenu()}>
-                <div class="cv-insert-menu shadow-xl">
+                <div
+                  class="cv-insert-menu shadow-xl"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    left: "0",
+                    "z-index": 50,
+                    "min-width": "170px",
+                  }}
+                >
                   <button
                     class="cv-insert-item"
                     type="button"

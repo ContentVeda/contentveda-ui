@@ -1630,6 +1630,7 @@
     return !!(readOnly || disabled);
   }
   function closeAllModals() {
+    showInsertMenu = false;
     showTableModal = false;
     showLinkModal = false;
     showWidgetModal = false;
@@ -2270,11 +2271,13 @@
   }
   function handleGlobalKeyDown(e: any) {
     if (e.key === "Escape") {
+      showInsertMenu = false;
       closeAllModals();
       deselectMediaElement();
     }
   }
   function handleEditorClick(e: any) {
+    showInsertMenu = false;
     if (isReadOnly()) return;
     const target = e.target;
     const resizable =
@@ -3085,7 +3088,13 @@
         >
       </div>
       <div class="cv-toolbar-divider" />
-      <div class="cv-toolbar-group relative">
+      <div
+        style={stringifyStyles({
+          position: "relative",
+          display: "inline-flex",
+        })}
+        class="cv-toolbar-group cv-insert-dropdown relative"
+      >
         <button
           type="button"
           class="cv-toolbar-action-btn"
@@ -3126,7 +3135,16 @@
           ></button
         >
         {#if showInsertMenu}
-          <div class="cv-insert-menu shadow-xl">
+          <div
+            style={stringifyStyles({
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: "0",
+              zIndex: 50,
+              minWidth: "170px",
+            })}
+            class="cv-insert-menu shadow-xl"
+          >
             <button
               type="button"
               class="cv-insert-item"

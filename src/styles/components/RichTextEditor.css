@@ -418,10 +418,15 @@
 }
 
 /* Insert Dropdown Menu */
+.cv-rich-text-editor .cv-insert-dropdown {
+  position: relative !important;
+  display: inline-flex !important;
+}
+
 .cv-rich-text-editor .cv-insert-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  position: absolute !important;
+  top: calc(100% + 4px) !important;
+  left: 0 !important;
   background: var(--cv-color-surface-raised, #ffffff);
   border: 1px solid var(--cv-color-border, #e2e8f0);
   border-radius: 8px;
@@ -430,8 +435,8 @@
   flex-direction: column;
   gap: 2px;
   z-index: 50;
-  min-width: 160px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  min-width: 170px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08);
 }
 
 .cv-rich-text-editor .cv-insert-item {
