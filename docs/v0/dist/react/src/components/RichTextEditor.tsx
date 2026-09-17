@@ -168,6 +168,10 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [videoUrl, setVideoUrl] = useState(() => "");
 
+  const [showFormulaModal, setShowFormulaModal] = useState(() => false);
+
+  const [formulaInput, setFormulaInput] = useState(() => "E = mc²");
+
   const [selectedMediaEl, setSelectedMediaEl] = useState(() => null);
 
   const [resizeHandleTop, setResizeHandleTop] = useState(() => 0);
@@ -689,10 +693,9 @@ function RichTextEditor(props: RichTextEditorProps) {
     } else if (type === "video") {
       openVideoModal();
     } else {
-      const url = window.prompt(`Enter ${type} URL:`);
-      if (url) {
-        insertContent(url);
-      }
+      const escaped = escapeHtml(type);
+      const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+      insertHtmlAtCursor(html);
     }
   }
 
@@ -1496,26 +1499,33 @@ function RichTextEditor(props: RichTextEditorProps) {
     checkFormats();
   }
 
-  function insertFormula() {
+  function openFormulaModal() {
     if (mode === "source") return;
     saveSelection();
-    const formula = window.prompt(
-      "Enter math formula or expression:",
-      "E = mc²"
-    );
+    setShowFormulaModal(true);
+    setFormulaInput("E = mc²");
+  }
+
+  function closeFormulaModal() {
+    setShowFormulaModal(false);
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+
+  function confirmFormula() {
+    setShowFormulaModal(false);
+    const formula = (formulaInput || "").trim();
     if (formula) {
-      const escaped = formula
-        .split("&")
-        .join("&amp;")
-        .split("<")
-        .join("&lt;")
-        .split(">")
-        .join("&gt;")
-        .split('"')
-        .join("&quot;");
+      const escaped = escapeHtml(formula);
       const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
       insertHtmlAtCursor(html);
     }
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+
+  function insertFormula() {
+    openFormulaModal();
   }
 
   function addClass(className: string) {
@@ -1644,6 +1654,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       [
         "image",
         "link",
+        "formula",
         "table",
         "unorderedList",
         "orderedList",
@@ -1802,6 +1813,7 @@ function RichTextEditor(props: RichTextEditorProps) {
     setShowAiModal(false);
     setShowImageModal(false);
     setShowVideoModal(false);
+    setShowFormulaModal(false);
   }
 
   function handleBackdropClick(e: any) {
@@ -3372,6 +3384,26 @@ function RichTextEditor(props: RichTextEditorProps) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => {
                     setShowInsertMenu(false);
+                    openFormulaModal();
+                  }}
+                >
+                  <span
+                    className="font-serif italic font-bold text-xs"
+                    style={{
+                      width: "14px",
+                      textAlign: "center",
+                    }}
+                  >
+                    Fx
+                  </span>
+                  Formula
+                </button>
+                <button
+                  type="button"
+                  className="cv-insert-item"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => {
+                    setShowInsertMenu(false);
                     format("insertHorizontalRule");
                   }}
                 >
@@ -3604,15 +3636,20 @@ function RichTextEditor(props: RichTextEditorProps) {
                 </svg>
               </button>
             ) : null}
-            <button
-              type="button"
-              className="cv-toolbar-btn"
-              title="Formula"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(event) => insertFormula()}
-            >
-              <span className="font-serif italic font-bold text-xs">Fx</span>
-            </button>
+            {showToolbarOption("formula") ? (
+              <button
+                type="button"
+                className="cv-toolbar-btn"
+                title="Formula"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  saveSelection();
+                }}
+                onClick={(event) => openFormulaModal()}
+              >
+                <span className="font-serif italic font-bold text-xs">Fx</span>
+              </button>
+            ) : null}
             {showToolbarOption("social") ? (
               <button
                 type="button"
@@ -3996,7 +4033,8 @@ function RichTextEditor(props: RichTextEditorProps) {
         showButtonModal ||
         showAiModal ||
         showImageModal ||
-        showVideoModal ? (
+        showVideoModal ||
+        showFormulaModal ? (
           <div
             className="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
             style={{
@@ -5402,6 +5440,130 @@ function RichTextEditor(props: RichTextEditorProps) {
                     onClick={(event) => confirmSocial()}
                   >
                     Embed Post
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {showFormulaModal ? (
+              <div
+                className="shadow-2xl"
+                style={{
+                  background: "var(--cv-color-surface-raised, #1e293b)",
+                  border:
+                    "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  width: "380px",
+                }}
+              >
+                <h3
+                  className="flex items-center text-white"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    marginBottom: "20px",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    className="font-serif italic font-bold text-base"
+                    style={{
+                      color: "var(--cv-color-primary, #7fc4de)",
+                    }}
+                  >
+                    Fx
+                  </span>
+                  Insert Math Formula
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "var(--cv-color-text-muted, #94a3b8)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Formula Expression
+                  </label>
+                  <input
+                    type="text"
+                    aria-label="Formula Expression"
+                    placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                    style={{
+                      background:
+                        "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                      border:
+                        "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                      borderRadius: "8px",
+                      padding: "12px 16px",
+                      width: "100%",
+                      fontSize: "14px",
+                      color: "var(--cv-color-text-main, #fff)",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "monospace",
+                    }}
+                    value={formulaInput}
+                    onInput={(e) => setFormulaInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        confirmFormula();
+                      }
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    marginTop: "32px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-text-secondary, #cbd5e1)",
+                      background:
+                        "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                    }}
+                    onClick={(event) => closeFormulaModal()}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-on-primary, #fff)",
+                      background:
+                        "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                    }}
+                    onClick={(event) => confirmFormula()}
+                  >
+                    Insert Formula
                   </button>
                 </div>
               </div>

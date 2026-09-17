@@ -153,6 +153,8 @@ class RichTextEditor extends HTMLElement {
       imageAlt: "",
       showVideoModal: false,
       videoUrl: "",
+      showFormulaModal: false,
+      formulaInput: "E = mc²",
       selectedMediaEl: null,
       resizeHandleTop: 0,
       resizeHandleLeft: 0,
@@ -676,10 +678,9 @@ class RichTextEditor extends HTMLElement {
         } else if (type === "video") {
           self.state.openVideoModal();
         } else {
-          const url = window.prompt(`Enter ${type} URL:`);
-          if (url) {
-            insertContent(url);
-          }
+          const escaped = self.state.escapeHtml(type);
+          const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+          self.state.insertHtmlAtCursor(html);
         }
       },
       clearAllFormatting() {
@@ -1504,26 +1505,34 @@ class RichTextEditor extends HTMLElement {
         self.state.syncContent();
         self.state.checkFormats();
       },
-      insertFormula() {
+      openFormulaModal() {
         if (self.state.mode === "source") return;
         self.state.saveSelection();
-        const formula = window.prompt(
-          "Enter math formula or expression:",
-          "E = mc²"
-        );
+        self.state.showFormulaModal = true;
+        self.update();
+        self.state.formulaInput = "E = mc²";
+        self.update();
+      },
+      closeFormulaModal() {
+        self.state.showFormulaModal = false;
+        self.update();
+        const el = self.state.getEditorElement();
+        if (el) el.focus();
+      },
+      confirmFormula() {
+        self.state.showFormulaModal = false;
+        self.update();
+        const formula = (self.state.formulaInput || "").trim();
         if (formula) {
-          const escaped = formula
-            .split("&")
-            .join("&amp;")
-            .split("<")
-            .join("&lt;")
-            .split(">")
-            .join("&gt;")
-            .split('"')
-            .join("&quot;");
+          const escaped = self.state.escapeHtml(formula);
           const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
           self.state.insertHtmlAtCursor(html);
         }
+        const el = self.state.getEditorElement();
+        if (el) el.focus();
+      },
+      insertFormula() {
+        self.state.openFormulaModal();
       },
       addClass(className: string) {
         if (!className) return;
@@ -1659,6 +1668,7 @@ class RichTextEditor extends HTMLElement {
           [
             "image",
             "link",
+            "formula",
             "table",
             "unorderedList",
             "orderedList",
@@ -1820,6 +1830,8 @@ class RichTextEditor extends HTMLElement {
         self.state.showImageModal = false;
         self.update();
         self.state.showVideoModal = false;
+        self.update();
+        self.state.showFormulaModal = false;
         self.update();
       },
       handleBackdropClick(e: any) {
@@ -2891,7 +2903,7 @@ class RichTextEditor extends HTMLElement {
     this.onButtonRichTextEditor22Click = (event) => {
       this.state.showInsertMenu = false;
       this.update();
-      this.state.format("insertHorizontalRule");
+      this.state.openFormulaModal();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-23
@@ -2903,7 +2915,7 @@ class RichTextEditor extends HTMLElement {
     this.onButtonRichTextEditor23Click = (event) => {
       this.state.showInsertMenu = false;
       this.update();
-      this.state.toggleBlock("BLOCKQUOTE");
+      this.state.format("insertHorizontalRule");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-24
@@ -2915,28 +2927,30 @@ class RichTextEditor extends HTMLElement {
     this.onButtonRichTextEditor24Click = (event) => {
       this.state.showInsertMenu = false;
       this.update();
-      this.state.clearAllFormatting();
+      this.state.toggleBlock("BLOCKQUOTE");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-25
     this.onButtonRichTextEditor25Mousedown = (e) => {
       e.preventDefault();
-      this.state.saveSelection();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-25
     this.onButtonRichTextEditor25Click = (event) => {
-      this.state.openTableModal();
+      this.state.showInsertMenu = false;
+      this.update();
+      this.state.clearAllFormatting();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-26
     this.onButtonRichTextEditor26Mousedown = (e) => {
       e.preventDefault();
+      this.state.saveSelection();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-26
     this.onButtonRichTextEditor26Click = (event) => {
-      this.state.modifyTable("addRow");
+      this.state.openTableModal();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-27
@@ -2946,7 +2960,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-27
     this.onButtonRichTextEditor27Click = (event) => {
-      this.state.modifyTable("removeRow");
+      this.state.modifyTable("addRow");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-28
@@ -2956,7 +2970,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-28
     this.onButtonRichTextEditor28Click = (event) => {
-      this.state.modifyTable("addCol");
+      this.state.modifyTable("removeRow");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-29
@@ -2966,7 +2980,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-29
     this.onButtonRichTextEditor29Click = (event) => {
-      this.state.modifyTable("removeCol");
+      this.state.modifyTable("addCol");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-30
@@ -2976,7 +2990,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-30
     this.onButtonRichTextEditor30Click = (event) => {
-      this.state.insertMedia("image");
+      this.state.modifyTable("removeCol");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-31
@@ -2986,7 +3000,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-31
     this.onButtonRichTextEditor31Click = (event) => {
-      this.state.openLinkModal();
+      this.state.insertMedia("image");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-32
@@ -2996,17 +3010,18 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-32
     this.onButtonRichTextEditor32Click = (event) => {
-      this.state.insertFormula();
+      this.state.openLinkModal();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-33
     this.onButtonRichTextEditor33Mousedown = (e) => {
       e.preventDefault();
+      this.state.saveSelection();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-33
     this.onButtonRichTextEditor33Click = (event) => {
-      this.state.openSocialModal();
+      this.state.openFormulaModal();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-34
@@ -3016,11 +3031,21 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-34
     this.onButtonRichTextEditor34Click = (event) => {
-      this.state.openWidgetModal();
+      this.state.openSocialModal();
+    };
+
+    // Event handler for 'mousedown' event on button-rich-text-editor-35
+    this.onButtonRichTextEditor35Mousedown = (e) => {
+      e.preventDefault();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-35
     this.onButtonRichTextEditor35Click = (event) => {
+      this.state.openWidgetModal();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-36
+    this.onButtonRichTextEditor36Click = (event) => {
       const cls = this.getScope(event.currentTarget, "cls");
       this.state.removeClass(cls);
     };
@@ -3030,16 +3055,6 @@ class RichTextEditor extends HTMLElement {
       this.state.handleClassInputKeyDown(e);
     };
 
-    // Event handler for 'mousedown' event on button-rich-text-editor-36
-    this.onButtonRichTextEditor36Mousedown = (e) => {
-      e.preventDefault();
-    };
-
-    // Event handler for 'click' event on button-rich-text-editor-36
-    this.onButtonRichTextEditor36Click = (event) => {
-      this.state.toggleMode();
-    };
-
     // Event handler for 'mousedown' event on button-rich-text-editor-37
     this.onButtonRichTextEditor37Mousedown = (e) => {
       e.preventDefault();
@@ -3047,7 +3062,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-37
     this.onButtonRichTextEditor37Click = (event) => {
-      this.state.toggleFullScreen();
+      this.state.toggleMode();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-38
@@ -3057,6 +3072,16 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-38
     this.onButtonRichTextEditor38Click = (event) => {
+      this.state.toggleFullScreen();
+    };
+
+    // Event handler for 'mousedown' event on button-rich-text-editor-39
+    this.onButtonRichTextEditor39Mousedown = (e) => {
+      e.preventDefault();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-39
+    this.onButtonRichTextEditor39Click = (event) => {
       this.state.syncContent();
     };
 
@@ -3110,16 +3135,6 @@ class RichTextEditor extends HTMLElement {
       this.state.startResize(e);
     };
 
-    // Event handler for 'mousedown' event on button-rich-text-editor-39
-    this.onButtonRichTextEditor39Mousedown = (e) => {
-      e.preventDefault();
-    };
-
-    // Event handler for 'click' event on button-rich-text-editor-39
-    this.onButtonRichTextEditor39Click = (event) => {
-      this.state.setImageSize("25%");
-    };
-
     // Event handler for 'mousedown' event on button-rich-text-editor-40
     this.onButtonRichTextEditor40Mousedown = (e) => {
       e.preventDefault();
@@ -3127,7 +3142,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-40
     this.onButtonRichTextEditor40Click = (event) => {
-      this.state.setImageSize("50%");
+      this.state.setImageSize("25%");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-41
@@ -3137,7 +3152,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-41
     this.onButtonRichTextEditor41Click = (event) => {
-      this.state.setImageSize("75%");
+      this.state.setImageSize("50%");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-42
@@ -3147,7 +3162,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-42
     this.onButtonRichTextEditor42Click = (event) => {
-      this.state.setImageSize("100%");
+      this.state.setImageSize("75%");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-43
@@ -3157,7 +3172,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-43
     this.onButtonRichTextEditor43Click = (event) => {
-      this.state.setImageAlign("left");
+      this.state.setImageSize("100%");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-44
@@ -3167,7 +3182,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-44
     this.onButtonRichTextEditor44Click = (event) => {
-      this.state.setImageAlign("center");
+      this.state.setImageAlign("left");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-45
@@ -3177,7 +3192,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-45
     this.onButtonRichTextEditor45Click = (event) => {
-      this.state.setImageAlign("right");
+      this.state.setImageAlign("center");
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-46
@@ -3187,6 +3202,16 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-46
     this.onButtonRichTextEditor46Click = (event) => {
+      this.state.setImageAlign("right");
+    };
+
+    // Event handler for 'mousedown' event on button-rich-text-editor-47
+    this.onButtonRichTextEditor47Mousedown = (e) => {
+      e.preventDefault();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-47
+    this.onButtonRichTextEditor47Click = (event) => {
       this.state.deleteSelectedMedia();
     };
 
@@ -3195,33 +3220,33 @@ class RichTextEditor extends HTMLElement {
       this.state.handleBackdropClick(e);
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-47
-    this.onButtonRichTextEditor47Click = (event) => {
-      this.state.closeAiModal();
-    };
-
     // Event handler for 'click' event on button-rich-text-editor-48
     this.onButtonRichTextEditor48Click = (event) => {
-      this.state.applyAiAction("improve");
+      this.state.closeAiModal();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-49
     this.onButtonRichTextEditor49Click = (event) => {
-      this.state.applyAiAction("callout");
+      this.state.applyAiAction("improve");
     };
 
     // Event handler for 'click' event on button-rich-text-editor-50
     this.onButtonRichTextEditor50Click = (event) => {
-      this.state.applyAiAction("summarize");
+      this.state.applyAiAction("callout");
     };
 
     // Event handler for 'click' event on button-rich-text-editor-51
     this.onButtonRichTextEditor51Click = (event) => {
-      this.state.applyAiAction("grammar");
+      this.state.applyAiAction("summarize");
     };
 
     // Event handler for 'click' event on button-rich-text-editor-52
     this.onButtonRichTextEditor52Click = (event) => {
+      this.state.applyAiAction("grammar");
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-53
+    this.onButtonRichTextEditor53Click = (event) => {
       this.state.closeAiModal();
     };
 
@@ -3253,13 +3278,13 @@ class RichTextEditor extends HTMLElement {
       }
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-53
-    this.onButtonRichTextEditor53Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-54
+    this.onButtonRichTextEditor54Click = (event) => {
       this.state.closeImageModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-54
-    this.onButtonRichTextEditor54Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-55
+    this.onButtonRichTextEditor55Click = (event) => {
       this.state.confirmImage();
     };
 
@@ -3277,13 +3302,13 @@ class RichTextEditor extends HTMLElement {
       }
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-55
-    this.onButtonRichTextEditor55Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-56
+    this.onButtonRichTextEditor56Click = (event) => {
       this.state.closeVideoModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-56
-    this.onButtonRichTextEditor56Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-57
+    this.onButtonRichTextEditor57Click = (event) => {
       this.state.confirmVideo();
     };
 
@@ -3321,13 +3346,13 @@ class RichTextEditor extends HTMLElement {
       }
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-57
-    this.onButtonRichTextEditor57Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-58
+    this.onButtonRichTextEditor58Click = (event) => {
       this.state.closeButtonModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-58
-    this.onButtonRichTextEditor58Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-59
+    this.onButtonRichTextEditor59Click = (event) => {
       this.state.confirmButton();
     };
 
@@ -3365,13 +3390,13 @@ class RichTextEditor extends HTMLElement {
       this.update();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-59
-    this.onButtonRichTextEditor59Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-60
+    this.onButtonRichTextEditor60Click = (event) => {
       this.state.closeTableModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-60
-    this.onButtonRichTextEditor60Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-61
+    this.onButtonRichTextEditor61Click = (event) => {
       this.state.confirmTable();
     };
 
@@ -3389,13 +3414,13 @@ class RichTextEditor extends HTMLElement {
       }
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-61
-    this.onButtonRichTextEditor61Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-62
+    this.onButtonRichTextEditor62Click = (event) => {
       this.state.closeLinkModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-62
-    this.onButtonRichTextEditor62Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-63
+    this.onButtonRichTextEditor63Click = (event) => {
       this.state.confirmLink();
     };
 
@@ -3405,13 +3430,13 @@ class RichTextEditor extends HTMLElement {
       this.update();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-63
-    this.onButtonRichTextEditor63Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-64
+    this.onButtonRichTextEditor64Click = (event) => {
       this.state.closeWidgetModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-64
-    this.onButtonRichTextEditor64Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-65
+    this.onButtonRichTextEditor65Click = (event) => {
       this.state.confirmWidget();
     };
 
@@ -3435,14 +3460,38 @@ class RichTextEditor extends HTMLElement {
       }
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-65
-    this.onButtonRichTextEditor65Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-66
+    this.onButtonRichTextEditor66Click = (event) => {
       this.state.closeSocialModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-66
-    this.onButtonRichTextEditor66Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-67
+    this.onButtonRichTextEditor67Click = (event) => {
       this.state.confirmSocial();
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-14
+    this.onInputRichTextEditor14Input = (e) => {
+      this.state.formulaInput = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-14
+    this.onInputRichTextEditor14Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmFormula();
+      }
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-68
+    this.onButtonRichTextEditor68Click = (event) => {
+      this.state.closeFormulaModal();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-69
+    this.onButtonRichTextEditor69Click = (event) => {
+      this.state.confirmFormula();
     };
 
     // Event handler for 'input' event on textarea-rich-text-editor-1
@@ -4148,6 +4197,20 @@ class RichTextEditor extends HTMLElement {
                     class="cv-insert-item"
                     data-el="button-rich-text-editor-22"
                   >
+                    <span
+                      class="font-serif italic font-bold text-xs"
+                      data-el="span-rich-text-editor-4"
+                    >
+                      Fx
+                    </span>
+      
+                    Formula
+                  </button>
+                  <button
+                    type="button"
+                    class="cv-insert-item"
+                    data-el="button-rich-text-editor-23"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="14"
@@ -4165,7 +4228,7 @@ class RichTextEditor extends HTMLElement {
                   <button
                     type="button"
                     class="cv-insert-item"
-                    data-el="button-rich-text-editor-23"
+                    data-el="button-rich-text-editor-24"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -4186,7 +4249,7 @@ class RichTextEditor extends HTMLElement {
                   <button
                     type="button"
                     class="cv-insert-item"
-                    data-el="button-rich-text-editor-24"
+                    data-el="button-rich-text-editor-25"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -4213,7 +4276,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-toolbar-action-btn"
                 title="Table"
-                data-el="button-rich-text-editor-25"
+                data-el="button-rich-text-editor-26"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -4243,7 +4306,7 @@ class RichTextEditor extends HTMLElement {
                   type="button"
                   class="w-6 h-6 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
                   title="Add Row Below"
-                  data-el="button-rich-text-editor-26"
+                  data-el="button-rich-text-editor-27"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4262,7 +4325,7 @@ class RichTextEditor extends HTMLElement {
                   type="button"
                   class="w-6 h-6 flex items-center justify-center rounded hover:bg-rose-500/30 text-rose-500 transition-colors"
                   title="Delete Row"
-                  data-el="button-rich-text-editor-27"
+                  data-el="button-rich-text-editor-28"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4282,7 +4345,7 @@ class RichTextEditor extends HTMLElement {
                   type="button"
                   class="w-6 h-6 flex items-center justify-center rounded hover:cv-rte-tint-strong cv-rte-accent transition-colors"
                   title="Add Column Right"
-                  data-el="button-rich-text-editor-28"
+                  data-el="button-rich-text-editor-29"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4301,7 +4364,7 @@ class RichTextEditor extends HTMLElement {
                   type="button"
                   class="w-6 h-6 flex items-center justify-center rounded hover:bg-rose-500/30 text-rose-500 transition-colors"
                   title="Delete Column"
-                  data-el="button-rich-text-editor-29"
+                  data-el="button-rich-text-editor-30"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4324,7 +4387,7 @@ class RichTextEditor extends HTMLElement {
                   type="button"
                   class="cv-toolbar-btn"
                   title="Image"
-                  data-el="button-rich-text-editor-30"
+                  data-el="button-rich-text-editor-31"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4348,7 +4411,7 @@ class RichTextEditor extends HTMLElement {
                   type="button"
                   class="cv-toolbar-btn"
                   title="Link"
-                  data-el="button-rich-text-editor-31"
+                  data-el="button-rich-text-editor-32"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4370,20 +4433,22 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                 </button>
               </template>
-              <button
-                type="button"
-                class="cv-toolbar-btn"
-                title="Formula"
-                data-el="button-rich-text-editor-32"
-              >
-                <span class="font-serif italic font-bold text-xs">Fx</span>
-              </button>
               <template data-el="show-rich-text-editor-21">
                 <button
                   type="button"
                   class="cv-toolbar-btn"
-                  title="Social Media Embed"
+                  title="Formula"
                   data-el="button-rich-text-editor-33"
+                >
+                  <span class="font-serif italic font-bold text-xs">Fx</span>
+                </button>
+              </template>
+              <template data-el="show-rich-text-editor-22">
+                <button
+                  type="button"
+                  class="cv-toolbar-btn"
+                  title="Social Media Embed"
+                  data-el="button-rich-text-editor-34"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4404,12 +4469,12 @@ class RichTextEditor extends HTMLElement {
               </template>
             </div>
             <div class="cv-toolbar-divider"></div>
-            <template data-el="show-rich-text-editor-22">
+            <template data-el="show-rich-text-editor-23">
               <button
                 type="button"
                 class="cv-toolbar-widget-btn"
                 title="Add UI Widget"
-                data-el="button-rich-text-editor-34"
+                data-el="button-rich-text-editor-35"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -4443,12 +4508,12 @@ class RichTextEditor extends HTMLElement {
                 <span>Add UI Widget</span>
               </button>
             </template>
-            <template data-el="show-rich-text-editor-23">
+            <template data-el="show-rich-text-editor-24">
               <div class="cv-toolbar-classes-group">
                 <span class="cv-class-badge">CLASS</span>
       
                 <template data-el="for-rich-text-editor">
-                  <span class="cv-class-chip" data-el="span-rich-text-editor-4">
+                  <span class="cv-class-chip" data-el="span-rich-text-editor-5">
                     <span>
                       <template data-el="div-rich-text-editor-3">
                         <!-- cls -->
@@ -4457,7 +4522,7 @@ class RichTextEditor extends HTMLElement {
                     <button
                       type="button"
                       class="cv-class-chip-remove"
-                      data-el="button-rich-text-editor-35"
+                      data-el="button-rich-text-editor-36"
                     >
                       ×
                     </button>
@@ -4472,7 +4537,7 @@ class RichTextEditor extends HTMLElement {
                   data-el="input-rich-text-editor-3"
                   data-dom-state="RichTextEditor-input-rich-text-editor-3"
                 />
-                <template data-el="show-rich-text-editor-24">
+                <template data-el="show-rich-text-editor-25">
                   <datalist id="editor-class-list">
                     <template data-el="for-rich-text-editor-2">
                       <option data-el="option-rich-text-editor-1">
@@ -4486,11 +4551,11 @@ class RichTextEditor extends HTMLElement {
               </div>
             </template>
             <div class="ml-auto flex items-center gap-1.5 flex-shrink-0">
-              <template data-el="show-rich-text-editor-25">
+              <template data-el="show-rich-text-editor-26">
                 <button
                   type="button"
                   title="View HTML Source Code"
-                  data-el="button-rich-text-editor-36"
+                  data-el="button-rich-text-editor-37"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4508,12 +4573,12 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                 </button>
               </template>
-              <template data-el="show-rich-text-editor-26">
+              <template data-el="show-rich-text-editor-27">
                 <button
                   type="button"
                   class="cv-toolbar-btn"
                   title="Full Screen"
-                  data-el="button-rich-text-editor-37"
+                  data-el="button-rich-text-editor-38"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4532,12 +4597,12 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                 </button>
               </template>
-              <template data-el="show-rich-text-editor-27">
+              <template data-el="show-rich-text-editor-28">
                 <button
                   type="button"
                   class="cv-toolbar-btn"
                   title="Save"
-                  data-el="button-rich-text-editor-38"
+                  data-el="button-rich-text-editor-39"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -4566,7 +4631,7 @@ class RichTextEditor extends HTMLElement {
             data-el="div-rich-text-editor-6"
             data-ref="RichTextEditor-editorRef"
           ></div>
-          <template data-el="show-rich-text-editor-28">
+          <template data-el="show-rich-text-editor-29">
             <div
               class="cv-resize-handle"
               title="Drag to resize"
@@ -4577,7 +4642,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="25% width"
-                data-el="button-rich-text-editor-39"
+                data-el="button-rich-text-editor-40"
               >
                 25%
               </button>
@@ -4585,7 +4650,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="50% width"
-                data-el="button-rich-text-editor-40"
+                data-el="button-rich-text-editor-41"
               >
                 50%
               </button>
@@ -4593,7 +4658,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="75% width"
-                data-el="button-rich-text-editor-41"
+                data-el="button-rich-text-editor-42"
               >
                 75%
               </button>
@@ -4601,7 +4666,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="100% width"
-                data-el="button-rich-text-editor-42"
+                data-el="button-rich-text-editor-43"
               >
                 100%
               </button>
@@ -4610,7 +4675,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="Align Left"
-                data-el="button-rich-text-editor-43"
+                data-el="button-rich-text-editor-44"
               >
                 <svg
                   width="12"
@@ -4631,7 +4696,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="Align Center"
-                data-el="button-rich-text-editor-44"
+                data-el="button-rich-text-editor-45"
               >
                 <svg
                   width="12"
@@ -4652,7 +4717,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn"
                 title="Align Right"
-                data-el="button-rich-text-editor-45"
+                data-el="button-rich-text-editor-46"
               >
                 <svg
                   width="12"
@@ -4674,7 +4739,7 @@ class RichTextEditor extends HTMLElement {
                 type="button"
                 class="cv-media-toolbar-btn cv-btn-danger"
                 title="Remove Media"
-                data-el="button-rich-text-editor-46"
+                data-el="button-rich-text-editor-47"
               >
                 <svg
                   width="12"
@@ -4694,12 +4759,12 @@ class RichTextEditor extends HTMLElement {
               </button>
             </div>
           </template>
-          <template data-el="show-rich-text-editor-29">
+          <template data-el="show-rich-text-editor-30">
             <div
               class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
               data-el="div-rich-text-editor-11"
             >
-              <template data-el="show-rich-text-editor-30">
+              <template data-el="show-rich-text-editor-31">
                 <div class="cv-ai-modal shadow-2xl">
                   <div class="cv-ai-modal-header">
                     <div
@@ -4723,7 +4788,7 @@ class RichTextEditor extends HTMLElement {
                     <button
                       type="button"
                       class="text-slate-400 hover:text-white text-lg font-bold"
-                      data-el="button-rich-text-editor-47"
+                      data-el="button-rich-text-editor-48"
                     >
                       ×
                     </button>
@@ -4732,40 +4797,40 @@ class RichTextEditor extends HTMLElement {
                     <button
                       type="button"
                       class="cv-ai-pill-btn"
-                      data-el="button-rich-text-editor-48"
+                      data-el="button-rich-text-editor-49"
                     >
                       ✨ Improve Writing & Polish Flow
                     </button>
                     <button
                       type="button"
                       class="cv-ai-pill-btn"
-                      data-el="button-rich-text-editor-49"
+                      data-el="button-rich-text-editor-50"
                     >
                       💡 Generate AI Callout Insight Box
                     </button>
                     <button
                       type="button"
                       class="cv-ai-pill-btn"
-                      data-el="button-rich-text-editor-50"
+                      data-el="button-rich-text-editor-51"
                     >
                       📝 Summarize Selected Section
                     </button>
                     <button
                       type="button"
                       class="cv-ai-pill-btn"
-                      data-el="button-rich-text-editor-51"
+                      data-el="button-rich-text-editor-52"
                     >
                       🔍 Fix Grammar & Syntax
                     </button>
                   </div>
                   <div data-el="div-rich-text-editor-13">
-                    <button type="button" data-el="button-rich-text-editor-52">
+                    <button type="button" data-el="button-rich-text-editor-53">
                       Close
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-31">
+              <template data-el="show-rich-text-editor-32">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-14">
                   <h3
                     class="flex items-center text-white"
@@ -4815,16 +4880,16 @@ class RichTextEditor extends HTMLElement {
                     </div>
                   </div>
                   <div data-el="div-rich-text-editor-18">
-                    <button type="button" data-el="button-rich-text-editor-53">
+                    <button type="button" data-el="button-rich-text-editor-54">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-54">
+                    <button type="button" data-el="button-rich-text-editor-55">
                       Insert Image
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-32">
+              <template data-el="show-rich-text-editor-33">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-19">
                   <h3
                     class="flex items-center text-white"
@@ -4871,16 +4936,16 @@ class RichTextEditor extends HTMLElement {
                     </div>
                   </div>
                   <div data-el="div-rich-text-editor-22">
-                    <button type="button" data-el="button-rich-text-editor-55">
+                    <button type="button" data-el="button-rich-text-editor-56">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-56">
+                    <button type="button" data-el="button-rich-text-editor-57">
                       Insert Video
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-33">
+              <template data-el="show-rich-text-editor-34">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-23">
                   <h3
                     class="flex items-center text-white"
@@ -4945,16 +5010,16 @@ class RichTextEditor extends HTMLElement {
                     </div>
                   </div>
                   <div data-el="div-rich-text-editor-28">
-                    <button type="button" data-el="button-rich-text-editor-57">
+                    <button type="button" data-el="button-rich-text-editor-58">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-58">
+                    <button type="button" data-el="button-rich-text-editor-59">
                       Insert
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-34">
+              <template data-el="show-rich-text-editor-35">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-29">
                   <h3
                     class="flex items-center text-white"
@@ -5017,16 +5082,16 @@ class RichTextEditor extends HTMLElement {
                     </label>
                   </div>
                   <div data-el="div-rich-text-editor-34">
-                    <button type="button" data-el="button-rich-text-editor-59">
+                    <button type="button" data-el="button-rich-text-editor-60">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-60">
+                    <button type="button" data-el="button-rich-text-editor-61">
                       Insert Table
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-35">
+              <template data-el="show-rich-text-editor-36">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-35">
                   <h3
                     class="flex items-center text-white"
@@ -5065,16 +5130,16 @@ class RichTextEditor extends HTMLElement {
                     />
                   </div>
                   <div data-el="div-rich-text-editor-37">
-                    <button type="button" data-el="button-rich-text-editor-61">
+                    <button type="button" data-el="button-rich-text-editor-62">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-62">
+                    <button type="button" data-el="button-rich-text-editor-63">
                       Insert Link
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-36">
+              <template data-el="show-rich-text-editor-37">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-38">
                   <h3
                     class="flex items-center text-white"
@@ -5123,16 +5188,16 @@ class RichTextEditor extends HTMLElement {
                     </select>
                   </div>
                   <div data-el="div-rich-text-editor-40">
-                    <button type="button" data-el="button-rich-text-editor-63">
+                    <button type="button" data-el="button-rich-text-editor-64">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-64">
+                    <button type="button" data-el="button-rich-text-editor-65">
                       Insert Widget
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-37">
+              <template data-el="show-rich-text-editor-38">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-41">
                   <h3
                     class="flex items-center text-white"
@@ -5199,11 +5264,48 @@ class RichTextEditor extends HTMLElement {
                     </div>
                   </div>
                   <div data-el="div-rich-text-editor-45">
-                    <button type="button" data-el="button-rich-text-editor-65">
+                    <button type="button" data-el="button-rich-text-editor-66">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-66">
+                    <button type="button" data-el="button-rich-text-editor-67">
                       Embed Post
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template data-el="show-rich-text-editor-39">
+                <div class="shadow-2xl" data-el="div-rich-text-editor-46">
+                  <h3
+                    class="flex items-center text-white"
+                    data-el="h3-rich-text-editor-8"
+                  >
+                    <span
+                      class="font-serif italic font-bold text-base"
+                      data-el="span-rich-text-editor-6"
+                    >
+                      Fx
+                    </span>
+      
+                    Insert Math Formula
+                  </h3>
+                  <div data-el="div-rich-text-editor-47">
+                    <label data-el="label-rich-text-editor-16">
+                      Formula Expression
+                    </label>
+                    <input
+                      type="text"
+                      aria-label="Formula Expression"
+                      placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                      data-el="input-rich-text-editor-14"
+                      data-dom-state="RichTextEditor-input-rich-text-editor-14"
+                    />
+                  </div>
+                  <div data-el="div-rich-text-editor-48">
+                    <button type="button" data-el="button-rich-text-editor-68">
+                      Cancel
+                    </button>
+                    <button type="button" data-el="button-rich-text-editor-69">
+                      Insert Formula
                     </button>
                   </div>
                 </div>
@@ -5211,7 +5313,7 @@ class RichTextEditor extends HTMLElement {
             </div>
           </template>
         </div>
-        <div data-el="div-rich-text-editor-46">
+        <div data-el="div-rich-text-editor-49">
           <textarea
             class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
             data-el="textarea-rich-text-editor-1"
@@ -5998,6 +6100,15 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
+      .querySelectorAll("[data-el='span-rich-text-editor-4']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          width: "14px",
+          textAlign: "center",
+        });
+      });
+
+    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-23']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6028,15 +6139,6 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-17']")
-      .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("table");
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-25']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6052,11 +6154,9 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-18']")
+      .querySelectorAll("[data-el='show-rich-text-editor-17']")
       .forEach((el) => {
-        const whenCondition =
-          this.state.activeFormats.inTable &&
-          this.state.showToolbarOption("table");
+        const whenCondition = this.state.showToolbarOption("table");
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6075,6 +6175,17 @@ class RichTextEditor extends HTMLElement {
         );
         el.removeEventListener("click", this.onButtonRichTextEditor26Click);
         el.addEventListener("click", this.onButtonRichTextEditor26Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-18']")
+      .forEach((el) => {
+        const whenCondition =
+          this.state.activeFormats.inTable &&
+          this.state.showToolbarOption("table");
+        if (whenCondition) {
+          this.showContent(el);
+        }
       });
 
     this._root
@@ -6123,15 +6234,6 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-19']")
-      .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("image");
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-30']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6147,9 +6249,9 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-20']")
+      .querySelectorAll("[data-el='show-rich-text-editor-19']")
       .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("link");
+        const whenCondition = this.state.showToolbarOption("image");
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6171,6 +6273,15 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-20']")
+      .forEach((el) => {
+        const whenCondition = this.state.showToolbarOption("link");
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-32']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6188,7 +6299,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-rich-text-editor-21']")
       .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("social");
+        const whenCondition = this.state.showToolbarOption("formula");
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6212,7 +6323,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-rich-text-editor-22']")
       .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("addWidget");
+        const whenCondition = this.state.showToolbarOption("social");
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6236,6 +6347,30 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-rich-text-editor-23']")
       .forEach((el) => {
+        const whenCondition = this.state.showToolbarOption("addWidget");
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-35']")
+      .forEach((el) => {
+        el.removeEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor35Mousedown
+        );
+        el.addEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor35Mousedown
+        );
+        el.removeEventListener("click", this.onButtonRichTextEditor35Click);
+        el.addEventListener("click", this.onButtonRichTextEditor35Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-24']")
+      .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("classInput");
         if (whenCondition) {
           this.showContent(el);
@@ -6250,7 +6385,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='span-rich-text-editor-4']")
+      .querySelectorAll("[data-el='span-rich-text-editor-5']")
       .forEach((el) => {
         const cls = this.getScope(el, "cls");
         el.key = cls;
@@ -6264,10 +6399,10 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-35']")
+      .querySelectorAll("[data-el='button-rich-text-editor-36']")
       .forEach((el) => {
-        el.removeEventListener("click", this.onButtonRichTextEditor35Click);
-        el.addEventListener("click", this.onButtonRichTextEditor35Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor36Click);
+        el.addEventListener("click", this.onButtonRichTextEditor36Click);
         const cls = this.getScope(el, "cls");
         el.setAttribute("title", "Remove " + cls);
       });
@@ -6280,7 +6415,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-24']")
+      .querySelectorAll("[data-el='show-rich-text-editor-25']")
       .forEach((el) => {
         const whenCondition =
           this.props.availableClasses && this.props.availableClasses.length > 0;
@@ -6311,7 +6446,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-25']")
+      .querySelectorAll("[data-el='show-rich-text-editor-26']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("source");
         if (whenCondition) {
@@ -6320,35 +6455,11 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-36']")
+      .querySelectorAll("[data-el='button-rich-text-editor-37']")
       .forEach((el) => {
         el.className = `cv-toolbar-btn cv-source-toggle-btn ${
           this.state.mode === "source" ? "is-active" : ""
         }`;
-        el.removeEventListener(
-          "mousedown",
-          this.onButtonRichTextEditor36Mousedown
-        );
-        el.addEventListener(
-          "mousedown",
-          this.onButtonRichTextEditor36Mousedown
-        );
-        el.removeEventListener("click", this.onButtonRichTextEditor36Click);
-        el.addEventListener("click", this.onButtonRichTextEditor36Click);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-26']")
-      .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("fullscreen");
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-37']")
-      .forEach((el) => {
         el.removeEventListener(
           "mousedown",
           this.onButtonRichTextEditor37Mousedown
@@ -6364,7 +6475,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-rich-text-editor-27']")
       .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("save");
+        const whenCondition = this.state.showToolbarOption("fullscreen");
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6383,6 +6494,30 @@ class RichTextEditor extends HTMLElement {
         );
         el.removeEventListener("click", this.onButtonRichTextEditor38Click);
         el.addEventListener("click", this.onButtonRichTextEditor38Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-28']")
+      .forEach((el) => {
+        const whenCondition = this.state.showToolbarOption("save");
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-39']")
+      .forEach((el) => {
+        el.removeEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor39Mousedown
+        );
+        el.addEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor39Mousedown
+        );
+        el.removeEventListener("click", this.onButtonRichTextEditor39Click);
+        el.addEventListener("click", this.onButtonRichTextEditor39Click);
       });
 
     this._root
@@ -6434,7 +6569,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-28']")
+      .querySelectorAll("[data-el='show-rich-text-editor-29']")
       .forEach((el) => {
         const whenCondition =
           this.state.selectedMediaEl && !this.state.isReadOnly();
@@ -6472,21 +6607,6 @@ class RichTextEditor extends HTMLElement {
           left: `${this.state.resizeToolbarLeft}px`,
           zIndex: 35,
         });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-39']")
-      .forEach((el) => {
-        el.removeEventListener(
-          "mousedown",
-          this.onButtonRichTextEditor39Mousedown
-        );
-        el.addEventListener(
-          "mousedown",
-          this.onButtonRichTextEditor39Mousedown
-        );
-        el.removeEventListener("click", this.onButtonRichTextEditor39Click);
-        el.addEventListener("click", this.onButtonRichTextEditor39Click);
       });
 
     this._root
@@ -6535,15 +6655,6 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-9']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          height: "14px",
-          margin: "0 2px",
-        });
-      });
-
-    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-43']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6556,6 +6667,15 @@ class RichTextEditor extends HTMLElement {
         );
         el.removeEventListener("click", this.onButtonRichTextEditor43Click);
         el.addEventListener("click", this.onButtonRichTextEditor43Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-9']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          height: "14px",
+          margin: "0 2px",
+        });
       });
 
     this._root
@@ -6589,15 +6709,6 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-10']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          height: "14px",
-          margin: "0 2px",
-        });
-      });
-
-    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-46']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6613,7 +6724,31 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-29']")
+      .querySelectorAll("[data-el='div-rich-text-editor-10']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          height: "14px",
+          margin: "0 2px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-47']")
+      .forEach((el) => {
+        el.removeEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor47Mousedown
+        );
+        el.addEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor47Mousedown
+        );
+        el.removeEventListener("click", this.onButtonRichTextEditor47Click);
+        el.addEventListener("click", this.onButtonRichTextEditor47Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-30']")
       .forEach((el) => {
         const whenCondition =
           this.state.showTableModal ||
@@ -6623,7 +6758,8 @@ class RichTextEditor extends HTMLElement {
           this.state.showButtonModal ||
           this.state.showAiModal ||
           this.state.showImageModal ||
-          this.state.showVideoModal;
+          this.state.showVideoModal ||
+          this.state.showFormulaModal;
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6640,7 +6776,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-30']")
+      .querySelectorAll("[data-el='show-rich-text-editor-31']")
       .forEach((el) => {
         const whenCondition = this.state.showAiModal;
         if (whenCondition) {
@@ -6649,10 +6785,10 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-47']")
+      .querySelectorAll("[data-el='button-rich-text-editor-48']")
       .forEach((el) => {
-        el.removeEventListener("click", this.onButtonRichTextEditor47Click);
-        el.addEventListener("click", this.onButtonRichTextEditor47Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor48Click);
+        el.addEventListener("click", this.onButtonRichTextEditor48Click);
       });
 
     this._root
@@ -6664,13 +6800,6 @@ class RichTextEditor extends HTMLElement {
           gap: "10px",
           marginBottom: "20px",
         });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-48']")
-      .forEach((el) => {
-        el.removeEventListener("click", this.onButtonRichTextEditor48Click);
-        el.addEventListener("click", this.onButtonRichTextEditor48Click);
       });
 
     this._root
@@ -6695,6 +6824,13 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-52']")
+      .forEach((el) => {
+        el.removeEventListener("click", this.onButtonRichTextEditor52Click);
+        el.addEventListener("click", this.onButtonRichTextEditor52Click);
+      });
+
+    this._root
       .querySelectorAll("[data-el='div-rich-text-editor-13']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
@@ -6705,7 +6841,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-52']")
+      .querySelectorAll("[data-el='button-rich-text-editor-53']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "8px 16px",
@@ -6716,12 +6852,12 @@ class RichTextEditor extends HTMLElement {
           borderRadius: "6px",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor52Click);
-        el.addEventListener("click", this.onButtonRichTextEditor52Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor53Click);
+        el.addEventListener("click", this.onButtonRichTextEditor53Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-31']")
+      .querySelectorAll("[data-el='show-rich-text-editor-32']")
       .forEach((el) => {
         const whenCondition = this.state.showImageModal;
         if (whenCondition) {
@@ -6869,7 +7005,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-53']")
+      .querySelectorAll("[data-el='button-rich-text-editor-54']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -6881,12 +7017,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor53Click);
-        el.addEventListener("click", this.onButtonRichTextEditor53Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor54Click);
+        el.addEventListener("click", this.onButtonRichTextEditor54Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-54']")
+      .querySelectorAll("[data-el='button-rich-text-editor-55']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -6900,12 +7036,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor54Click);
-        el.addEventListener("click", this.onButtonRichTextEditor54Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor55Click);
+        el.addEventListener("click", this.onButtonRichTextEditor55Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-32']")
+      .querySelectorAll("[data-el='show-rich-text-editor-33']")
       .forEach((el) => {
         const whenCondition = this.state.showVideoModal;
         if (whenCondition) {
@@ -7010,7 +7146,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-55']")
+      .querySelectorAll("[data-el='button-rich-text-editor-56']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7022,12 +7158,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor55Click);
-        el.addEventListener("click", this.onButtonRichTextEditor55Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor56Click);
+        el.addEventListener("click", this.onButtonRichTextEditor56Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-56']")
+      .querySelectorAll("[data-el='button-rich-text-editor-57']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7040,12 +7176,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor56Click);
-        el.addEventListener("click", this.onButtonRichTextEditor56Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor57Click);
+        el.addEventListener("click", this.onButtonRichTextEditor57Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-33']")
+      .querySelectorAll("[data-el='show-rich-text-editor-34']")
       .forEach((el) => {
         const whenCondition = this.state.showButtonModal;
         if (whenCondition) {
@@ -7256,7 +7392,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-57']")
+      .querySelectorAll("[data-el='button-rich-text-editor-58']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7268,12 +7404,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor57Click);
-        el.addEventListener("click", this.onButtonRichTextEditor57Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor58Click);
+        el.addEventListener("click", this.onButtonRichTextEditor58Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-58']")
+      .querySelectorAll("[data-el='button-rich-text-editor-59']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7288,12 +7424,12 @@ class RichTextEditor extends HTMLElement {
           boxShadow:
             "0 4px 14px var(--cv-shadow-accent-color, rgba(36,80,102,0.2))",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor58Click);
-        el.addEventListener("click", this.onButtonRichTextEditor58Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor59Click);
+        el.addEventListener("click", this.onButtonRichTextEditor59Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-34']")
+      .querySelectorAll("[data-el='show-rich-text-editor-35']")
       .forEach((el) => {
         const whenCondition = this.state.showTableModal;
         if (whenCondition) {
@@ -7480,7 +7616,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-59']")
+      .querySelectorAll("[data-el='button-rich-text-editor-60']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7492,12 +7628,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor59Click);
-        el.addEventListener("click", this.onButtonRichTextEditor59Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor60Click);
+        el.addEventListener("click", this.onButtonRichTextEditor60Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-60']")
+      .querySelectorAll("[data-el='button-rich-text-editor-61']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7511,12 +7647,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor60Click);
-        el.addEventListener("click", this.onButtonRichTextEditor60Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor61Click);
+        el.addEventListener("click", this.onButtonRichTextEditor61Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-35']")
+      .querySelectorAll("[data-el='show-rich-text-editor-36']")
       .forEach((el) => {
         const whenCondition = this.state.showLinkModal;
         if (whenCondition) {
@@ -7611,7 +7747,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-61']")
+      .querySelectorAll("[data-el='button-rich-text-editor-62']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7623,12 +7759,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor61Click);
-        el.addEventListener("click", this.onButtonRichTextEditor61Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor62Click);
+        el.addEventListener("click", this.onButtonRichTextEditor62Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-62']")
+      .querySelectorAll("[data-el='button-rich-text-editor-63']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7641,12 +7777,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor62Click);
-        el.addEventListener("click", this.onButtonRichTextEditor62Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor63Click);
+        el.addEventListener("click", this.onButtonRichTextEditor63Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-36']")
+      .querySelectorAll("[data-el='show-rich-text-editor-37']")
       .forEach((el) => {
         const whenCondition = this.state.showWidgetModal;
         if (whenCondition) {
@@ -7771,7 +7907,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-63']")
+      .querySelectorAll("[data-el='button-rich-text-editor-64']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7783,12 +7919,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor63Click);
-        el.addEventListener("click", this.onButtonRichTextEditor63Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor64Click);
+        el.addEventListener("click", this.onButtonRichTextEditor64Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-64']")
+      .querySelectorAll("[data-el='button-rich-text-editor-65']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -7802,12 +7938,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor64Click);
-        el.addEventListener("click", this.onButtonRichTextEditor64Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor65Click);
+        el.addEventListener("click", this.onButtonRichTextEditor65Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-37']")
+      .querySelectorAll("[data-el='show-rich-text-editor-38']")
       .forEach((el) => {
         const whenCondition = this.state.showSocialModal;
         if (whenCondition) {
@@ -8001,7 +8137,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-65']")
+      .querySelectorAll("[data-el='button-rich-text-editor-66']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -8013,12 +8149,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor65Click);
-        el.addEventListener("click", this.onButtonRichTextEditor65Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor66Click);
+        el.addEventListener("click", this.onButtonRichTextEditor66Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-66']")
+      .querySelectorAll("[data-el='button-rich-text-editor-67']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -8031,12 +8167,144 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor66Click);
-        el.addEventListener("click", this.onButtonRichTextEditor66Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor67Click);
+        el.addEventListener("click", this.onButtonRichTextEditor67Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-39']")
+      .forEach((el) => {
+        const whenCondition = this.state.showFormulaModal;
+        if (whenCondition) {
+          this.showContent(el);
+        }
       });
 
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-46']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-raised, #1e293b)",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "16px",
+          padding: "24px",
+          width: "380px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='h3-rich-text-editor-8']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "18px",
+          fontWeight: "bold",
+          marginBottom: "20px",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='span-rich-text-editor-6']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          color: "var(--cv-color-primary, #7fc4de)",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-47']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          marginBottom: "24px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-16']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-14']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px 16px",
+          width: "100%",
+          fontSize: "14px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          boxSizing: "border-box",
+          fontFamily: "monospace",
+        });
+        el.value = this.state.formulaInput;
+        el.removeEventListener("input", this.onInputRichTextEditor14Input);
+        el.addEventListener("input", this.onInputRichTextEditor14Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor14Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor14Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-48']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "12px",
+          marginTop: "32px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-68']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-text-secondary, #cbd5e1)",
+          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "500",
+          cursor: "pointer",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor68Click);
+        el.addEventListener("click", this.onButtonRichTextEditor68Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-69']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-on-primary, #fff)",
+          background:
+            "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor69Click);
+        el.addEventListener("click", this.onButtonRichTextEditor69Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-49']")
       .forEach((el) => {
         el.className = `editor-source flex-1 relative min-h-[350px] overflow-hidden cv-mode-src-${this.state.mode}`;
         __cvAssignStyle(el.style, {

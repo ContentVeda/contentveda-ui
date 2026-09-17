@@ -760,6 +760,26 @@ let activeSavedRange: any = null;
                   (mousedown)="$event.preventDefault()"
                   (click)="
           showInsertMenu = false;
+          openFormulaModal();
+        "
+                >
+                  <span
+                    class="font-serif italic font-bold text-xs"
+                    [ngStyle]="{
+          width: '14px',
+          textAlign: 'center'
+        }"
+                    >Fx</span
+                  >
+
+                  Formula
+                </button>
+                <button
+                  type="button"
+                  class="cv-insert-item"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="
+          showInsertMenu = false;
           format('insertHorizontalRule');
         "
                 >
@@ -1002,15 +1022,20 @@ let activeSavedRange: any = null;
                   ></path>
                 </svg></button
             ></ng-container>
-            <button
-              type="button"
-              class="cv-toolbar-btn"
-              title="Formula"
-              (mousedown)="$event.preventDefault()"
-              (click)="insertFormula()"
+            <ng-container *ngIf="showToolbarOption('formula')"
+              ><button
+                type="button"
+                class="cv-toolbar-btn"
+                title="Formula"
+                (mousedown)="
+          $event.preventDefault();
+          saveSelection();
+        "
+                (click)="openFormulaModal()"
+              >
+                <span class="font-serif italic font-bold text-xs">Fx</span>
+              </button></ng-container
             >
-              <span class="font-serif italic font-bold text-xs">Fx</span>
-            </button>
             <ng-container *ngIf="showToolbarOption('social')"
               ><button
                 type="button"
@@ -1387,7 +1412,7 @@ let activeSavedRange: any = null;
             </button></div
         ></ng-container>
         <ng-container
-          *ngIf="showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal"
+          *ngIf="showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal || showFormulaModal"
           ><div
             class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
             [ngStyle]="{
@@ -2735,6 +2760,119 @@ let activeSavedRange: any = null;
                 </div>
               </div></ng-container
             >
+            <ng-container *ngIf="showFormulaModal"
+              ><div
+                class="shadow-2xl"
+                [ngStyle]="{
+          background: 'var(--cv-color-surface-raised, #1e293b)',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '16px',
+          padding: '24px',
+          width: '380px'
+        }"
+              >
+                <h3
+                  class="flex items-center text-white"
+                  [ngStyle]="{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          marginBottom: '20px',
+          gap: '8px'
+        }"
+                >
+                  <span
+                    class="font-serif italic font-bold text-base"
+                    [ngStyle]="{
+          color: 'var(--cv-color-primary, #7fc4de)'
+        }"
+                    >Fx</span
+                  >
+
+                  Insert Math Formula
+                </h3>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          marginBottom: '24px'
+        }"
+                >
+                  <label
+                    [ngStyle]="{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: 'var(--cv-color-text-muted, #94a3b8)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }"
+                    >Formula Expression</label
+                  >
+                  <input
+                    type="text"
+                    aria-label="Formula Expression"
+                    placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                    [ngStyle]="{
+          background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          width: '100%',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-main, #fff)',
+          outline: 'none',
+          boxSizing: 'border-box',
+          fontFamily: 'monospace'
+        }"
+                    [attr.value]="formulaInput"
+                    (input)="formulaInput = $event.target.value"
+                    (keydown)="onClassInputKeydown($event)"
+                  />
+                </div>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          marginTop: '32px'
+        }"
+                >
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-secondary, #cbd5e1)',
+          background: 'var(--cv-color-hover, rgba(255,255,255,0.05))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '500',
+          cursor: 'pointer'
+        }"
+                    (click)="closeFormulaModal()"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-on-primary, #fff)',
+          background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+        }"
+                    (click)="confirmFormula()"
+                  >
+                    Insert Formula
+                  </button>
+                </div>
+              </div></ng-container
+            >
           </div></ng-container
         >
       </div>
@@ -2905,6 +3043,8 @@ export default class RichTextEditor {
   imageAlt = "";
   showVideoModal = false;
   videoUrl = "";
+  showFormulaModal = false;
+  formulaInput = "E = mc²";
   selectedMediaEl = null;
   resizeHandleTop = 0;
   resizeHandleLeft = 0;
@@ -3394,10 +3534,9 @@ export default class RichTextEditor {
     } else if (type === "video") {
       this.openVideoModal();
     } else {
-      const url = window.prompt(`Enter ${type} URL:`);
-      if (url) {
-        insertContent(url);
-      }
+      const escaped = this.escapeHtml(type);
+      const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+      this.insertHtmlAtCursor(html);
     }
   }
   clearAllFormatting() {
@@ -4174,26 +4313,30 @@ export default class RichTextEditor {
     this.syncContent();
     this.checkFormats();
   }
-  insertFormula() {
+  openFormulaModal() {
     if (this.mode === "source") return;
     this.saveSelection();
-    const formula = window.prompt(
-      "Enter math formula or expression:",
-      "E = mc²"
-    );
+    this.showFormulaModal = true;
+    this.formulaInput = "E = mc²";
+  }
+  closeFormulaModal() {
+    this.showFormulaModal = false;
+    const el = this.getEditorElement();
+    if (el) el.focus();
+  }
+  confirmFormula() {
+    this.showFormulaModal = false;
+    const formula = (this.formulaInput || "").trim();
     if (formula) {
-      const escaped = formula
-        .split("&")
-        .join("&amp;")
-        .split("<")
-        .join("&lt;")
-        .split(">")
-        .join("&gt;")
-        .split('"')
-        .join("&quot;");
+      const escaped = this.escapeHtml(formula);
       const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
       this.insertHtmlAtCursor(html);
     }
+    const el = this.getEditorElement();
+    if (el) el.focus();
+  }
+  insertFormula() {
+    this.openFormulaModal();
   }
   addClass(className: string) {
     if (!className) return;
@@ -4317,6 +4460,7 @@ export default class RichTextEditor {
       [
         "image",
         "link",
+        "formula",
         "table",
         "unorderedList",
         "orderedList",
@@ -4462,6 +4606,7 @@ export default class RichTextEditor {
     this.showAiModal = false;
     this.showImageModal = false;
     this.showVideoModal = false;
+    this.showFormulaModal = false;
   }
   handleBackdropClick(e: any) {
     if (e && e.target === e.currentTarget) {

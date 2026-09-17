@@ -113,6 +113,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     imageAlt: '',
     showVideoModal: false,
     videoUrl: '',
+    showFormulaModal: false,
+    formulaInput: 'E = mc²',
 
     selectedMediaEl: null as any,
     resizeHandleTop: 0,
@@ -571,10 +573,9 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       } else if (type === 'video') {
         state.openVideoModal();
       } else {
-        const url = window.prompt(`Enter ${type} URL:`);
-        if (url) {
-          insertContent(url);
-        }
+        const escaped = state.escapeHtml(type);
+        const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+        state.insertHtmlAtCursor(html);
       }
     },
     
@@ -1293,15 +1294,30 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.syncContent();
       state.checkFormats();
     },
-    insertFormula() {
+    openFormulaModal() {
       if (state.mode === 'source') return;
       state.saveSelection();
-      const formula = window.prompt('Enter math formula or expression:', 'E = mc²');
+      state.showFormulaModal = true;
+      state.formulaInput = 'E = mc²';
+    },
+    closeFormulaModal() {
+      state.showFormulaModal = false;
+      const el = state.getEditorElement();
+      if (el) el.focus();
+    },
+    confirmFormula() {
+      state.showFormulaModal = false;
+      const formula = (state.formulaInput || '').trim();
       if (formula) {
-        const escaped = formula.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;');
+        const escaped = state.escapeHtml(formula);
         const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
         state.insertHtmlAtCursor(html);
       }
+      const el = state.getEditorElement();
+      if (el) el.focus();
+    },
+    insertFormula() {
+      state.openFormulaModal();
     },
     addClass(className: string) {
       if (!className) return;
@@ -1399,7 +1415,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         ['headings'],
         ['foreColor', 'backColor'],
         ['alignLeft', 'justifyLeft', 'alignCenter', 'justifyCenter', 'alignRight', 'justifyRight'],
-        ['image', 'link', 'table', 'unorderedList', 'orderedList', 'horizontalRule', 'video', 'social'],
+        ['image', 'link', 'formula', 'table', 'unorderedList', 'orderedList', 'horizontalRule', 'video', 'social'],
         ['insertButton', 'addWidget'],
         ['save'],
         ['classInput']
@@ -1533,6 +1549,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.showAiModal = false;
       state.showImageModal = false;
       state.showVideoModal = false;
+      state.showFormulaModal = false;
     },
     handleBackdropClick(e: any) {
       if (e && e.target === e.currentTarget) {
@@ -2620,6 +2637,10 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   Social Post
                 </button>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openFormulaModal(); }}>
+                  <span class="font-serif italic font-bold text-xs" style={{ width: '14px', textAlign: 'center' }}>Fx</span>
+                  Formula
+                </button>
                 <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.format('insertHorizontalRule'); }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Divider
@@ -2697,15 +2718,17 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               </button>
             </Show>
-            <button
-              type="button"
-              class="cv-toolbar-btn"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => state.insertFormula()}
-              title="Formula"
-            >
-              <span class="font-serif italic font-bold text-xs">Fx</span>
-            </button>
+            <Show when={state.showToolbarOption('formula')}>
+              <button
+                type="button"
+                class="cv-toolbar-btn"
+                onMouseDown={(e) => { e.preventDefault(); state.saveSelection(); }}
+                onClick={() => state.openFormulaModal()}
+                title="Formula"
+              >
+                <span class="font-serif italic font-bold text-xs">Fx</span>
+              </button>
+            </Show>
             <Show when={state.showToolbarOption('social')}>
               <button
                 type="button"
@@ -2957,7 +2980,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         </Show>
 
         {/* Premium Modals with Guaranteed Inline CSS to prevent Tailwind purging */}
-        <Show when={state.showTableModal || state.showLinkModal || state.showWidgetModal || state.showSocialModal || state.showButtonModal || state.showAiModal || state.showImageModal || state.showVideoModal}>
+        <Show when={state.showTableModal || state.showLinkModal || state.showWidgetModal || state.showSocialModal || state.showButtonModal || state.showAiModal || state.showImageModal || state.showVideoModal || state.showFormulaModal}>
           <div 
             class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md" 
             style={{ background: 'rgba(0, 0, 0, 0.6)' }}
@@ -3232,6 +3255,31 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
                   <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeSocialModal()}>Cancel</button>
                   <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-color-info-fill, #075985)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmSocial()}>Embed Post</button>
+                </div>
+              </div>
+            </Show>
+
+            <Show when={state.showFormulaModal}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '380px' }}>
+                <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
+                  <span class="font-serif italic font-bold text-base" style={{ color: 'var(--cv-color-primary, #7fc4de)' }}>Fx</span>
+                  Insert Math Formula
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Formula Expression</label>
+                  <input 
+                    type="text" 
+                    aria-label="Formula Expression" 
+                    style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }} 
+                    placeholder="e.g. E = mc² or f(x) = ax² + bx + c" 
+                    value={state.formulaInput} 
+                    onInput={(e) => state.formulaInput = e.target.value}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmFormula(); } }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeFormulaModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmFormula()}>Insert Formula</button>
                 </div>
               </div>
             </Show>

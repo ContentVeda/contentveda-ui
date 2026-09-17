@@ -585,10 +585,9 @@
     } else if (type === "video") {
       openVideoModal();
     } else {
-      const url = window.prompt(`Enter ${type} URL:`);
-      if (url) {
-        insertContent(url);
-      }
+      const escaped = escapeHtml(type);
+      const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+      insertHtmlAtCursor(html);
     }
   }
   function clearAllFormatting() {
@@ -1355,26 +1354,30 @@
     syncContent();
     checkFormats();
   }
-  function insertFormula() {
+  function openFormulaModal() {
     if (mode === "source") return;
     saveSelection();
-    const formula = window.prompt(
-      "Enter math formula or expression:",
-      "E = mc²"
-    );
+    showFormulaModal = true;
+    formulaInput = "E = mc²";
+  }
+  function closeFormulaModal() {
+    showFormulaModal = false;
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+  function confirmFormula() {
+    showFormulaModal = false;
+    const formula = (formulaInput || "").trim();
     if (formula) {
-      const escaped = formula
-        .split("&")
-        .join("&amp;")
-        .split("<")
-        .join("&lt;")
-        .split(">")
-        .join("&gt;")
-        .split('"')
-        .join("&quot;");
+      const escaped = escapeHtml(formula);
       const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
       insertHtmlAtCursor(html);
     }
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+  function insertFormula() {
+    openFormulaModal();
   }
   function addClass(className: string) {
     if (!className) return;
@@ -1489,6 +1492,7 @@
       [
         "image",
         "link",
+        "formula",
         "table",
         "unorderedList",
         "orderedList",
@@ -1634,6 +1638,7 @@
     showAiModal = false;
     showImageModal = false;
     showVideoModal = false;
+    showFormulaModal = false;
   }
   function handleBackdropClick(e: any) {
     if (e && e.target === e.currentTarget) {
@@ -2379,6 +2384,8 @@
   let imageAlt = "";
   let showVideoModal = false;
   let videoUrl = "";
+  let showFormulaModal = false;
+  let formulaInput = "E = mc²";
   let selectedMediaEl = null;
   let resizeHandleTop = 0;
   let resizeHandleLeft = 0;
@@ -3295,6 +3302,24 @@
               }}
               on:click={(event) => {
                 showInsertMenu = false;
+                openFormulaModal();
+              }}
+              ><span
+                style={stringifyStyles({
+                  width: "14px",
+                  textAlign: "center",
+                })}
+                class="font-serif italic font-bold text-xs">Fx</span
+              >
+              Formula
+            </button><button
+              type="button"
+              class="cv-insert-item"
+              on:mousedown={(e) => {
+                e.preventDefault();
+              }}
+              on:click={(event) => {
+                showInsertMenu = false;
                 format("insertHorizontalRule");
               }}
               ><svg
@@ -3541,17 +3566,22 @@
               /></svg
             ></button
           >
-        {/if}<button
-          type="button"
-          class="cv-toolbar-btn"
-          title="Formula"
-          on:mousedown={(e) => {
-            e.preventDefault();
-          }}
-          on:click={(event) => {
-            insertFormula();
-          }}><span class="font-serif italic font-bold text-xs">Fx</span></button
-        >
+        {/if}
+        {#if showToolbarOption("formula")}
+          <button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Formula"
+            on:mousedown={(e) => {
+              e.preventDefault();
+              saveSelection();
+            }}
+            on:click={(event) => {
+              openFormulaModal();
+            }}
+            ><span class="font-serif italic font-bold text-xs">Fx</span></button
+          >
+        {/if}
         {#if showToolbarOption("social")}
           <button
             type="button"
@@ -3996,7 +4026,7 @@
         >
       </div>
     {/if}
-    {#if showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal}
+    {#if showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal || showFormulaModal}
       <div
         style={stringifyStyles({
           background: "rgba(0, 0, 0, 0.6)",
@@ -5352,6 +5382,123 @@
                 on:click={(event) => {
                   confirmSocial();
                 }}>Embed Post</button
+              >
+            </div>
+          </div>
+        {/if}
+        {#if showFormulaModal}
+          <div
+            style={stringifyStyles({
+              background: "var(--cv-color-surface-raised, #1e293b)",
+              border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "380px",
+            })}
+            class="shadow-2xl"
+          >
+            <h3
+              style={stringifyStyles({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                gap: "8px",
+              })}
+              class="flex items-center text-white"
+            >
+              <span
+                style={stringifyStyles({
+                  color: "var(--cv-color-primary, #7fc4de)",
+                })}
+                class="font-serif italic font-bold text-base">Fx</span
+              >
+              Insert Math Formula
+            </h3>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                marginBottom: "24px",
+              })}
+            >
+              <label
+                style={stringifyStyles({
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  color: "var(--cv-color-text-muted, #94a3b8)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                })}>Formula Expression</label
+              ><input
+                style={stringifyStyles({
+                  background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                  border:
+                    "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                  borderRadius: "8px",
+                  padding: "12px 16px",
+                  width: "100%",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-main, #fff)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "monospace",
+                })}
+                type="text"
+                aria-label="Formula Expression"
+                placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                value={formulaInput}
+                on:input={(e) => {
+                  formulaInput = e.target.value;
+                }}
+                on:keydown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmFormula();
+                  }
+                }}
+              />
+            </div>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "32px",
+              })}
+            >
+              <button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-secondary, #cbd5e1)",
+                  background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                })}
+                type="button"
+                on:click={(event) => {
+                  closeFormulaModal();
+                }}>Cancel</button
+              ><button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-on-primary, #fff)",
+                  background:
+                    "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                })}
+                type="button"
+                on:click={(event) => {
+                  confirmFormula();
+                }}>Insert Formula</button
               >
             </div>
           </div>
