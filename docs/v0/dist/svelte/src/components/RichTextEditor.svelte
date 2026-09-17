@@ -12,6 +12,8 @@
     availableClasses?: string[];
     onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
     config?: RichTextEditorConfig;
+    readOnly?: boolean;
+    disabled?: boolean;
   }
 </script>
 
@@ -26,6 +28,8 @@
   export let onMediaRequest: RichTextEditorProps["onMediaRequest"];
   export let onChange: RichTextEditorProps["onChange"];
   export let config: RichTextEditorProps["config"];
+  export let readOnly: RichTextEditorProps["readOnly"];
+  export let disabled: RichTextEditorProps["disabled"];
   export let className: RichTextEditorProps["className"];
   export let availableClasses: RichTextEditorProps["availableClasses"];
   function stringifyStyles(stylesObj) {
@@ -329,6 +333,7 @@
         activeSavedRange = newRange.cloneRange();
       }
     }
+    ensureEditableStructure();
     syncContent();
     checkFormats();
     renderEmbeds();
@@ -1231,16 +1236,167 @@
     }
     selectedMediaEl = null;
   }
+  function isReadOnly() {
+    return !!(readOnly || disabled);
+  }
+  function closeAllModals() {
+    showTableModal = false;
+    showLinkModal = false;
+    showWidgetModal = false;
+    showSocialModal = false;
+    showButtonModal = false;
+    showAiModal = false;
+  }
+  function handleBackdropClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      closeAllModals();
+    }
+  }
+  function ensureEditableStructure() {
+    if (typeof window === "undefined" || !editorRef) return;
+    const html = (editorRef.innerHTML || "").trim();
+    if (!html || html === "<br>" || html === "<p></p>") {
+      editorRef.innerHTML = "<p><br></p>";
+      return;
+    }
+    const last = editorRef.lastElementChild;
+    if (
+      last &&
+      (last.getAttribute("contenteditable") === "false" ||
+        last.tagName === "TABLE" ||
+        (last.classList &&
+          (last.classList.contains("cv-social-embed") ||
+            last.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorRef.appendChild(p);
+    }
+    const first = editorRef.firstElementChild;
+    if (
+      first &&
+      (first.getAttribute("contenteditable") === "false" ||
+        first.tagName === "TABLE" ||
+        (first.classList &&
+          (first.classList.contains("cv-social-embed") ||
+            first.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorRef.insertBefore(p, first);
+    }
+  }
+  function normalizeSelection() {
+    if (typeof window === "undefined" || !editorRef || isReadOnly()) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let range: any = null;
+    try {
+      range = sel.getRangeAt(0);
+    } catch (e) {
+      return;
+    }
+    let node: any = range.startContainer;
+    let atomicEl: any = null;
+    while (node && node !== editorRef) {
+      if (
+        node.nodeType === 1 &&
+        node.getAttribute &&
+        node.getAttribute("contenteditable") === "false"
+      ) {
+        atomicEl = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    if (atomicEl) {
+      const newRange = document.createRange();
+      if (
+        !atomicEl.nextSibling ||
+        (atomicEl.nextSibling.nodeType === 1 &&
+          atomicEl.nextSibling.getAttribute("contenteditable") === "false")
+      ) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (atomicEl.nextSibling) {
+          atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+        } else {
+          atomicEl.parentNode.appendChild(p);
+        }
+        newRange.setStart(p, 0);
+      } else {
+        newRange.setStartAfter(atomicEl);
+      }
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      activeSavedRange = newRange.cloneRange();
+    }
+  }
+  function focusEditorAtEnd() {
+    if (typeof window === "undefined" || !editorRef || isReadOnly()) return;
+    ensureEditableStructure();
+    try {
+      if (typeof (editorRef as any).focus === "function") {
+        (editorRef as any).focus();
+      }
+    } catch (e) {}
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(editorRef as Node);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      activeSavedRange = range.cloneRange();
+    }
+  }
+  function handleEditorContentClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      focusEditorAtEnd();
+    }
+  }
+  function handleKeyDown(e: any) {
+    if (isReadOnly()) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape") {
+      deselectMediaElement();
+      closeAllModals();
+      return;
+    }
+    if (selectedMediaEl && (e.key === "Backspace" || e.key === "Delete")) {
+      e.preventDefault();
+      const el = selectedMediaEl;
+      deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      ensureEditableStructure();
+      syncContent();
+      return;
+    }
+    normalizeSelection();
+  }
+  function handleGlobalKeyDown(e: any) {
+    if (e.key === "Escape") {
+      closeAllModals();
+      deselectMediaElement();
+    }
+  }
   function handleEditorClick(e: any) {
+    if (isReadOnly()) return;
     const target = e.target;
     if (isResizableTarget(target)) {
       selectMediaElement(target);
     } else {
       deselectMediaElement();
+      normalizeSelection();
     }
   }
   function startResize(e: any) {
-    if (!selectedMediaEl) return;
+    if (!selectedMediaEl || isReadOnly()) return;
     e.preventDefault();
     e.stopPropagation();
     isResizing = true;
@@ -1294,6 +1450,7 @@
           saveSelection();
         }
         checkFormats();
+        normalizeSelection();
       }
     }
   }
@@ -1359,6 +1516,7 @@
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       editorRef.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
       renderEmbeds();
     }
     if (typeof document !== "undefined") {
@@ -1374,13 +1532,34 @@
       }
       document.addEventListener("fullscreenchange", handleFullscreenChange);
       document.addEventListener("selectionchange", handleSelectionChange);
+      document.addEventListener("keydown", handleGlobalKeyDown);
     }
   });
+
+  function onUpdateFn_0(..._args: any[]) {
+    if (
+      editorRef &&
+      typeof content === "string" &&
+      content !== internalContent
+    ) {
+      internalContent = content;
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      editorRef.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
+      renderEmbeds();
+    }
+  }
+
+  $: onUpdateFn_0(...[content]);
 
   onDestroy(() => {
     if (typeof document !== "undefined") {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", stopResize);
     }
   });
 </script>
@@ -1401,7 +1580,11 @@
       : "w-full"
   } ${className || ""}`}
 >
-  <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+  <div
+    class={`editor-toolbar select-none sticky top-0 z-10 w-full ${
+      isReadOnly() ? "opacity-60 pointer-events-none" : ""
+    }`}
+  >
     <div class="cv-toolbar-row cv-toolbar-row-1">
       <div class="cv-toolbar-group">
         <button
@@ -2635,10 +2818,14 @@
       padding: "2rem 3rem",
       color: "var(--cv-color-text-main, #f1f5f9)",
       position: "relative",
+      cursor: isReadOnly() ? "default" : "text",
     })}
     class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode}`}
     on:scroll={(event) => {
       updateResizeHandlePosition();
+    }}
+    on:click={(e) => {
+      handleEditorContentClick(e);
     }}
   >
     <div
@@ -2648,27 +2835,35 @@
         lineHeight: "1.7",
         fontSize: "15px",
       })}
-      contentEditable="true"
-      class="wysiwyg-content outline-none prose prose-invert max-w-none"
       bind:this={editorRef}
+      contentEditable={isReadOnly() ? "false" : "true"}
+      class={`wysiwyg-content outline-none prose prose-invert max-w-none ${
+        isReadOnly() ? "cv-readonly" : ""
+      }`}
       on:input={(event) => {
         handleInput();
         checkFormats();
+        normalizeSelection();
       }}
       on:blur={(event) => {
         handleInput();
       }}
       on:keyup={(event) => {
         checkFormats();
+        normalizeSelection();
+      }}
+      on:keydown={(e) => {
+        handleKeyDown(e);
       }}
       on:mouseup={(event) => {
         checkFormats();
+        normalizeSelection();
       }}
       on:click={(e) => {
         handleEditorClick(e);
       }}
     />
-    {#if selectedMediaEl}
+    {#if selectedMediaEl && !isReadOnly()}
       <div
         style={stringifyStyles({
           position: "absolute",
@@ -2696,6 +2891,9 @@
           background: "rgba(0, 0, 0, 0.6)",
         })}
         class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
+        on:click={(e) => {
+          handleBackdropClick(e);
+        }}
       >
         {#if showAiModal}
           <div class="cv-ai-modal shadow-2xl">

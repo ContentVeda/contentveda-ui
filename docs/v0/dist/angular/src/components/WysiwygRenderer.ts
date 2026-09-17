@@ -385,9 +385,7 @@ export default class WysiwygRenderer {
   constructor() {}
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {

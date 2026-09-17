@@ -8,6 +8,7 @@ import {
   ViewChild,
   ElementRef,
   Input,
+  SimpleChanges,
 } from "@angular/core";
 
 export interface RichTextEditorConfig {
@@ -21,6 +22,8 @@ export interface RichTextEditorProps {
   availableClasses?: string[];
   onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
   config?: RichTextEditorConfig;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
 import DOMPurify from "isomorphic-dompurify";
@@ -39,7 +42,9 @@ let activeSavedRange: any = null;
           boxShadow: 'var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))'
         }"
     >
-      <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+      <div
+        [class]="'editor-toolbar select-none sticky top-0 z-10 w-full ' + (isReadOnly() ? 'opacity-60 pointer-events-none' : '')"
+      >
         <div class="cv-toolbar-row cv-toolbar-row-1">
           <div class="cv-toolbar-group">
             <button
@@ -1177,23 +1182,33 @@ let activeSavedRange: any = null;
       <div
         [class]="'editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-' + (mode)"
         (scroll)="updateResizeHandlePosition()"
+        (click)="handleEditorContentClick($event)"
         [ngStyle]="{
           padding: '2rem 3rem',
           color: 'var(--cv-color-text-main, #f1f5f9)',
-          position: 'relative'
+          position: 'relative',
+          cursor: isReadOnly() ? 'default' : 'text'
         }"
       >
         <div
-          contenteditable="true"
-          class="wysiwyg-content outline-none prose prose-invert max-w-none"
           #editorRef
+          [attr.contentEditable]='isReadOnly() ? "false" : "true"'
+          [class]="'wysiwyg-content outline-none prose prose-invert max-w-none ' + (isReadOnly() ? 'cv-readonly' : '')"
           (input)="
           handleInput();
           checkFormats();
+          normalizeSelection();
         "
           (blur)="handleInput()"
-          (keyup)="checkFormats()"
-          (mouseup)="checkFormats()"
+          (keyup)="
+          checkFormats();
+          normalizeSelection();
+        "
+          (keydown)="handleKeyDown($event)"
+          (mouseup)="
+          checkFormats();
+          normalizeSelection();
+        "
           (click)="handleEditorClick($event)"
           [ngStyle]="{
           minHeight: '350px',
@@ -1202,7 +1217,7 @@ let activeSavedRange: any = null;
           fontSize: '15px'
         }"
         ></div>
-        <ng-container *ngIf="selectedMediaEl"
+        <ng-container *ngIf="selectedMediaEl && !isReadOnly()"
           ><div
             class="cv-resize-handle"
             title="Drag to resize"
@@ -1229,6 +1244,7 @@ let activeSavedRange: any = null;
             [ngStyle]="{
           background: 'rgba(0, 0, 0, 0.6)'
         }"
+            (click)="handleBackdropClick($event)"
           >
             <ng-container *ngIf="showAiModal"
               ><div class="cv-ai-modal shadow-2xl">
@@ -2291,6 +2307,8 @@ export default class RichTextEditor {
   @Input() content!: RichTextEditorProps["content"];
   @Input() initialContent!: RichTextEditorProps["initialContent"];
   @Input() config!: RichTextEditorProps["config"];
+  @Input() readOnly!: RichTextEditorProps["readOnly"];
+  @Input() disabled!: RichTextEditorProps["disabled"];
   @Input() className!: RichTextEditorProps["className"];
   @Input() availableClasses!: RichTextEditorProps["availableClasses"];
   @Output() onMediaRequest = new EventEmitter<any>();
@@ -2650,6 +2668,7 @@ export default class RichTextEditor {
         activeSavedRange = newRange.cloneRange();
       }
     }
+    this.ensureEditableStructure();
     this.syncContent();
     this.checkFormats();
     this.renderEmbeds();
@@ -3571,16 +3590,177 @@ export default class RichTextEditor {
     }
     this.selectedMediaEl = null;
   }
+  isReadOnly() {
+    return !!(this.readOnly || this.disabled);
+  }
+  closeAllModals() {
+    this.showTableModal = false;
+    this.showLinkModal = false;
+    this.showWidgetModal = false;
+    this.showSocialModal = false;
+    this.showButtonModal = false;
+    this.showAiModal = false;
+  }
+  handleBackdropClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      this.closeAllModals();
+    }
+  }
+  ensureEditableStructure() {
+    if (typeof window === "undefined" || !this.editorRef?.nativeElement) return;
+    const html = (this.editorRef?.nativeElement.innerHTML || "").trim();
+    if (!html || html === "<br>" || html === "<p></p>") {
+      this.editorRef!.nativeElement.innerHTML = "<p><br></p>";
+      return;
+    }
+    const last = this.editorRef?.nativeElement.lastElementChild;
+    if (
+      last &&
+      (last.getAttribute("contenteditable") === "false" ||
+        last.tagName === "TABLE" ||
+        (last.classList &&
+          (last.classList.contains("cv-social-embed") ||
+            last.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      this.editorRef?.nativeElement.appendChild(p);
+    }
+    const first = this.editorRef?.nativeElement.firstElementChild;
+    if (
+      first &&
+      (first.getAttribute("contenteditable") === "false" ||
+        first.tagName === "TABLE" ||
+        (first.classList &&
+          (first.classList.contains("cv-social-embed") ||
+            first.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      this.editorRef?.nativeElement.insertBefore(p, first);
+    }
+  }
+  normalizeSelection() {
+    if (
+      typeof window === "undefined" ||
+      !this.editorRef?.nativeElement ||
+      this.isReadOnly()
+    )
+      return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let range: any = null;
+    try {
+      range = sel.getRangeAt(0);
+    } catch (e) {
+      return;
+    }
+    let node: any = range.startContainer;
+    let atomicEl: any = null;
+    while (node && node !== this.editorRef?.nativeElement) {
+      if (
+        node.nodeType === 1 &&
+        node.getAttribute &&
+        node.getAttribute("contenteditable") === "false"
+      ) {
+        atomicEl = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    if (atomicEl) {
+      const newRange = document.createRange();
+      if (
+        !atomicEl.nextSibling ||
+        (atomicEl.nextSibling.nodeType === 1 &&
+          atomicEl.nextSibling.getAttribute("contenteditable") === "false")
+      ) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (atomicEl.nextSibling) {
+          atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+        } else {
+          atomicEl.parentNode.appendChild(p);
+        }
+        newRange.setStart(p, 0);
+      } else {
+        newRange.setStartAfter(atomicEl);
+      }
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      activeSavedRange = newRange.cloneRange();
+    }
+  }
+  focusEditorAtEnd() {
+    if (
+      typeof window === "undefined" ||
+      !this.editorRef?.nativeElement ||
+      this.isReadOnly()
+    )
+      return;
+    this.ensureEditableStructure();
+    try {
+      if (typeof (this.editorRef?.nativeElement as any).focus === "function") {
+        (this.editorRef?.nativeElement as any).focus();
+      }
+    } catch (e) {}
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(this.editorRef?.nativeElement as Node);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      activeSavedRange = range.cloneRange();
+    }
+  }
+  handleEditorContentClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      this.focusEditorAtEnd();
+    }
+  }
+  handleKeyDown(e: any) {
+    if (this.isReadOnly()) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape") {
+      this.deselectMediaElement();
+      this.closeAllModals();
+      return;
+    }
+    if (this.selectedMediaEl && (e.key === "Backspace" || e.key === "Delete")) {
+      e.preventDefault();
+      const el = this.selectedMediaEl;
+      this.deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      this.ensureEditableStructure();
+      this.syncContent();
+      return;
+    }
+    this.normalizeSelection();
+  }
+  handleGlobalKeyDown(e: any) {
+    if (e.key === "Escape") {
+      this.closeAllModals();
+      this.deselectMediaElement();
+    }
+  }
   handleEditorClick(e: any) {
+    if (this.isReadOnly()) return;
     const target = e.target;
     if (this.isResizableTarget(target)) {
       this.selectMediaElement(target);
     } else {
       this.deselectMediaElement();
+      this.normalizeSelection();
     }
   }
   startResize(e: any) {
-    if (!this.selectedMediaEl) return;
+    if (!this.selectedMediaEl || this.isReadOnly()) return;
     e.preventDefault();
     e.stopPropagation();
     this.isResizing = true;
@@ -3638,6 +3818,7 @@ export default class RichTextEditor {
           this.saveSelection();
         }
         this.checkFormats();
+        this.normalizeSelection();
       }
     }
   }
@@ -3646,9 +3827,7 @@ export default class RichTextEditor {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {
@@ -3664,6 +3843,7 @@ export default class RichTextEditor {
         this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
           this.internalContent
         );
+        this.ensureEditableStructure();
         this.renderEmbeds();
       }
       if (typeof document !== "undefined") {
@@ -3685,6 +3865,26 @@ export default class RichTextEditor {
           "selectionchange",
           this.handleSelectionChange
         );
+        document.addEventListener("keydown", this.handleGlobalKeyDown);
+      }
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (typeof window !== "undefined") {
+      if (
+        this.editorRef?.nativeElement &&
+        typeof this.content === "string" &&
+        this.content !== this.internalContent
+      ) {
+        this.internalContent = this.content;
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
+          this.internalContent
+        );
+        this.ensureEditableStructure();
+        this.renderEmbeds();
       }
     }
   }
@@ -3699,6 +3899,9 @@ export default class RichTextEditor {
         "selectionchange",
         this.handleSelectionChange
       );
+      document.removeEventListener("keydown", this.handleGlobalKeyDown);
+      document.removeEventListener("mousemove", this.handleResizeMove);
+      document.removeEventListener("mouseup", this.stopResize);
     }
   }
 }

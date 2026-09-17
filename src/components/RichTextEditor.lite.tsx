@@ -1,4 +1,4 @@
-import { useStore, useRef, onMount, onUnMount, Show } from '@builder.io/mitosis';
+import { useStore, useRef, onMount, onUnMount, onUpdate, Show } from '@builder.io/mitosis';
 import DOMPurify from 'isomorphic-dompurify';
 
 export interface RichTextEditorConfig {
@@ -13,6 +13,8 @@ export interface RichTextEditorProps {
   availableClasses?: string[];
   onMediaRequest?: (type: 'image' | 'video' | 'audio') => Promise<string>;
   config?: RichTextEditorConfig;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
 let activeSavedRange: any = null;
@@ -334,6 +336,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           activeSavedRange = newRange.cloneRange();
         }
       }
+      state.ensureEditableStructure();
       state.syncContent();
       state.checkFormats();
       state.renderEmbeds();
@@ -1148,16 +1151,145 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       }
       state.selectedMediaEl = null;
     },
+    isReadOnly() {
+      return !!(props.readOnly || props.disabled);
+    },
+    closeAllModals() {
+      state.showTableModal = false;
+      state.showLinkModal = false;
+      state.showWidgetModal = false;
+      state.showSocialModal = false;
+      state.showButtonModal = false;
+      state.showAiModal = false;
+    },
+    handleBackdropClick(e: any) {
+      if (e && e.target === e.currentTarget) {
+        state.closeAllModals();
+      }
+    },
+    ensureEditableStructure() {
+      if (typeof window === 'undefined' || !editorRef) return;
+      const html = (editorRef.innerHTML || '').trim();
+      if (!html || html === '<br>' || html === '<p></p>') {
+        editorRef.innerHTML = '<p><br></p>';
+        return;
+      }
+      const last = editorRef.lastElementChild;
+      if (last && (last.getAttribute('contenteditable') === 'false' || last.tagName === 'TABLE' || (last.classList && (last.classList.contains('cv-social-embed') || last.classList.contains('cv-widget'))))) {
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        editorRef.appendChild(p);
+      }
+      const first = editorRef.firstElementChild;
+      if (first && (first.getAttribute('contenteditable') === 'false' || first.tagName === 'TABLE' || (first.classList && (first.classList.contains('cv-social-embed') || first.classList.contains('cv-widget'))))) {
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        editorRef.insertBefore(p, first);
+      }
+    },
+    normalizeSelection() {
+      if (typeof window === 'undefined' || !editorRef || state.isReadOnly()) return;
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      let range: any = null;
+      try {
+        range = sel.getRangeAt(0);
+      } catch (e) {
+        return;
+      }
+      let node: any = range.startContainer;
+      let atomicEl: any = null;
+      while (node && node !== editorRef) {
+        if (node.nodeType === 1 && node.getAttribute && node.getAttribute('contenteditable') === 'false') {
+          atomicEl = node;
+          break;
+        }
+        node = node.parentNode;
+      }
+      if (atomicEl) {
+        const newRange = document.createRange();
+        if (!atomicEl.nextSibling || (atomicEl.nextSibling.nodeType === 1 && atomicEl.nextSibling.getAttribute('contenteditable') === 'false')) {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          if (atomicEl.nextSibling) {
+            atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+          } else {
+            atomicEl.parentNode.appendChild(p);
+          }
+          newRange.setStart(p, 0);
+        } else {
+          newRange.setStartAfter(atomicEl);
+        }
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        activeSavedRange = newRange.cloneRange();
+      }
+    },
+    focusEditorAtEnd() {
+      if (typeof window === 'undefined' || !editorRef || state.isReadOnly()) return;
+      state.ensureEditableStructure();
+      try {
+        if (typeof (editorRef as any).focus === 'function') {
+          (editorRef as any).focus();
+        }
+      } catch (e) {}
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(editorRef as Node);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        activeSavedRange = range.cloneRange();
+      }
+    },
+    handleEditorContentClick(e: any) {
+      if (e && e.target === e.currentTarget) {
+        state.focusEditorAtEnd();
+      }
+    },
+    handleKeyDown(e: any) {
+      if (state.isReadOnly()) {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === 'Escape') {
+        state.deselectMediaElement();
+        state.closeAllModals();
+        return;
+      }
+      if (state.selectedMediaEl && (e.key === 'Backspace' || e.key === 'Delete')) {
+        e.preventDefault();
+        const el = state.selectedMediaEl;
+        state.deselectMediaElement();
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        state.ensureEditableStructure();
+        state.syncContent();
+        return;
+      }
+      state.normalizeSelection();
+    },
+    handleGlobalKeyDown(e: any) {
+      if (e.key === 'Escape') {
+        state.closeAllModals();
+        state.deselectMediaElement();
+      }
+    },
     handleEditorClick(e: any) {
+      if (state.isReadOnly()) return;
       const target = e.target;
       if (state.isResizableTarget(target)) {
         state.selectMediaElement(target);
       } else {
         state.deselectMediaElement();
+        state.normalizeSelection();
       }
     },
     startResize(e: any) {
-      if (!state.selectedMediaEl) return;
+      if (!state.selectedMediaEl || state.isReadOnly()) return;
       e.preventDefault();
       e.stopPropagation();
       state.isResizing = true;
@@ -1207,6 +1339,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             state.saveSelection();
           }
           state.checkFormats();
+          state.normalizeSelection();
         }
       }
     },
@@ -1220,6 +1353,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+      state.ensureEditableStructure();
       state.renderEmbeds();
     }
     if (typeof document !== 'undefined') {
@@ -1235,6 +1369,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       
       document.addEventListener('fullscreenchange', state.handleFullscreenChange);
       document.addEventListener('selectionchange', state.handleSelectionChange);
+      document.addEventListener('keydown', state.handleGlobalKeyDown);
     }
   });
 
@@ -1242,8 +1377,22 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     if (typeof document !== 'undefined') {
       document.removeEventListener('fullscreenchange', state.handleFullscreenChange);
       document.removeEventListener('selectionchange', state.handleSelectionChange);
+      document.removeEventListener('keydown', state.handleGlobalKeyDown);
+      document.removeEventListener('mousemove', state.handleResizeMove);
+      document.removeEventListener('mouseup', state.stopResize);
     }
   });
+
+  onUpdate(() => {
+    if (editorRef && typeof props.content === 'string' && props.content !== state.internalContent) {
+      state.internalContent = props.content;
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+      state.ensureEditableStructure();
+      state.renderEmbeds();
+    }
+  }, [props.content]);
 
   return (
     <div 
@@ -1257,7 +1406,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       }}
     >
       {/* Redesigned 2-Row Modern Toolbar */}
-      <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+      <div class={`editor-toolbar select-none sticky top-0 z-10 w-full ${state.isReadOnly() ? 'opacity-60 pointer-events-none' : ''}`}>
         
         {/* ROW 1: History, Block Format, Typography, Inline Formatting, Colors, Alignments */}
         <div class="cv-toolbar-row cv-toolbar-row-1">
@@ -1803,25 +1952,28 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       <div
         class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${state.mode}`}
         onScroll={() => state.updateResizeHandlePosition()}
+        onClick={(e) => state.handleEditorContentClick(e)}
         style={{
           padding: '2rem 3rem',
           color: 'var(--cv-color-text-main, #f1f5f9)',
-          position: 'relative'
+          position: 'relative',
+          cursor: state.isReadOnly() ? 'default' : 'text'
         }}
       >
         <div
           ref={editorRef}
-          contentEditable="true"
-          class="wysiwyg-content outline-none prose prose-invert max-w-none"
-          onInput={() => { state.handleInput(); state.checkFormats(); }}
+          contentEditable={state.isReadOnly() ? "false" : "true"}
+          class={`wysiwyg-content outline-none prose prose-invert max-w-none ${state.isReadOnly() ? 'cv-readonly' : ''}`}
+          onInput={() => { state.handleInput(); state.checkFormats(); state.normalizeSelection(); }}
           onBlur={() => state.handleInput()}
-          onKeyUp={() => state.checkFormats()}
-          onMouseUp={() => state.checkFormats()}
+          onKeyUp={() => { state.checkFormats(); state.normalizeSelection(); }}
+          onKeyDown={(e) => state.handleKeyDown(e)}
+          onMouseUp={() => { state.checkFormats(); state.normalizeSelection(); }}
           onClick={(e) => state.handleEditorClick(e)}
           style={{ minHeight: '350px', fontFamily: 'Inter, sans-serif', lineHeight: '1.7', fontSize: '15px' }}
         ></div>
 
-        <Show when={state.selectedMediaEl}>
+        <Show when={state.selectedMediaEl && !state.isReadOnly()}>
           <div
             class="cv-resize-handle"
             title="Drag to resize"
@@ -1844,7 +1996,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
 
         {/* Premium Modals with Guaranteed Inline CSS to prevent Tailwind purging */}
         <Show when={state.showTableModal || state.showLinkModal || state.showWidgetModal || state.showSocialModal || state.showButtonModal || state.showAiModal}>
-          <div class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
+          <div 
+            class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md" 
+            style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+            onClick={(e) => state.handleBackdropClick(e)}
+          >
             
             <Show when={state.showAiModal}>
               <div class="cv-ai-modal shadow-2xl">

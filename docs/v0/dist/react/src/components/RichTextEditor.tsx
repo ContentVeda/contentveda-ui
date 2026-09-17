@@ -13,6 +13,8 @@ export interface RichTextEditorProps {
   availableClasses?: string[];
   onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
   config?: RichTextEditorConfig;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
 import DOMPurify from "isomorphic-dompurify";
@@ -413,6 +415,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         activeSavedRange = newRange.cloneRange();
       }
     }
+    ensureEditableStructure();
     syncContent();
     checkFormats();
     renderEmbeds();
@@ -1372,17 +1375,179 @@ function RichTextEditor(props: RichTextEditorProps) {
     setSelectedMediaEl(null);
   }
 
+  function isReadOnly() {
+    return !!(props.readOnly || props.disabled);
+  }
+
+  function closeAllModals() {
+    setShowTableModal(false);
+    setShowLinkModal(false);
+    setShowWidgetModal(false);
+    setShowSocialModal(false);
+    setShowButtonModal(false);
+    setShowAiModal(false);
+  }
+
+  function handleBackdropClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      closeAllModals();
+    }
+  }
+
+  function ensureEditableStructure() {
+    if (typeof window === "undefined" || !editorRef.current) return;
+    const html = (editorRef.current.innerHTML || "").trim();
+    if (!html || html === "<br>" || html === "<p></p>") {
+      editorRef.current.innerHTML = "<p><br></p>";
+      return;
+    }
+    const last = editorRef.current.lastElementChild;
+    if (
+      last &&
+      (last.getAttribute("contenteditable") === "false" ||
+        last.tagName === "TABLE" ||
+        (last.classList &&
+          (last.classList.contains("cv-social-embed") ||
+            last.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorRef.current.appendChild(p);
+    }
+    const first = editorRef.current.firstElementChild;
+    if (
+      first &&
+      (first.getAttribute("contenteditable") === "false" ||
+        first.tagName === "TABLE" ||
+        (first.classList &&
+          (first.classList.contains("cv-social-embed") ||
+            first.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorRef.current.insertBefore(p, first);
+    }
+  }
+
+  function normalizeSelection() {
+    if (typeof window === "undefined" || !editorRef.current || isReadOnly())
+      return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let range: any = null;
+    try {
+      range = sel.getRangeAt(0);
+    } catch (e) {
+      return;
+    }
+    let node: any = range.startContainer;
+    let atomicEl: any = null;
+    while (node && node !== editorRef.current) {
+      if (
+        node.nodeType === 1 &&
+        node.getAttribute &&
+        node.getAttribute("contenteditable") === "false"
+      ) {
+        atomicEl = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    if (atomicEl) {
+      const newRange = document.createRange();
+      if (
+        !atomicEl.nextSibling ||
+        (atomicEl.nextSibling.nodeType === 1 &&
+          atomicEl.nextSibling.getAttribute("contenteditable") === "false")
+      ) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (atomicEl.nextSibling) {
+          atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+        } else {
+          atomicEl.parentNode.appendChild(p);
+        }
+        newRange.setStart(p, 0);
+      } else {
+        newRange.setStartAfter(atomicEl);
+      }
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      activeSavedRange = newRange.cloneRange();
+    }
+  }
+
+  function focusEditorAtEnd() {
+    if (typeof window === "undefined" || !editorRef.current || isReadOnly())
+      return;
+    ensureEditableStructure();
+    try {
+      if (typeof (editorRef.current as any).focus === "function") {
+        (editorRef.current as any).focus();
+      }
+    } catch (e) {}
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current as Node);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      activeSavedRange = range.cloneRange();
+    }
+  }
+
+  function handleEditorContentClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      focusEditorAtEnd();
+    }
+  }
+
+  function handleKeyDown(e: any) {
+    if (isReadOnly()) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape") {
+      deselectMediaElement();
+      closeAllModals();
+      return;
+    }
+    if (selectedMediaEl && (e.key === "Backspace" || e.key === "Delete")) {
+      e.preventDefault();
+      const el = selectedMediaEl;
+      deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      ensureEditableStructure();
+      syncContent();
+      return;
+    }
+    normalizeSelection();
+  }
+
+  function handleGlobalKeyDown(e: any) {
+    if (e.key === "Escape") {
+      closeAllModals();
+      deselectMediaElement();
+    }
+  }
+
   function handleEditorClick(e: any) {
+    if (isReadOnly()) return;
     const target = e.target;
     if (isResizableTarget(target)) {
       selectMediaElement(target);
     } else {
       deselectMediaElement();
+      normalizeSelection();
     }
   }
 
   function startResize(e: any) {
-    if (!selectedMediaEl) return;
+    if (!selectedMediaEl || isReadOnly()) return;
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
@@ -1443,6 +1608,7 @@ function RichTextEditor(props: RichTextEditorProps) {
           saveSelection();
         }
         checkFormats();
+        normalizeSelection();
       }
     }
   }
@@ -1455,6 +1621,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       editorRef.current.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
       renderEmbeds();
     }
     if (typeof document !== "undefined") {
@@ -1470,9 +1637,23 @@ function RichTextEditor(props: RichTextEditorProps) {
       }
       document.addEventListener("fullscreenchange", handleFullscreenChange);
       document.addEventListener("selectionchange", handleSelectionChange);
+      document.addEventListener("keydown", handleGlobalKeyDown);
     }
   }, []);
-
+  useEffect(() => {
+    if (
+      editorRef.current &&
+      typeof props.content === "string" &&
+      props.content !== internalContent
+    ) {
+      setInternalContent(props.content);
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      editorRef.current.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
+      renderEmbeds();
+    }
+  }, [props.content]);
   useEffect(() => {
     return () => {
       if (typeof document !== "undefined") {
@@ -1481,6 +1662,9 @@ function RichTextEditor(props: RichTextEditorProps) {
           handleFullscreenChange
         );
         document.removeEventListener("selectionchange", handleSelectionChange);
+        document.removeEventListener("keydown", handleGlobalKeyDown);
+        document.removeEventListener("mousemove", handleResizeMove);
+        document.removeEventListener("mouseup", stopResize);
       }
     };
   }, []);
@@ -1502,7 +1686,11 @@ function RichTextEditor(props: RichTextEditorProps) {
         boxShadow: "var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))",
       }}
     >
-      <div className="editor-toolbar select-none sticky top-0 z-10 w-full">
+      <div
+        className={`editor-toolbar select-none sticky top-0 z-10 w-full ${
+          isReadOnly() ? "opacity-60 pointer-events-none" : ""
+        }`}
+      >
         <div className="cv-toolbar-row cv-toolbar-row-1">
           <div className="cv-toolbar-group">
             <button
@@ -2655,23 +2843,35 @@ function RichTextEditor(props: RichTextEditorProps) {
       <div
         className={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode}`}
         onScroll={(event) => updateResizeHandlePosition()}
+        onClick={(e) => handleEditorContentClick(e)}
         style={{
           padding: "2rem 3rem",
           color: "var(--cv-color-text-main, #f1f5f9)",
           position: "relative",
+          cursor: isReadOnly() ? "default" : "text",
         }}
       >
         <div
-          contentEditable="true"
-          className="wysiwyg-content outline-none prose prose-invert max-w-none"
           ref={editorRef}
+          contentEditable={isReadOnly() ? "false" : "true"}
+          className={`wysiwyg-content outline-none prose prose-invert max-w-none ${
+            isReadOnly() ? "cv-readonly" : ""
+          }`}
           onInput={(event) => {
             handleInput();
             checkFormats();
+            normalizeSelection();
           }}
           onBlur={(event) => handleInput()}
-          onKeyUp={(event) => checkFormats()}
-          onMouseUp={(event) => checkFormats()}
+          onKeyUp={(event) => {
+            checkFormats();
+            normalizeSelection();
+          }}
+          onKeyDown={(e) => handleKeyDown(e)}
+          onMouseUp={(event) => {
+            checkFormats();
+            normalizeSelection();
+          }}
           onClick={(e) => handleEditorClick(e)}
           style={{
             minHeight: "350px",
@@ -2680,7 +2880,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             fontSize: "15px",
           }}
         />
-        {selectedMediaEl ? (
+        {selectedMediaEl && !isReadOnly() ? (
           <div
             className="cv-resize-handle"
             title="Drag to resize"
@@ -2711,6 +2911,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             style={{
               background: "rgba(0, 0, 0, 0.6)",
             }}
+            onClick={(e) => handleBackdropClick(e)}
           >
             {showAiModal ? (
               <div className="cv-ai-modal shadow-2xl">
