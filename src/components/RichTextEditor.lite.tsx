@@ -108,6 +108,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     btnText: 'Click Here',
     btnUrl: '',
     btnStyle: 'primary',
+    showImageModal: false,
+    imageUrl: '',
+    imageAlt: '',
+    showVideoModal: false,
+    videoUrl: '',
 
     selectedMediaEl: null as any,
     resizeHandleTop: 0,
@@ -350,50 +355,73 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       }
       targetRange = state.escapeAtomicRange(targetRange);
 
-      if (targetRange && targetRange.insertNode) {
-        targetRange.deleteContents();
-        const template = document.createElement('template');
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        template.innerHTML = html.trim();
-        const frag = template.content;
-        const resizableEl = frag.querySelector('img, video, audio, .cv-social-embed, .cv-widget');
-        const lastNode = frag.lastChild;
-        targetRange.insertNode(frag);
-        if (lastNode && sel) {
-          const newRange = document.createRange();
-          newRange.setStartAfter(lastNode);
-          newRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(newRange);
-          const cloned = newRange.cloneRange();
-          activeSavedRange = cloned;
-          if (el) (el as any).__cv_savedRange = cloned;
-        }
-        if (resizableEl) {
-          state.selectMediaElement(resizableEl);
-        }
-      } else if (el) {
-        const template = document.createElement('template');
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        template.innerHTML = html.trim();
-        const resizableEl = template.content.querySelector('img, video, audio, .cv-social-embed, .cv-widget');
-        el.appendChild(template.content);
-        const newRange = document.createRange();
-        newRange.selectNodeContents(el as Node);
-        newRange.collapse(false);
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(newRange);
-          const cloned = newRange.cloneRange();
-          activeSavedRange = cloned;
-          if (el) (el as any).__cv_savedRange = cloned;
-        }
-        if (resizableEl) {
-          state.selectMediaElement(resizableEl);
+      const isBlockHtml = /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(html);
+      let blockParent: HTMLElement | null = null;
+      if (targetRange && el) {
+        let n: any = targetRange.startContainer;
+        while (n && n !== el) {
+          if (n.nodeType === 1 && /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)) {
+            blockParent = n;
+            break;
+          }
+          n = n.parentNode;
         }
       }
+
+      const template = document.createElement('template');
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      template.innerHTML = html.trim();
+      const frag = template.content;
+
+      // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+      let lastP: HTMLElement | null = frag.querySelector('p:last-child');
+      if (isBlockHtml && !lastP) {
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        frag.appendChild(p);
+        lastP = p;
+      }
+
+      let insertedP: HTMLElement | null = null;
+      if (isBlockHtml && blockParent && blockParent !== el && blockParent.parentNode) {
+        const isEmptyBlock = !blockParent.textContent?.trim() || blockParent.innerHTML === '<br>';
+        if (isEmptyBlock) {
+          const parent = blockParent.parentNode;
+          insertedP = lastP;
+          parent.insertBefore(frag, blockParent);
+          blockParent.remove();
+        } else {
+          insertedP = lastP;
+          blockParent.after(frag);
+        }
+      } else if (targetRange && targetRange.insertNode) {
+        targetRange.deleteContents();
+        insertedP = lastP;
+        targetRange.insertNode(frag);
+      } else if (el) {
+        insertedP = lastP;
+        el.appendChild(frag);
+      }
+
+      // Position caret inside the trailing paragraph so author can type / press Enter immediately
+      const targetP = insertedP || (el ? el.querySelector('p:last-child') : null);
+      if (el && typeof (el as any).focus === 'function') {
+        try {
+          (el as any).focus();
+        } catch (e) {}
+      }
+      if (targetP && sel) {
+        const newRange = document.createRange();
+        newRange.setStart(targetP, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
+      }
+
       state.ensureEditableStructure();
       state.syncContent();
       state.checkFormats();
@@ -538,12 +566,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         }).catch((err) => {
           console.error('Media request failed', err);
         });
+      } else if (type === 'image') {
+        state.openImageModal();
+      } else if (type === 'video') {
+        state.openVideoModal();
       } else {
         const url = window.prompt(`Enter ${type} URL:`);
-        if (url && type === 'image') {
-          const altText = window.prompt('Describe this image for screen readers and search engines (alt text):', '');
-          insertContent(url, altText || undefined);
-        } else if (url) {
+        if (url) {
           insertContent(url);
         }
       }
@@ -1050,6 +1079,57 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.showSocialModal = false;
     },
 
+    openImageModal() {
+      if (state.mode === 'source') return;
+      state.saveSelection();
+      state.showImageModal = true;
+      state.imageUrl = '';
+      state.imageAlt = '';
+    },
+    closeImageModal() {
+      state.showImageModal = false;
+    },
+    confirmImage() {
+      state.showImageModal = false;
+      if (state.imageUrl) {
+        const url = state.imageUrl.trim();
+        const filenameGuess = (url.split('/').pop() || 'image').split('?')[0].split('.')[0].replace(/[-_]+/g, ' ').trim();
+        const alt = (state.imageAlt || '').trim() || filenameGuess || 'Image';
+        const escapedAlt = state.escapeHtml(alt);
+        const escapedUrl = state.escapeHtml(url);
+        const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        state.insertHtmlAtCursor(html);
+      }
+    },
+
+    openVideoModal() {
+      if (state.mode === 'source') return;
+      state.saveSelection();
+      state.showVideoModal = true;
+      state.videoUrl = '';
+    },
+    closeVideoModal() {
+      state.showVideoModal = false;
+    },
+    confirmVideo() {
+      state.showVideoModal = false;
+      if (state.videoUrl) {
+        const url = state.videoUrl.trim();
+        const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/);
+        const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+        const escapedUrl = state.escapeHtml(url);
+        let html = '';
+        if (ytMatch) {
+          html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+        } else if (vimeoMatch) {
+          html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+        } else {
+          html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+        }
+        state.insertHtmlAtCursor(html);
+      }
+    },
+
     toggleMode() {
       if (state.mode === 'visual') {
         state.syncContent();
@@ -1444,6 +1524,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.showSocialModal = false;
       state.showButtonModal = false;
       state.showAiModal = false;
+      state.showImageModal = false;
+      state.showVideoModal = false;
     },
     handleBackdropClick(e: any) {
       if (e && e.target === e.currentTarget) {
@@ -1463,12 +1545,12 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         return;
       }
       const last = el.lastElementChild;
-      if (last && (last.getAttribute('contenteditable') === 'false' || last.tagName === 'TABLE' || (last.classList && (last.classList.contains('cv-social-embed') || last.classList.contains('cv-widget'))))) {
+      if (last && (last.getAttribute('contenteditable') === 'false' || last.tagName === 'TABLE' || last.tagName === 'IMG' || last.tagName === 'VIDEO' || last.tagName === 'AUDIO' || (last.classList && (last.classList.contains('cv-social-embed') || last.classList.contains('cv-widget'))))) {
         const p = document.createElement('p');
         p.innerHTML = '<br>';
         el.appendChild(p);
       }
-      if (first && (first.getAttribute('contenteditable') === 'false' || first.tagName === 'TABLE' || (first.classList && (first.classList.contains('cv-social-embed') || first.classList.contains('cv-widget'))))) {
+      if (first && (first.getAttribute('contenteditable') === 'false' || first.tagName === 'TABLE' || first.tagName === 'IMG' || first.tagName === 'VIDEO' || first.tagName === 'AUDIO' || (first.classList && (first.classList.contains('cv-social-embed') || first.classList.contains('cv-widget'))))) {
         const p = document.createElement('p');
         p.innerHTML = '<br>';
         el.insertBefore(p, first);
@@ -1497,15 +1579,18 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       }
       if (atomicEl) {
         const newRange = document.createRange();
-        if (!atomicEl.nextSibling || (atomicEl.nextSibling.nodeType === 1 && atomicEl.nextSibling.getAttribute('contenteditable') === 'false')) {
+        const next = atomicEl.nextSibling;
+        if (!next || (next.nodeType === 1 && next.getAttribute('contenteditable') === 'false')) {
           const p = document.createElement('p');
           p.innerHTML = '<br>';
-          if (atomicEl.nextSibling) {
-            atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+          if (next) {
+            atomicEl.parentNode.insertBefore(p, next);
           } else {
             atomicEl.parentNode.appendChild(p);
           }
           newRange.setStart(p, 0);
+        } else if (next.nodeType === 1) {
+          newRange.setStart(next, 0);
         } else {
           newRange.setStartAfter(atomicEl);
         }
@@ -1555,16 +1640,79 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         state.closeAllModals();
         return;
       }
-      if (state.selectedMediaEl && (e.key === 'Backspace' || e.key === 'Delete')) {
-        e.preventDefault();
-        const el = state.selectedMediaEl;
-        state.deselectMediaElement();
-        if (el && el.parentNode) {
-          el.parentNode.removeChild(el);
+      if (state.selectedMediaEl) {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          const el = state.selectedMediaEl;
+          state.deselectMediaElement();
+          if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+          state.ensureEditableStructure();
+          state.syncContent();
+          return;
         }
-        state.ensureEditableStructure();
-        state.syncContent();
-        return;
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const media = state.selectedMediaEl;
+          state.deselectMediaElement();
+          const editor = state.getEditorElement();
+          let block: any = media;
+          while (block && block.parentNode && block.parentNode !== editor) {
+            block = block.parentNode;
+          }
+          let targetP: HTMLElement | null = null;
+          if (block && block.nextElementSibling && block.nextElementSibling.tagName === 'P') {
+            targetP = block.nextElementSibling as HTMLElement;
+          } else if (block && block.parentNode) {
+            targetP = document.createElement('p');
+            targetP.innerHTML = '<br>';
+            block.after(targetP);
+          }
+          if (targetP) {
+            const sel = window.getSelection();
+            if (sel) {
+              const newRange = document.createRange();
+              newRange.setStart(targetP, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              state.saveSelection();
+            }
+          }
+          state.ensureEditableStructure();
+          state.syncContent();
+          return;
+        }
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          const media = state.selectedMediaEl;
+          state.deselectMediaElement();
+          const editor = state.getEditorElement();
+          let block: any = media;
+          while (block && block.parentNode && block.parentNode !== editor) {
+            block = block.parentNode;
+          }
+          let targetP: HTMLElement | null = null;
+          if (block && block.nextElementSibling && block.nextElementSibling.tagName === 'P') {
+            targetP = block.nextElementSibling as HTMLElement;
+          } else if (block && block.parentNode) {
+            targetP = document.createElement('p');
+            targetP.innerHTML = '<br>';
+            block.after(targetP);
+          }
+          if (targetP) {
+            const sel = window.getSelection();
+            if (sel) {
+              const newRange = document.createRange();
+              newRange.setStart(targetP, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              state.saveSelection();
+            }
+          }
+          return;
+        }
       }
       if (e.key === 'Backspace') {
         const sel = typeof window !== 'undefined' ? window.getSelection() : null;
@@ -1620,10 +1768,13 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           let node: any = sel.getRangeAt(0).startContainer;
           let taskLi: HTMLElement | null = null;
           let taskUl: HTMLElement | null = null;
+          let atomicEl: HTMLElement | null = null;
           while (node && node !== editor) {
             if (node.nodeType === 1) {
               if (node.tagName === 'LI') taskLi = node;
               if (node.tagName === 'UL' && node.classList.contains('task-list')) taskUl = node;
+              if (node.getAttribute && node.getAttribute('contenteditable') === 'false') atomicEl = node;
+              if (node.tagName === 'IMG' || node.tagName === 'VIDEO' || node.tagName === 'AUDIO') atomicEl = node;
             }
             node = node.parentNode;
           }
@@ -1673,9 +1824,30 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             state.syncContent();
             return;
           }
+          if (atomicEl) {
+            e.preventDefault();
+            let block: any = atomicEl;
+            while (block && block.parentNode && block.parentNode !== editor) {
+              block = block.parentNode;
+            }
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            if (block && block.parentNode) {
+              block.after(p);
+            } else {
+              editor.appendChild(p);
+            }
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            state.saveSelection();
+            state.syncContent();
+            return;
+          }
         }
       }
-      state.normalizeSelection();
     },
     handleGlobalKeyDown(e: any) {
       if (e.key === 'Escape') {
@@ -2515,7 +2687,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         </Show>
 
         {/* Premium Modals with Guaranteed Inline CSS to prevent Tailwind purging */}
-        <Show when={state.showTableModal || state.showLinkModal || state.showWidgetModal || state.showSocialModal || state.showButtonModal || state.showAiModal}>
+        <Show when={state.showTableModal || state.showLinkModal || state.showWidgetModal || state.showSocialModal || state.showButtonModal || state.showAiModal || state.showImageModal || state.showVideoModal}>
           <div 
             class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md" 
             style={{ background: 'rgba(0, 0, 0, 0.6)' }}
@@ -2551,6 +2723,72 @@ export default function RichTextEditor(props: RichTextEditorProps) {
               </div>
             </Show>
 
+            <Show when={state.showImageModal}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '400px' }}>
+                <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ color: 'var(--cv-color-primary, #7fc4de)' }}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  Insert Image
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Image URL</label>
+                    <input 
+                      type="url" 
+                      aria-label="Image URL" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                      placeholder="https://example.com/photo.jpg" 
+                      value={state.imageUrl} 
+                      onInput={(e) => state.imageUrl = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmImage(); } }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alt Text (Accessibility & SEO)</label>
+                    <input 
+                      type="text" 
+                      aria-label="Image Alt Text" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                      placeholder="Descriptive text for screen readers" 
+                      value={state.imageAlt} 
+                      onInput={(e) => state.imageAlt = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmImage(); } }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeImageModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmImage()}>Insert Image</button>
+                </div>
+              </div>
+            </Show>
+
+            <Show when={state.showVideoModal}>
+              <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '400px' }}>
+                <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ color: 'var(--cv-color-info, #0ea5e9)' }}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/></svg>
+                  Insert Video
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Video URL (YouTube, Vimeo, or MP4)</label>
+                    <input 
+                      type="url" 
+                      aria-label="Video URL" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                      placeholder="https://www.youtube.com/watch?v=... or .mp4" 
+                      value={state.videoUrl} 
+                      onInput={(e) => state.videoUrl = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmVideo(); } }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeVideoModal()}>Cancel</button>
+                  <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-on-primary, #fff)', background: 'var(--cv-color-info-fill, #075985)', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }} onClick={() => state.confirmVideo()}>Insert Video</button>
+                </div>
+              </div>
+            </Show>
+
             <Show when={state.showButtonModal}>
               <div class="shadow-2xl" style={{ background: 'var(--cv-color-surface-raised, #1e293b)', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '16px', padding: '24px', width: '380px' }}>
                 <h3 class="flex items-center text-white" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', gap: '8px' }}>
@@ -2568,11 +2806,27 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Label</label>
-                    <input type="text" aria-label="Button Label" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="e.g. Get Started Today" value={state.btnText} onInput={(e) => state.btnText = e.target.value} />
+                    <input 
+                      type="text" 
+                      aria-label="Button Label" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                      placeholder="e.g. Get Started Today" 
+                      value={state.btnText} 
+                      onInput={(e) => state.btnText = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmButton(); } }}
+                    />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target URL</label>
-                    <input type="url" aria-label="Target URL" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://..." value={state.btnUrl} onInput={(e) => state.btnUrl = e.target.value} />
+                    <input 
+                      type="url" 
+                      aria-label="Target URL" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                      placeholder="https://..." 
+                      value={state.btnUrl} 
+                      onInput={(e) => state.btnUrl = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmButton(); } }}
+                    />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -2591,11 +2845,29 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rows</label>
-                    <input type="number" aria-label="Table Rows" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px', width: '100%', fontSize: '15px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', textAlign: 'center', boxSizing: 'border-box' }} value={state.tableRows} min="1" max="10" onInput={(e) => state.tableRows = e.target.value} />
+                    <input 
+                      type="number" 
+                      aria-label="Table Rows" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px', width: '100%', fontSize: '15px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', textAlign: 'center', boxSizing: 'border-box' }} 
+                      value={state.tableRows} 
+                      min="1" 
+                      max="10" 
+                      onInput={(e) => state.tableRows = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmTable(); } }}
+                    />
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Columns</label>
-                    <input type="number" aria-label="Table Columns" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px', width: '100%', fontSize: '15px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', textAlign: 'center', boxSizing: 'border-box' }} value={state.tableCols} min="1" max="10" onInput={(e) => state.tableCols = e.target.value} />
+                    <input 
+                      type="number" 
+                      aria-label="Table Columns" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px', width: '100%', fontSize: '15px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', textAlign: 'center', boxSizing: 'border-box' }} 
+                      value={state.tableCols} 
+                      min="1" 
+                      max="10" 
+                      onInput={(e) => state.tableCols = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmTable(); } }}
+                    />
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
@@ -2617,7 +2889,15 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>URL Destination</label>
-                  <input type="url" aria-label="Hyperlink URL" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://example.com" value={state.linkUrl} onInput={(e) => state.linkUrl = e.target.value} />
+                  <input 
+                    type="url" 
+                    aria-label="Hyperlink URL" 
+                    style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                    placeholder="https://example.com" 
+                    value={state.linkUrl} 
+                    onInput={(e) => state.linkUrl = e.target.value}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmLink(); } }}
+                  />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
                   <button type="button" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--cv-color-text-secondary, #cbd5e1)', background: 'var(--cv-color-hover, rgba(255,255,255,0.05))', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }} onClick={() => state.closeLinkModal()}>Cancel</button>
@@ -2668,7 +2948,15 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cv-color-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Post URL</label>
-                    <input type="url" aria-label="Social Link URL" style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} placeholder="https://..." value={state.socialUrl} onInput={(e) => state.socialUrl = e.target.value} />
+                    <input 
+                      type="url" 
+                      aria-label="Social Link URL" 
+                      style={{ background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))', border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))', borderRadius: '8px', padding: '12px 16px', width: '100%', fontSize: '14px', color: 'var(--cv-color-text-main, #fff)', outline: 'none', boxSizing: 'border-box' }} 
+                      placeholder="https://..." 
+                      value={state.socialUrl} 
+                      onInput={(e) => state.socialUrl = e.target.value}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); state.confirmSocial(); } }}
+                    />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>

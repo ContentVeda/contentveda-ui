@@ -148,6 +148,11 @@ class RichTextEditor extends HTMLElement {
       btnText: "Click Here",
       btnUrl: "",
       btnStyle: "primary",
+      showImageModal: false,
+      imageUrl: "",
+      imageAlt: "",
+      showVideoModal: false,
+      videoUrl: "",
       selectedMediaEl: null,
       resizeHandleTop: 0,
       resizeHandleLeft: 0,
@@ -428,53 +433,81 @@ class RichTextEditor extends HTMLElement {
           } catch (e) {}
         }
         targetRange = self.state.escapeAtomicRange(targetRange);
-        if (targetRange && targetRange.insertNode) {
+        const isBlockHtml =
+          /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(html);
+        let blockParent: HTMLElement | null = null;
+        if (targetRange && el) {
+          let n: any = targetRange.startContainer;
+          while (n && n !== el) {
+            if (
+              n.nodeType === 1 &&
+              /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)
+            ) {
+              blockParent = n;
+              break;
+            }
+            n = n.parentNode;
+          }
+        }
+        const template = document.createElement("template");
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        template.innerHTML = html.trim();
+        const frag = template.content;
+
+        // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+        let lastP: HTMLElement | null = frag.querySelector("p:last-child");
+        if (isBlockHtml && !lastP) {
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          frag.appendChild(p);
+          lastP = p;
+        }
+        let insertedP: HTMLElement | null = null;
+        if (
+          isBlockHtml &&
+          blockParent &&
+          blockParent !== el &&
+          blockParent.parentNode
+        ) {
+          const isEmptyBlock =
+            !blockParent.textContent?.trim() ||
+            blockParent.innerHTML === "<br>";
+          if (isEmptyBlock) {
+            const parent = blockParent.parentNode;
+            insertedP = lastP;
+            parent.insertBefore(frag, blockParent);
+            blockParent.remove();
+          } else {
+            insertedP = lastP;
+            blockParent.after(frag);
+          }
+        } else if (targetRange && targetRange.insertNode) {
           targetRange.deleteContents();
-          const template = document.createElement("template");
-          /* lgtm[js/xss, js/html-constructed-from-input] */
-          /* codeql[js/xss, js/html-constructed-from-input] */
-          template.innerHTML = html.trim();
-          const frag = template.content;
-          const resizableEl = frag.querySelector(
-            "img, video, audio, .cv-social-embed, .cv-widget"
-          );
-          const lastNode = frag.lastChild;
+          insertedP = lastP;
           targetRange.insertNode(frag);
-          if (lastNode && sel) {
-            const newRange = document.createRange();
-            newRange.setStartAfter(lastNode);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-            const cloned = newRange.cloneRange();
-            activeSavedRange = cloned;
-            if (el) (el as any).__cv_savedRange = cloned;
-          }
-          if (resizableEl) {
-            self.state.selectMediaElement(resizableEl);
-          }
         } else if (el) {
-          const template = document.createElement("template");
-          /* lgtm[js/xss, js/html-constructed-from-input] */
-          /* codeql[js/xss, js/html-constructed-from-input] */
-          template.innerHTML = html.trim();
-          const resizableEl = template.content.querySelector(
-            "img, video, audio, .cv-social-embed, .cv-widget"
-          );
-          el.appendChild(template.content);
+          insertedP = lastP;
+          el.appendChild(frag);
+        }
+
+        // Position caret inside the trailing paragraph so author can type / press Enter immediately
+        const targetP =
+          insertedP || (el ? el.querySelector("p:last-child") : null);
+        if (el && typeof (el as any).focus === "function") {
+          try {
+            (el as any).focus();
+          } catch (e) {}
+        }
+        if (targetP && sel) {
           const newRange = document.createRange();
-          newRange.selectNodeContents(el as Node);
-          newRange.collapse(false);
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-            const cloned = newRange.cloneRange();
-            activeSavedRange = cloned;
-            if (el) (el as any).__cv_savedRange = cloned;
-          }
-          if (resizableEl) {
-            self.state.selectMediaElement(resizableEl);
-          }
+          newRange.setStart(targetP, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          const cloned = newRange.cloneRange();
+          activeSavedRange = cloned;
+          if (el) (el as any).__cv_savedRange = cloned;
         }
         self.state.ensureEditableStructure();
         self.state.syncContent();
@@ -638,15 +671,13 @@ class RichTextEditor extends HTMLElement {
             .catch((err) => {
               console.error("Media request failed", err);
             });
+        } else if (type === "image") {
+          self.state.openImageModal();
+        } else if (type === "video") {
+          self.state.openVideoModal();
         } else {
           const url = window.prompt(`Enter ${type} URL:`);
-          if (url && type === "image") {
-            const altText = window.prompt(
-              "Describe this image for screen readers and search engines (alt text):",
-              ""
-            );
-            insertContent(url, altText || undefined);
-          } else if (url) {
+          if (url) {
             insertContent(url);
           }
         }
@@ -1217,6 +1248,71 @@ class RichTextEditor extends HTMLElement {
         self.state.showSocialModal = false;
         self.update();
       },
+      openImageModal() {
+        if (self.state.mode === "source") return;
+        self.state.saveSelection();
+        self.state.showImageModal = true;
+        self.update();
+        self.state.imageUrl = "";
+        self.update();
+        self.state.imageAlt = "";
+        self.update();
+      },
+      closeImageModal() {
+        self.state.showImageModal = false;
+        self.update();
+      },
+      confirmImage() {
+        self.state.showImageModal = false;
+        self.update();
+        if (self.state.imageUrl) {
+          const url = self.state.imageUrl.trim();
+          const filenameGuess = (url.split("/").pop() || "image")
+            .split("?")[0]
+            .split(".")[0]
+            .replace(/[-_]+/g, " ")
+            .trim();
+          const alt =
+            (self.state.imageAlt || "").trim() || filenameGuess || "Image";
+          const escapedAlt = self.state.escapeHtml(alt);
+          const escapedUrl = self.state.escapeHtml(url);
+          const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+          self.state.insertHtmlAtCursor(html);
+        }
+      },
+      openVideoModal() {
+        if (self.state.mode === "source") return;
+        self.state.saveSelection();
+        self.state.showVideoModal = true;
+        self.update();
+        self.state.videoUrl = "";
+        self.update();
+      },
+      closeVideoModal() {
+        self.state.showVideoModal = false;
+        self.update();
+      },
+      confirmVideo() {
+        self.state.showVideoModal = false;
+        self.update();
+        if (self.state.videoUrl) {
+          const url = self.state.videoUrl.trim();
+          const ytMatch = url.match(
+            /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+          );
+          const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+          const escapedUrl = self.state.escapeHtml(url);
+          let html = "";
+          if (ytMatch) {
+            html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+          } else if (vimeoMatch) {
+            html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+          } else {
+            html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+          }
+          self.state.insertHtmlAtCursor(html);
+        }
+      },
       toggleMode() {
         if (self.state.mode === "visual") {
           self.state.syncContent();
@@ -1714,6 +1810,10 @@ class RichTextEditor extends HTMLElement {
         self.update();
         self.state.showAiModal = false;
         self.update();
+        self.state.showImageModal = false;
+        self.update();
+        self.state.showVideoModal = false;
+        self.update();
       },
       handleBackdropClick(e: any) {
         if (e && e.target === e.currentTarget) {
@@ -1743,6 +1843,9 @@ class RichTextEditor extends HTMLElement {
           last &&
           (last.getAttribute("contenteditable") === "false" ||
             last.tagName === "TABLE" ||
+            last.tagName === "IMG" ||
+            last.tagName === "VIDEO" ||
+            last.tagName === "AUDIO" ||
             (last.classList &&
               (last.classList.contains("cv-social-embed") ||
                 last.classList.contains("cv-widget"))))
@@ -1755,6 +1858,9 @@ class RichTextEditor extends HTMLElement {
           first &&
           (first.getAttribute("contenteditable") === "false" ||
             first.tagName === "TABLE" ||
+            first.tagName === "IMG" ||
+            first.tagName === "VIDEO" ||
+            first.tagName === "AUDIO" ||
             (first.classList &&
               (first.classList.contains("cv-social-embed") ||
                 first.classList.contains("cv-widget"))))
@@ -1791,19 +1897,22 @@ class RichTextEditor extends HTMLElement {
         }
         if (atomicEl) {
           const newRange = document.createRange();
+          const next = atomicEl.nextSibling;
           if (
-            !atomicEl.nextSibling ||
-            (atomicEl.nextSibling.nodeType === 1 &&
-              atomicEl.nextSibling.getAttribute("contenteditable") === "false")
+            !next ||
+            (next.nodeType === 1 &&
+              next.getAttribute("contenteditable") === "false")
           ) {
             const p = document.createElement("p");
             p.innerHTML = "<br>";
-            if (atomicEl.nextSibling) {
-              atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+            if (next) {
+              atomicEl.parentNode.insertBefore(p, next);
             } else {
               atomicEl.parentNode.appendChild(p);
             }
             newRange.setStart(p, 0);
+          } else if (next.nodeType === 1) {
+            newRange.setStart(next, 0);
           } else {
             newRange.setStartAfter(atomicEl);
           }
@@ -1853,19 +1962,87 @@ class RichTextEditor extends HTMLElement {
           self.state.closeAllModals();
           return;
         }
-        if (
-          self.state.selectedMediaEl &&
-          (e.key === "Backspace" || e.key === "Delete")
-        ) {
-          e.preventDefault();
-          const el = self.state.selectedMediaEl;
-          self.state.deselectMediaElement();
-          if (el && el.parentNode) {
-            el.parentNode.removeChild(el);
+        if (self.state.selectedMediaEl) {
+          if (e.key === "Backspace" || e.key === "Delete") {
+            e.preventDefault();
+            const el = self.state.selectedMediaEl;
+            self.state.deselectMediaElement();
+            if (el && el.parentNode) {
+              el.parentNode.removeChild(el);
+            }
+            self.state.ensureEditableStructure();
+            self.state.syncContent();
+            return;
           }
-          self.state.ensureEditableStructure();
-          self.state.syncContent();
-          return;
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const media = self.state.selectedMediaEl;
+            self.state.deselectMediaElement();
+            const editor = self.state.getEditorElement();
+            let block: any = media;
+            while (block && block.parentNode && block.parentNode !== editor) {
+              block = block.parentNode;
+            }
+            let targetP: HTMLElement | null = null;
+            if (
+              block &&
+              block.nextElementSibling &&
+              block.nextElementSibling.tagName === "P"
+            ) {
+              targetP = block.nextElementSibling as HTMLElement;
+            } else if (block && block.parentNode) {
+              targetP = document.createElement("p");
+              targetP.innerHTML = "<br>";
+              block.after(targetP);
+            }
+            if (targetP) {
+              const sel = window.getSelection();
+              if (sel) {
+                const newRange = document.createRange();
+                newRange.setStart(targetP, 0);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                self.state.saveSelection();
+              }
+            }
+            self.state.ensureEditableStructure();
+            self.state.syncContent();
+            return;
+          }
+          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            const media = self.state.selectedMediaEl;
+            self.state.deselectMediaElement();
+            const editor = self.state.getEditorElement();
+            let block: any = media;
+            while (block && block.parentNode && block.parentNode !== editor) {
+              block = block.parentNode;
+            }
+            let targetP: HTMLElement | null = null;
+            if (
+              block &&
+              block.nextElementSibling &&
+              block.nextElementSibling.tagName === "P"
+            ) {
+              targetP = block.nextElementSibling as HTMLElement;
+            } else if (block && block.parentNode) {
+              targetP = document.createElement("p");
+              targetP.innerHTML = "<br>";
+              block.after(targetP);
+            }
+            if (targetP) {
+              const sel = window.getSelection();
+              if (sel) {
+                const newRange = document.createRange();
+                newRange.setStart(targetP, 0);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                self.state.saveSelection();
+              }
+            }
+            return;
+          }
         }
         if (e.key === "Backspace") {
           const sel =
@@ -1927,6 +2104,7 @@ class RichTextEditor extends HTMLElement {
             let node: any = sel.getRangeAt(0).startContainer;
             let taskLi: HTMLElement | null = null;
             let taskUl: HTMLElement | null = null;
+            let atomicEl: HTMLElement | null = null;
             while (node && node !== editor) {
               if (node.nodeType === 1) {
                 if (node.tagName === "LI") taskLi = node;
@@ -1935,6 +2113,17 @@ class RichTextEditor extends HTMLElement {
                   node.classList.contains("task-list")
                 )
                   taskUl = node;
+                if (
+                  node.getAttribute &&
+                  node.getAttribute("contenteditable") === "false"
+                )
+                  atomicEl = node;
+                if (
+                  node.tagName === "IMG" ||
+                  node.tagName === "VIDEO" ||
+                  node.tagName === "AUDIO"
+                )
+                  atomicEl = node;
               }
               node = node.parentNode;
             }
@@ -1985,9 +2174,30 @@ class RichTextEditor extends HTMLElement {
               self.state.syncContent();
               return;
             }
+            if (atomicEl) {
+              e.preventDefault();
+              let block: any = atomicEl;
+              while (block && block.parentNode && block.parentNode !== editor) {
+                block = block.parentNode;
+              }
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              if (block && block.parentNode) {
+                block.after(p);
+              } else {
+                editor.appendChild(p);
+              }
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              self.state.saveSelection();
+              self.state.syncContent();
+              return;
+            }
           }
         }
-        self.state.normalizeSelection();
       },
       handleGlobalKeyDown(e: any) {
         if (e.key === "Escape") {
@@ -2749,75 +2959,177 @@ class RichTextEditor extends HTMLElement {
       this.state.closeAiModal();
     };
 
+    // Event handler for 'input' event on input-rich-text-editor-4
+    this.onInputRichTextEditor4Input = (e) => {
+      this.state.imageUrl = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-4
+    this.onInputRichTextEditor4Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmImage();
+      }
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-5
+    this.onInputRichTextEditor5Input = (e) => {
+      this.state.imageAlt = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-5
+    this.onInputRichTextEditor5Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmImage();
+      }
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-53
+    this.onButtonRichTextEditor53Click = (event) => {
+      this.state.closeImageModal();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-54
+    this.onButtonRichTextEditor54Click = (event) => {
+      this.state.confirmImage();
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-6
+    this.onInputRichTextEditor6Input = (e) => {
+      this.state.videoUrl = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-6
+    this.onInputRichTextEditor6Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmVideo();
+      }
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-55
+    this.onButtonRichTextEditor55Click = (event) => {
+      this.state.closeVideoModal();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-56
+    this.onButtonRichTextEditor56Click = (event) => {
+      this.state.confirmVideo();
+    };
+
     // Event handler for 'change' event on select-rich-text-editor-4
     this.onSelectRichTextEditor4Change = (e) => {
       this.state.btnStyle = e.target.value;
       this.update();
     };
 
-    // Event handler for 'input' event on input-rich-text-editor-4
-    this.onInputRichTextEditor4Input = (e) => {
+    // Event handler for 'input' event on input-rich-text-editor-7
+    this.onInputRichTextEditor7Input = (e) => {
       this.state.btnText = e.target.value;
       this.update();
     };
 
-    // Event handler for 'input' event on input-rich-text-editor-5
-    this.onInputRichTextEditor5Input = (e) => {
+    // Event handler for 'keydown' event on input-rich-text-editor-7
+    this.onInputRichTextEditor7Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmButton();
+      }
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-8
+    this.onInputRichTextEditor8Input = (e) => {
       this.state.btnUrl = e.target.value;
       this.update();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-53
-    this.onButtonRichTextEditor53Click = (event) => {
-      this.state.closeButtonModal();
-    };
-
-    // Event handler for 'click' event on button-rich-text-editor-54
-    this.onButtonRichTextEditor54Click = (event) => {
-      this.state.confirmButton();
-    };
-
-    // Event handler for 'input' event on input-rich-text-editor-6
-    this.onInputRichTextEditor6Input = (e) => {
-      this.state.tableRows = e.target.value;
-      this.update();
-    };
-
-    // Event handler for 'input' event on input-rich-text-editor-7
-    this.onInputRichTextEditor7Input = (e) => {
-      this.state.tableCols = e.target.value;
-      this.update();
-    };
-
-    // Event handler for 'change' event on input-rich-text-editor-8
-    this.onInputRichTextEditor8Change = (e) => {
-      this.state.tableHasHeader = e.target.checked;
-      this.update();
-    };
-
-    // Event handler for 'click' event on button-rich-text-editor-55
-    this.onButtonRichTextEditor55Click = (event) => {
-      this.state.closeTableModal();
-    };
-
-    // Event handler for 'click' event on button-rich-text-editor-56
-    this.onButtonRichTextEditor56Click = (event) => {
-      this.state.confirmTable();
-    };
-
-    // Event handler for 'input' event on input-rich-text-editor-9
-    this.onInputRichTextEditor9Input = (e) => {
-      this.state.linkUrl = e.target.value;
-      this.update();
+    // Event handler for 'keydown' event on input-rich-text-editor-8
+    this.onInputRichTextEditor8Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmButton();
+      }
     };
 
     // Event handler for 'click' event on button-rich-text-editor-57
     this.onButtonRichTextEditor57Click = (event) => {
-      this.state.closeLinkModal();
+      this.state.closeButtonModal();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-58
     this.onButtonRichTextEditor58Click = (event) => {
+      this.state.confirmButton();
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-9
+    this.onInputRichTextEditor9Input = (e) => {
+      this.state.tableRows = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-9
+    this.onInputRichTextEditor9Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmTable();
+      }
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-10
+    this.onInputRichTextEditor10Input = (e) => {
+      this.state.tableCols = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-10
+    this.onInputRichTextEditor10Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmTable();
+      }
+    };
+
+    // Event handler for 'change' event on input-rich-text-editor-11
+    this.onInputRichTextEditor11Change = (e) => {
+      this.state.tableHasHeader = e.target.checked;
+      this.update();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-59
+    this.onButtonRichTextEditor59Click = (event) => {
+      this.state.closeTableModal();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-60
+    this.onButtonRichTextEditor60Click = (event) => {
+      this.state.confirmTable();
+    };
+
+    // Event handler for 'input' event on input-rich-text-editor-12
+    this.onInputRichTextEditor12Input = (e) => {
+      this.state.linkUrl = e.target.value;
+      this.update();
+    };
+
+    // Event handler for 'keydown' event on input-rich-text-editor-12
+    this.onInputRichTextEditor12Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmLink();
+      }
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-61
+    this.onButtonRichTextEditor61Click = (event) => {
+      this.state.closeLinkModal();
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-62
+    this.onButtonRichTextEditor62Click = (event) => {
       this.state.confirmLink();
     };
 
@@ -2827,13 +3139,13 @@ class RichTextEditor extends HTMLElement {
       this.update();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-59
-    this.onButtonRichTextEditor59Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-63
+    this.onButtonRichTextEditor63Click = (event) => {
       this.state.closeWidgetModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-60
-    this.onButtonRichTextEditor60Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-64
+    this.onButtonRichTextEditor64Click = (event) => {
       this.state.confirmWidget();
     };
 
@@ -2843,19 +3155,27 @@ class RichTextEditor extends HTMLElement {
       this.update();
     };
 
-    // Event handler for 'input' event on input-rich-text-editor-10
-    this.onInputRichTextEditor10Input = (e) => {
+    // Event handler for 'input' event on input-rich-text-editor-13
+    this.onInputRichTextEditor13Input = (e) => {
       this.state.socialUrl = e.target.value;
       this.update();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-61
-    this.onButtonRichTextEditor61Click = (event) => {
+    // Event handler for 'keydown' event on input-rich-text-editor-13
+    this.onInputRichTextEditor13Keydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.state.confirmSocial();
+      }
+    };
+
+    // Event handler for 'click' event on button-rich-text-editor-65
+    this.onButtonRichTextEditor65Click = (event) => {
       this.state.closeSocialModal();
     };
 
-    // Event handler for 'click' event on button-rich-text-editor-62
-    this.onButtonRichTextEditor62Click = (event) => {
+    // Event handler for 'click' event on button-rich-text-editor-66
+    this.onButtonRichTextEditor66Click = (event) => {
       this.state.confirmSocial();
     };
 
@@ -4198,63 +4518,48 @@ class RichTextEditor extends HTMLElement {
                       data-el="svg-rich-text-editor-1"
                     >
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="12" y1="8" x2="12" y2="16"></line>
-                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
       
-                    Insert Button
+                    Insert Image
                   </h3>
                   <div data-el="div-rich-text-editor-15">
                     <div data-el="div-rich-text-editor-16">
-                      <label data-el="label-rich-text-editor-3">Button Style</label>
-                      <select
-                        data-el="select-rich-text-editor-4"
-                        data-dom-state="RichTextEditor-select-rich-text-editor-4"
-                      >
-                        <option value="primary" data-el="option-rich-text-editor-2">
-                          Primary (Gradient)
-                        </option>
-                        <option value="secondary" data-el="option-rich-text-editor-3">
-                          Secondary (Dark)
-                        </option>
-                        <option value="outline" data-el="option-rich-text-editor-4">
-                          Outline (Violet)
-                        </option>
-                      </select>
-                    </div>
-                    <div data-el="div-rich-text-editor-17">
-                      <label data-el="label-rich-text-editor-4">Button Label</label>
+                      <label data-el="label-rich-text-editor-3">Image URL</label>
                       <input
-                        type="text"
-                        aria-label="Button Label"
-                        placeholder="e.g. Get Started Today"
+                        type="url"
+                        aria-label="Image URL"
+                        placeholder="https://example.com/photo.jpg"
                         data-el="input-rich-text-editor-4"
                         data-dom-state="RichTextEditor-input-rich-text-editor-4"
                       />
                     </div>
-                    <div data-el="div-rich-text-editor-18">
-                      <label data-el="label-rich-text-editor-5">Target URL</label>
+                    <div data-el="div-rich-text-editor-17">
+                      <label data-el="label-rich-text-editor-4">
+                        Alt Text (Accessibility & SEO)
+                      </label>
                       <input
-                        type="url"
-                        aria-label="Target URL"
-                        placeholder="https://..."
+                        type="text"
+                        aria-label="Image Alt Text"
+                        placeholder="Descriptive text for screen readers"
                         data-el="input-rich-text-editor-5"
                         data-dom-state="RichTextEditor-input-rich-text-editor-5"
                       />
                     </div>
                   </div>
-                  <div data-el="div-rich-text-editor-19">
+                  <div data-el="div-rich-text-editor-18">
                     <button type="button" data-el="button-rich-text-editor-53">
                       Cancel
                     </button>
                     <button type="button" data-el="button-rich-text-editor-54">
-                      Insert
+                      Insert Image
                     </button>
                   </div>
                 </div>
               </template>
               <template data-el="show-rich-text-editor-32">
-                <div class="shadow-2xl" data-el="div-rich-text-editor-20">
+                <div class="shadow-2xl" data-el="div-rich-text-editor-19">
                   <h3
                     class="flex items-center text-white"
                     data-el="h3-rich-text-editor-2"
@@ -4271,62 +4576,46 @@ class RichTextEditor extends HTMLElement {
                       stroke-linejoin="round"
                       data-el="svg-rich-text-editor-2"
                     >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="3" y1="9" x2="21" y2="9"></line>
-                      <line x1="3" y1="15" x2="21" y2="15"></line>
-                      <line x1="9" y1="3" x2="9" y2="21"></line>
-                      <line x1="15" y1="3" x2="15" y2="21"></line>
+                      <rect
+                        x="2"
+                        y="2"
+                        width="20"
+                        height="20"
+                        rx="2.18"
+                        ry="2.18"
+                      ></rect>
+                      <line x1="7" y1="2" x2="7" y2="22"></line>
+                      <line x1="17" y1="2" x2="17" y2="22"></line>
                     </svg>
       
-                    Insert Table Grid
+                    Insert Video
                   </h3>
-                  <div data-el="div-rich-text-editor-21">
-                    <div data-el="div-rich-text-editor-22">
-                      <label data-el="label-rich-text-editor-6">Rows</label>
+                  <div data-el="div-rich-text-editor-20">
+                    <div data-el="div-rich-text-editor-21">
+                      <label data-el="label-rich-text-editor-5">
+                        Video URL (YouTube, Vimeo, or MP4)
+                      </label>
                       <input
-                        type="number"
-                        aria-label="Table Rows"
-                        min="1"
-                        max="10"
+                        type="url"
+                        aria-label="Video URL"
+                        placeholder="https://www.youtube.com/watch?v=... or .mp4"
                         data-el="input-rich-text-editor-6"
                         data-dom-state="RichTextEditor-input-rich-text-editor-6"
                       />
                     </div>
-                    <div data-el="div-rich-text-editor-23">
-                      <label data-el="label-rich-text-editor-7">Columns</label>
-                      <input
-                        type="number"
-                        aria-label="Table Columns"
-                        min="1"
-                        max="10"
-                        data-el="input-rich-text-editor-7"
-                        data-dom-state="RichTextEditor-input-rich-text-editor-7"
-                      />
-                    </div>
                   </div>
-                  <div data-el="div-rich-text-editor-24">
-                    <input
-                      type="checkbox"
-                      id="cv-header-check"
-                      data-el="input-rich-text-editor-8"
-                      data-dom-state="RichTextEditor-input-rich-text-editor-8"
-                    />
-                    <label for="cv-header-check" data-el="label-rich-text-editor-8">
-                      Include header row
-                    </label>
-                  </div>
-                  <div data-el="div-rich-text-editor-25">
+                  <div data-el="div-rich-text-editor-22">
                     <button type="button" data-el="button-rich-text-editor-55">
                       Cancel
                     </button>
                     <button type="button" data-el="button-rich-text-editor-56">
-                      Insert Table
+                      Insert Video
                     </button>
                   </div>
                 </div>
               </template>
               <template data-el="show-rich-text-editor-33">
-                <div class="shadow-2xl" data-el="div-rich-text-editor-26">
+                <div class="shadow-2xl" data-el="div-rich-text-editor-23">
                   <h3
                     class="flex items-center text-white"
                     data-el="h3-rich-text-editor-3"
@@ -4343,32 +4632,58 @@ class RichTextEditor extends HTMLElement {
                       stroke-linejoin="round"
                       data-el="svg-rich-text-editor-3"
                     >
-                      <path
-                        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                      ></path>
-                      <path
-                        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                      ></path>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
                     </svg>
       
-                    Insert Hyperlink
+                    Insert Button
                   </h3>
-                  <div data-el="div-rich-text-editor-27">
-                    <label data-el="label-rich-text-editor-9">URL Destination</label>
-                    <input
-                      type="url"
-                      aria-label="Hyperlink URL"
-                      placeholder="https://example.com"
-                      data-el="input-rich-text-editor-9"
-                      data-dom-state="RichTextEditor-input-rich-text-editor-9"
-                    />
+                  <div data-el="div-rich-text-editor-24">
+                    <div data-el="div-rich-text-editor-25">
+                      <label data-el="label-rich-text-editor-6">Button Style</label>
+                      <select
+                        data-el="select-rich-text-editor-4"
+                        data-dom-state="RichTextEditor-select-rich-text-editor-4"
+                      >
+                        <option value="primary" data-el="option-rich-text-editor-2">
+                          Primary (Gradient)
+                        </option>
+                        <option value="secondary" data-el="option-rich-text-editor-3">
+                          Secondary (Dark)
+                        </option>
+                        <option value="outline" data-el="option-rich-text-editor-4">
+                          Outline (Violet)
+                        </option>
+                      </select>
+                    </div>
+                    <div data-el="div-rich-text-editor-26">
+                      <label data-el="label-rich-text-editor-7">Button Label</label>
+                      <input
+                        type="text"
+                        aria-label="Button Label"
+                        placeholder="e.g. Get Started Today"
+                        data-el="input-rich-text-editor-7"
+                        data-dom-state="RichTextEditor-input-rich-text-editor-7"
+                      />
+                    </div>
+                    <div data-el="div-rich-text-editor-27">
+                      <label data-el="label-rich-text-editor-8">Target URL</label>
+                      <input
+                        type="url"
+                        aria-label="Target URL"
+                        placeholder="https://..."
+                        data-el="input-rich-text-editor-8"
+                        data-dom-state="RichTextEditor-input-rich-text-editor-8"
+                      />
+                    </div>
                   </div>
                   <div data-el="div-rich-text-editor-28">
                     <button type="button" data-el="button-rich-text-editor-57">
                       Cancel
                     </button>
                     <button type="button" data-el="button-rich-text-editor-58">
-                      Insert Link
+                      Insert
                     </button>
                   </div>
                 </div>
@@ -4391,6 +4706,126 @@ class RichTextEditor extends HTMLElement {
                       stroke-linejoin="round"
                       data-el="svg-rich-text-editor-4"
                     >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="3" y1="9" x2="21" y2="9"></line>
+                      <line x1="3" y1="15" x2="21" y2="15"></line>
+                      <line x1="9" y1="3" x2="9" y2="21"></line>
+                      <line x1="15" y1="3" x2="15" y2="21"></line>
+                    </svg>
+      
+                    Insert Table Grid
+                  </h3>
+                  <div data-el="div-rich-text-editor-30">
+                    <div data-el="div-rich-text-editor-31">
+                      <label data-el="label-rich-text-editor-9">Rows</label>
+                      <input
+                        type="number"
+                        aria-label="Table Rows"
+                        min="1"
+                        max="10"
+                        data-el="input-rich-text-editor-9"
+                        data-dom-state="RichTextEditor-input-rich-text-editor-9"
+                      />
+                    </div>
+                    <div data-el="div-rich-text-editor-32">
+                      <label data-el="label-rich-text-editor-10">Columns</label>
+                      <input
+                        type="number"
+                        aria-label="Table Columns"
+                        min="1"
+                        max="10"
+                        data-el="input-rich-text-editor-10"
+                        data-dom-state="RichTextEditor-input-rich-text-editor-10"
+                      />
+                    </div>
+                  </div>
+                  <div data-el="div-rich-text-editor-33">
+                    <input
+                      type="checkbox"
+                      id="cv-header-check"
+                      data-el="input-rich-text-editor-11"
+                      data-dom-state="RichTextEditor-input-rich-text-editor-11"
+                    />
+                    <label for="cv-header-check" data-el="label-rich-text-editor-11">
+                      Include header row
+                    </label>
+                  </div>
+                  <div data-el="div-rich-text-editor-34">
+                    <button type="button" data-el="button-rich-text-editor-59">
+                      Cancel
+                    </button>
+                    <button type="button" data-el="button-rich-text-editor-60">
+                      Insert Table
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template data-el="show-rich-text-editor-35">
+                <div class="shadow-2xl" data-el="div-rich-text-editor-35">
+                  <h3
+                    class="flex items-center text-white"
+                    data-el="h3-rich-text-editor-5"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      data-el="svg-rich-text-editor-5"
+                    >
+                      <path
+                        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                      ></path>
+                      <path
+                        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                      ></path>
+                    </svg>
+      
+                    Insert Hyperlink
+                  </h3>
+                  <div data-el="div-rich-text-editor-36">
+                    <label data-el="label-rich-text-editor-12">URL Destination</label>
+                    <input
+                      type="url"
+                      aria-label="Hyperlink URL"
+                      placeholder="https://example.com"
+                      data-el="input-rich-text-editor-12"
+                      data-dom-state="RichTextEditor-input-rich-text-editor-12"
+                    />
+                  </div>
+                  <div data-el="div-rich-text-editor-37">
+                    <button type="button" data-el="button-rich-text-editor-61">
+                      Cancel
+                    </button>
+                    <button type="button" data-el="button-rich-text-editor-62">
+                      Insert Link
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template data-el="show-rich-text-editor-36">
+                <div class="shadow-2xl" data-el="div-rich-text-editor-38">
+                  <h3
+                    class="flex items-center text-white"
+                    data-el="h3-rich-text-editor-6"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      data-el="svg-rich-text-editor-6"
+                    >
                       <rect x="3" y="3" width="7" height="7"></rect>
                       <rect x="14" y="3" width="7" height="7"></rect>
                       <rect x="14" y="14" width="7" height="7"></rect>
@@ -4399,8 +4834,8 @@ class RichTextEditor extends HTMLElement {
       
                     Insert Component
                   </h3>
-                  <div data-el="div-rich-text-editor-30">
-                    <label data-el="label-rich-text-editor-10">
+                  <div data-el="div-rich-text-editor-39">
+                    <label data-el="label-rich-text-editor-13">
                       Select ContentVeda Widget
                     </label>
                     <select
@@ -4421,21 +4856,21 @@ class RichTextEditor extends HTMLElement {
                       </option>
                     </select>
                   </div>
-                  <div data-el="div-rich-text-editor-31">
-                    <button type="button" data-el="button-rich-text-editor-59">
+                  <div data-el="div-rich-text-editor-40">
+                    <button type="button" data-el="button-rich-text-editor-63">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-60">
+                    <button type="button" data-el="button-rich-text-editor-64">
                       Insert Widget
                     </button>
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-35">
-                <div class="shadow-2xl" data-el="div-rich-text-editor-32">
+              <template data-el="show-rich-text-editor-37">
+                <div class="shadow-2xl" data-el="div-rich-text-editor-41">
                   <h3
                     class="flex items-center text-white"
-                    data-el="h3-rich-text-editor-5"
+                    data-el="h3-rich-text-editor-7"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -4447,7 +4882,7 @@ class RichTextEditor extends HTMLElement {
                       stroke-width="2.5"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      data-el="svg-rich-text-editor-5"
+                      data-el="svg-rich-text-editor-7"
                     >
                       <path
                         d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"
@@ -4456,9 +4891,9 @@ class RichTextEditor extends HTMLElement {
       
                     Embed Social Post
                   </h3>
-                  <div data-el="div-rich-text-editor-33">
-                    <div data-el="div-rich-text-editor-34">
-                      <label data-el="label-rich-text-editor-11">Platform</label>
+                  <div data-el="div-rich-text-editor-42">
+                    <div data-el="div-rich-text-editor-43">
+                      <label data-el="label-rich-text-editor-14">Platform</label>
                       <select
                         data-el="select-rich-text-editor-6"
                         data-dom-state="RichTextEditor-select-rich-text-editor-6"
@@ -4486,22 +4921,22 @@ class RichTextEditor extends HTMLElement {
                         </option>
                       </select>
                     </div>
-                    <div data-el="div-rich-text-editor-35">
-                      <label data-el="label-rich-text-editor-12">Post URL</label>
+                    <div data-el="div-rich-text-editor-44">
+                      <label data-el="label-rich-text-editor-15">Post URL</label>
                       <input
                         type="url"
                         aria-label="Social Link URL"
                         placeholder="https://..."
-                        data-el="input-rich-text-editor-10"
-                        data-dom-state="RichTextEditor-input-rich-text-editor-10"
+                        data-el="input-rich-text-editor-13"
+                        data-dom-state="RichTextEditor-input-rich-text-editor-13"
                       />
                     </div>
                   </div>
-                  <div data-el="div-rich-text-editor-36">
-                    <button type="button" data-el="button-rich-text-editor-61">
+                  <div data-el="div-rich-text-editor-45">
+                    <button type="button" data-el="button-rich-text-editor-65">
                       Cancel
                     </button>
-                    <button type="button" data-el="button-rich-text-editor-62">
+                    <button type="button" data-el="button-rich-text-editor-66">
                       Embed Post
                     </button>
                   </div>
@@ -4510,7 +4945,7 @@ class RichTextEditor extends HTMLElement {
             </div>
           </template>
         </div>
-        <div data-el="div-rich-text-editor-37">
+        <div data-el="div-rich-text-editor-46">
           <textarea
             class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
             data-el="textarea-rich-text-editor-1"
@@ -5913,7 +6348,9 @@ class RichTextEditor extends HTMLElement {
           this.state.showWidgetModal ||
           this.state.showSocialModal ||
           this.state.showButtonModal ||
-          this.state.showAiModal;
+          this.state.showAiModal ||
+          this.state.showImageModal ||
+          this.state.showVideoModal;
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6013,7 +6450,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-rich-text-editor-31']")
       .forEach((el) => {
-        const whenCondition = this.state.showButtonModal;
+        const whenCondition = this.state.showImageModal;
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6027,7 +6464,7 @@ class RichTextEditor extends HTMLElement {
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
           padding: "24px",
-          width: "380px",
+          width: "400px",
         });
       });
 
@@ -6084,6 +6521,330 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-4']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px 16px",
+          width: "100%",
+          fontSize: "14px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          boxSizing: "border-box",
+        });
+        el.value = this.state.imageUrl;
+        el.removeEventListener("input", this.onInputRichTextEditor4Input);
+        el.addEventListener("input", this.onInputRichTextEditor4Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor4Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor4Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-17']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-4']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-5']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px 16px",
+          width: "100%",
+          fontSize: "14px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          boxSizing: "border-box",
+        });
+        el.value = this.state.imageAlt;
+        el.removeEventListener("input", this.onInputRichTextEditor5Input);
+        el.addEventListener("input", this.onInputRichTextEditor5Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor5Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor5Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-18']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "12px",
+          marginTop: "32px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-53']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-text-secondary, #cbd5e1)",
+          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "500",
+          cursor: "pointer",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor53Click);
+        el.addEventListener("click", this.onButtonRichTextEditor53Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-54']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-on-primary, #fff)",
+          background:
+            "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor54Click);
+        el.addEventListener("click", this.onButtonRichTextEditor54Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-32']")
+      .forEach((el) => {
+        const whenCondition = this.state.showVideoModal;
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-19']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-raised, #1e293b)",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "16px",
+          padding: "24px",
+          width: "400px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='h3-rich-text-editor-2']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "18px",
+          fontWeight: "bold",
+          marginBottom: "20px",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='svg-rich-text-editor-2']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          color: "var(--cv-color-info, #0ea5e9)",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-20']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          marginBottom: "24px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-21']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-5']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-6']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px 16px",
+          width: "100%",
+          fontSize: "14px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          boxSizing: "border-box",
+        });
+        el.value = this.state.videoUrl;
+        el.removeEventListener("input", this.onInputRichTextEditor6Input);
+        el.addEventListener("input", this.onInputRichTextEditor6Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor6Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor6Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-22']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "12px",
+          marginTop: "32px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-55']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-text-secondary, #cbd5e1)",
+          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "500",
+          cursor: "pointer",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor55Click);
+        el.addEventListener("click", this.onButtonRichTextEditor55Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-56']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-on-primary, #fff)",
+          background: "var(--cv-color-info-fill, #075985)",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor56Click);
+        el.addEventListener("click", this.onButtonRichTextEditor56Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-33']")
+      .forEach((el) => {
+        const whenCondition = this.state.showButtonModal;
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-23']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-raised, #1e293b)",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "16px",
+          padding: "24px",
+          width: "380px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='h3-rich-text-editor-3']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "18px",
+          fontWeight: "bold",
+          marginBottom: "20px",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='svg-rich-text-editor-3']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          color: "var(--cv-color-primary, #7fc4de)",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-24']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          marginBottom: "24px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-25']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-6']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
       .querySelectorAll("[data-el='select-rich-text-editor-4']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
@@ -6126,232 +6887,9 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-17']")
+      .querySelectorAll("[data-el='div-rich-text-editor-26']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-4']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          fontSize: "12px",
-          fontWeight: "600",
-          color: "var(--cv-color-text-muted, #94a3b8)",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='input-rich-text-editor-4']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
-          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
-          borderRadius: "8px",
-          padding: "12px 16px",
-          width: "100%",
-          fontSize: "14px",
-          color: "var(--cv-color-text-main, #fff)",
-          outline: "none",
-          boxSizing: "border-box",
-        });
-        el.value = this.state.btnText;
-        el.removeEventListener("input", this.onInputRichTextEditor4Input);
-        el.addEventListener("input", this.onInputRichTextEditor4Input);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-18']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-5']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          fontSize: "12px",
-          fontWeight: "600",
-          color: "var(--cv-color-text-muted, #94a3b8)",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='input-rich-text-editor-5']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
-          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
-          borderRadius: "8px",
-          padding: "12px 16px",
-          width: "100%",
-          fontSize: "14px",
-          color: "var(--cv-color-text-main, #fff)",
-          outline: "none",
-          boxSizing: "border-box",
-        });
-        el.value = this.state.btnUrl;
-        el.removeEventListener("input", this.onInputRichTextEditor5Input);
-        el.addEventListener("input", this.onInputRichTextEditor5Input);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-19']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "12px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-53']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          padding: "10px 20px",
-          fontSize: "14px",
-          color: "var(--cv-color-text-secondary, #cbd5e1)",
-          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "500",
-          cursor: "pointer",
-        });
-        el.removeEventListener("click", this.onButtonRichTextEditor53Click);
-        el.addEventListener("click", this.onButtonRichTextEditor53Click);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-54']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          padding: "10px 20px",
-          fontSize: "14px",
-          color: "var(--cv-color-on-primary, #fff)",
-          background:
-            "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "600",
-          cursor: "pointer",
-          boxShadow:
-            "0 4px 14px var(--cv-shadow-accent-color, rgba(36,80,102,0.2))",
-        });
-        el.removeEventListener("click", this.onButtonRichTextEditor54Click);
-        el.addEventListener("click", this.onButtonRichTextEditor54Click);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-32']")
-      .forEach((el) => {
-        const whenCondition = this.state.showTableModal;
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-20']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          background: "var(--cv-color-surface-raised, #1e293b)",
-          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
-          borderRadius: "16px",
-          padding: "24px",
-          width: "340px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='h3-rich-text-editor-2']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          fontSize: "18px",
-          fontWeight: "bold",
-          marginBottom: "20px",
-          gap: "8px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='svg-rich-text-editor-2']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          color: "var(--cv-color-link, #7fc4de)",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-21']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          display: "flex",
-          gap: "16px",
-          marginBottom: "20px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-22']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-6']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          fontSize: "12px",
-          fontWeight: "600",
-          color: "var(--cv-color-text-muted, #94a3b8)",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='input-rich-text-editor-6']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
-          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
-          borderRadius: "8px",
-          padding: "12px",
-          width: "100%",
-          fontSize: "15px",
-          color: "var(--cv-color-text-main, #fff)",
-          outline: "none",
-          textAlign: "center",
-          boxSizing: "border-box",
-        });
-        el.value = this.state.tableRows;
-        el.removeEventListener("input", this.onInputRichTextEditor6Input);
-        el.addEventListener("input", this.onInputRichTextEditor6Input);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-23']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          flex: 1,
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -6377,140 +6915,18 @@ class RichTextEditor extends HTMLElement {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "8px",
-          padding: "12px",
+          padding: "12px 16px",
           width: "100%",
-          fontSize: "15px",
+          fontSize: "14px",
           color: "var(--cv-color-text-main, #fff)",
           outline: "none",
-          textAlign: "center",
           boxSizing: "border-box",
         });
-        el.value = this.state.tableCols;
+        el.value = this.state.btnText;
         el.removeEventListener("input", this.onInputRichTextEditor7Input);
         el.addEventListener("input", this.onInputRichTextEditor7Input);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-24']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          marginBottom: "28px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='input-rich-text-editor-8']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          width: "18px",
-          height: "18px",
-          borderRadius: "4px",
-          cursor: "pointer",
-          accentColor: "var(--cv-color-link, #7fc4de)",
-        });
-        el.setAttribute("checked", this.state.tableHasHeader);
-        el.removeEventListener("change", this.onInputRichTextEditor8Change);
-        el.addEventListener("change", this.onInputRichTextEditor8Change);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-8']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          fontSize: "14px",
-          color: "var(--cv-color-text-secondary, #cbd5e1)",
-          cursor: "pointer",
-          userSelect: "none",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-25']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "12px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-55']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          padding: "10px 20px",
-          fontSize: "14px",
-          color: "var(--cv-color-text-secondary, #cbd5e1)",
-          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "500",
-          cursor: "pointer",
-        });
-        el.removeEventListener("click", this.onButtonRichTextEditor55Click);
-        el.addEventListener("click", this.onButtonRichTextEditor55Click);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-56']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          padding: "10px 20px",
-          fontSize: "14px",
-          color: "var(--cv-color-on-primary, #fff)",
-          background:
-            "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "600",
-          cursor: "pointer",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
-        });
-        el.removeEventListener("click", this.onButtonRichTextEditor56Click);
-        el.addEventListener("click", this.onButtonRichTextEditor56Click);
-      });
-
-    this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-33']")
-      .forEach((el) => {
-        const whenCondition = this.state.showLinkModal;
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-26']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          background: "var(--cv-color-surface-raised, #1e293b)",
-          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
-          borderRadius: "16px",
-          padding: "24px",
-          width: "380px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='h3-rich-text-editor-3']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          fontSize: "18px",
-          fontWeight: "bold",
-          marginBottom: "20px",
-          gap: "8px",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='svg-rich-text-editor-3']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          color: "var(--cv-color-link, #7fc4de)",
-        });
+        el.removeEventListener("keydown", this.onInputRichTextEditor7Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor7Keydown);
       });
 
     this._root
@@ -6520,12 +6936,11 @@ class RichTextEditor extends HTMLElement {
           display: "flex",
           flexDirection: "column",
           gap: "8px",
-          marginBottom: "24px",
         });
       });
 
     this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-9']")
+      .querySelectorAll("[data-el='label-rich-text-editor-8']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           fontSize: "12px",
@@ -6537,7 +6952,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='input-rich-text-editor-9']")
+      .querySelectorAll("[data-el='input-rich-text-editor-8']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
@@ -6550,9 +6965,11 @@ class RichTextEditor extends HTMLElement {
           outline: "none",
           boxSizing: "border-box",
         });
-        el.value = this.state.linkUrl;
-        el.removeEventListener("input", this.onInputRichTextEditor9Input);
-        el.addEventListener("input", this.onInputRichTextEditor9Input);
+        el.value = this.state.btnUrl;
+        el.removeEventListener("input", this.onInputRichTextEditor8Input);
+        el.addEventListener("input", this.onInputRichTextEditor8Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor8Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor8Keydown);
       });
 
     this._root
@@ -6562,7 +6979,6 @@ class RichTextEditor extends HTMLElement {
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
-          marginTop: "32px",
         });
       });
 
@@ -6590,12 +7006,14 @@ class RichTextEditor extends HTMLElement {
           padding: "10px 20px",
           fontSize: "14px",
           color: "var(--cv-color-on-primary, #fff)",
-          background: "var(--cv-color-info-fill, #075985)",
+          background:
+            "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
           border: "none",
           borderRadius: "8px",
           fontWeight: "600",
           cursor: "pointer",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+          boxShadow:
+            "0 4px 14px var(--cv-shadow-accent-color, rgba(36,80,102,0.2))",
         });
         el.removeEventListener("click", this.onButtonRichTextEditor58Click);
         el.addEventListener("click", this.onButtonRichTextEditor58Click);
@@ -6604,7 +7022,7 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-rich-text-editor-34']")
       .forEach((el) => {
-        const whenCondition = this.state.showWidgetModal;
+        const whenCondition = this.state.showTableModal;
         if (whenCondition) {
           this.showContent(el);
         }
@@ -6618,7 +7036,7 @@ class RichTextEditor extends HTMLElement {
           border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
           borderRadius: "16px",
           padding: "24px",
-          width: "380px",
+          width: "340px",
         });
       });
 
@@ -6637,12 +7055,235 @@ class RichTextEditor extends HTMLElement {
       .querySelectorAll("[data-el='svg-rich-text-editor-4']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
-          color: "var(--cv-color-secondary, #5eb3d6)",
+          color: "var(--cv-color-link, #7fc4de)",
         });
       });
 
     this._root
       .querySelectorAll("[data-el='div-rich-text-editor-30']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          gap: "16px",
+          marginBottom: "20px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-31']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-9']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-9']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px",
+          width: "100%",
+          fontSize: "15px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          textAlign: "center",
+          boxSizing: "border-box",
+        });
+        el.value = this.state.tableRows;
+        el.removeEventListener("input", this.onInputRichTextEditor9Input);
+        el.addEventListener("input", this.onInputRichTextEditor9Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor9Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor9Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-32']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-10']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-10']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px",
+          width: "100%",
+          fontSize: "15px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          textAlign: "center",
+          boxSizing: "border-box",
+        });
+        el.value = this.state.tableCols;
+        el.removeEventListener("input", this.onInputRichTextEditor10Input);
+        el.addEventListener("input", this.onInputRichTextEditor10Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor10Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor10Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-33']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "28px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-11']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          width: "18px",
+          height: "18px",
+          borderRadius: "4px",
+          cursor: "pointer",
+          accentColor: "var(--cv-color-link, #7fc4de)",
+        });
+        el.setAttribute("checked", this.state.tableHasHeader);
+        el.removeEventListener("change", this.onInputRichTextEditor11Change);
+        el.addEventListener("change", this.onInputRichTextEditor11Change);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-11']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "14px",
+          color: "var(--cv-color-text-secondary, #cbd5e1)",
+          cursor: "pointer",
+          userSelect: "none",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-34']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "12px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-59']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-text-secondary, #cbd5e1)",
+          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "500",
+          cursor: "pointer",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor59Click);
+        el.addEventListener("click", this.onButtonRichTextEditor59Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-60']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-on-primary, #fff)",
+          background:
+            "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor60Click);
+        el.addEventListener("click", this.onButtonRichTextEditor60Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-35']")
+      .forEach((el) => {
+        const whenCondition = this.state.showLinkModal;
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-35']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-raised, #1e293b)",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "16px",
+          padding: "24px",
+          width: "380px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='h3-rich-text-editor-5']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "18px",
+          fontWeight: "bold",
+          marginBottom: "20px",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='svg-rich-text-editor-5']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          color: "var(--cv-color-link, #7fc4de)",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-36']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           display: "flex",
@@ -6653,7 +7294,137 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-10']")
+      .querySelectorAll("[data-el='label-rich-text-editor-12']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "12px",
+          fontWeight: "600",
+          color: "var(--cv-color-text-muted, #94a3b8)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='input-rich-text-editor-12']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "8px",
+          padding: "12px 16px",
+          width: "100%",
+          fontSize: "14px",
+          color: "var(--cv-color-text-main, #fff)",
+          outline: "none",
+          boxSizing: "border-box",
+        });
+        el.value = this.state.linkUrl;
+        el.removeEventListener("input", this.onInputRichTextEditor12Input);
+        el.addEventListener("input", this.onInputRichTextEditor12Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor12Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor12Keydown);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-37']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "12px",
+          marginTop: "32px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-61']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-text-secondary, #cbd5e1)",
+          background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "500",
+          cursor: "pointer",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor61Click);
+        el.addEventListener("click", this.onButtonRichTextEditor61Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='button-rich-text-editor-62']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          padding: "10px 20px",
+          fontSize: "14px",
+          color: "var(--cv-color-on-primary, #fff)",
+          background: "var(--cv-color-info-fill, #075985)",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+        });
+        el.removeEventListener("click", this.onButtonRichTextEditor62Click);
+        el.addEventListener("click", this.onButtonRichTextEditor62Click);
+      });
+
+    this._root
+      .querySelectorAll("[data-el='show-rich-text-editor-36']")
+      .forEach((el) => {
+        const whenCondition = this.state.showWidgetModal;
+        if (whenCondition) {
+          this.showContent(el);
+        }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-38']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          background: "var(--cv-color-surface-raised, #1e293b)",
+          border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+          borderRadius: "16px",
+          padding: "24px",
+          width: "380px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='h3-rich-text-editor-6']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          fontSize: "18px",
+          fontWeight: "bold",
+          marginBottom: "20px",
+          gap: "8px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='svg-rich-text-editor-6']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          color: "var(--cv-color-secondary, #5eb3d6)",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-rich-text-editor-39']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          marginBottom: "24px",
+        });
+      });
+
+    this._root
+      .querySelectorAll("[data-el='label-rich-text-editor-13']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           fontSize: "12px",
@@ -6716,7 +7487,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-31']")
+      .querySelectorAll("[data-el='div-rich-text-editor-40']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           display: "flex",
@@ -6727,7 +7498,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-59']")
+      .querySelectorAll("[data-el='button-rich-text-editor-63']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -6739,12 +7510,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor59Click);
-        el.addEventListener("click", this.onButtonRichTextEditor59Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor63Click);
+        el.addEventListener("click", this.onButtonRichTextEditor63Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-60']")
+      .querySelectorAll("[data-el='button-rich-text-editor-64']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -6758,12 +7529,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor60Click);
-        el.addEventListener("click", this.onButtonRichTextEditor60Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor64Click);
+        el.addEventListener("click", this.onButtonRichTextEditor64Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-35']")
+      .querySelectorAll("[data-el='show-rich-text-editor-37']")
       .forEach((el) => {
         const whenCondition = this.state.showSocialModal;
         if (whenCondition) {
@@ -6772,7 +7543,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-32']")
+      .querySelectorAll("[data-el='div-rich-text-editor-41']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-raised, #1e293b)",
@@ -6784,7 +7555,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='h3-rich-text-editor-5']")
+      .querySelectorAll("[data-el='h3-rich-text-editor-7']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           fontSize: "18px",
@@ -6795,7 +7566,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='svg-rich-text-editor-5']")
+      .querySelectorAll("[data-el='svg-rich-text-editor-7']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           color: "var(--cv-color-info, #0ea5e9)",
@@ -6803,7 +7574,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-33']")
+      .querySelectorAll("[data-el='div-rich-text-editor-42']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           display: "flex",
@@ -6814,7 +7585,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-34']")
+      .querySelectorAll("[data-el='div-rich-text-editor-43']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           display: "flex",
@@ -6824,7 +7595,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-11']")
+      .querySelectorAll("[data-el='label-rich-text-editor-14']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           fontSize: "12px",
@@ -6903,7 +7674,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-35']")
+      .querySelectorAll("[data-el='div-rich-text-editor-44']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           display: "flex",
@@ -6913,7 +7684,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='label-rich-text-editor-12']")
+      .querySelectorAll("[data-el='label-rich-text-editor-15']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           fontSize: "12px",
@@ -6925,7 +7696,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='input-rich-text-editor-10']")
+      .querySelectorAll("[data-el='input-rich-text-editor-13']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
@@ -6939,12 +7710,14 @@ class RichTextEditor extends HTMLElement {
           boxSizing: "border-box",
         });
         el.value = this.state.socialUrl;
-        el.removeEventListener("input", this.onInputRichTextEditor10Input);
-        el.addEventListener("input", this.onInputRichTextEditor10Input);
+        el.removeEventListener("input", this.onInputRichTextEditor13Input);
+        el.addEventListener("input", this.onInputRichTextEditor13Input);
+        el.removeEventListener("keydown", this.onInputRichTextEditor13Keydown);
+        el.addEventListener("keydown", this.onInputRichTextEditor13Keydown);
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-36']")
+      .querySelectorAll("[data-el='div-rich-text-editor-45']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           display: "flex",
@@ -6955,7 +7728,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-61']")
+      .querySelectorAll("[data-el='button-rich-text-editor-65']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -6967,12 +7740,12 @@ class RichTextEditor extends HTMLElement {
           fontWeight: "500",
           cursor: "pointer",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor61Click);
-        el.addEventListener("click", this.onButtonRichTextEditor61Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor65Click);
+        el.addEventListener("click", this.onButtonRichTextEditor65Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='button-rich-text-editor-62']")
+      .querySelectorAll("[data-el='button-rich-text-editor-66']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
           padding: "10px 20px",
@@ -6985,12 +7758,12 @@ class RichTextEditor extends HTMLElement {
           cursor: "pointer",
           boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
         });
-        el.removeEventListener("click", this.onButtonRichTextEditor62Click);
-        el.addEventListener("click", this.onButtonRichTextEditor62Click);
+        el.removeEventListener("click", this.onButtonRichTextEditor66Click);
+        el.addEventListener("click", this.onButtonRichTextEditor66Click);
       });
 
     this._root
-      .querySelectorAll("[data-el='div-rich-text-editor-37']")
+      .querySelectorAll("[data-el='div-rich-text-editor-46']")
       .forEach((el) => {
         el.className = `editor-source flex-1 relative min-h-[350px] overflow-hidden cv-mode-src-${this.state.mode}`;
         __cvAssignStyle(el.style, {

@@ -1406,7 +1406,9 @@
           showWidgetModal ||
           showSocialModal ||
           showButtonModal ||
-          showAiModal
+          showAiModal ||
+          showImageModal ||
+          showVideoModal
         "
       >
         <div
@@ -1499,6 +1501,337 @@
                   @click="async (event) => closeAiModal()"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <template v-if="showImageModal">
+            <div
+              class="shadow-2xl"
+              :style="{
+                background: 'var(--cv-color-surface-raised, #1e293b)',
+                border:
+                  '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                borderRadius: '16px',
+                padding: '24px',
+                width: '400px',
+              }"
+            >
+              <h3
+                class="flex items-center text-white"
+                :style="{
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  marginBottom: '20px',
+                  gap: '8px',
+                }"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  :style="{
+                    color: 'var(--cv-color-primary, #7fc4de)',
+                  }"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                Insert Image
+              </h3>
+              <div
+                :style="{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  marginBottom: '24px',
+                }"
+              >
+                <div
+                  :style="{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }"
+                >
+                  <label
+                    :style="{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: 'var(--cv-color-text-muted, #94a3b8)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }"
+                    >Image URL</label
+                  ><input
+                    type="url"
+                    aria-label="Image URL"
+                    placeholder="https://example.com/photo.jpg"
+                    :style="{
+                      background:
+                        'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+                      border:
+                        '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      width: '100%',
+                      fontSize: '14px',
+                      color: 'var(--cv-color-text-main, #fff)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }"
+                    :value="imageUrl"
+                    @input="async (e) => (imageUrl = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmImage();
+                        }
+                      }
+                    "
+                  />
+                </div>
+                <div
+                  :style="{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }"
+                >
+                  <label
+                    :style="{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: 'var(--cv-color-text-muted, #94a3b8)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }"
+                    >Alt Text (Accessibility & SEO)</label
+                  ><input
+                    type="text"
+                    aria-label="Image Alt Text"
+                    placeholder="Descriptive text for screen readers"
+                    :style="{
+                      background:
+                        'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+                      border:
+                        '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      width: '100%',
+                      fontSize: '14px',
+                      color: 'var(--cv-color-text-main, #fff)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }"
+                    :value="imageAlt"
+                    @input="async (e) => (imageAlt = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmImage();
+                        }
+                      }
+                    "
+                  />
+                </div>
+              </div>
+              <div
+                :style="{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '32px',
+                }"
+              >
+                <button
+                  type="button"
+                  :style="{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    color: 'var(--cv-color-text-secondary, #cbd5e1)',
+                    background: 'var(--cv-color-hover, rgba(255,255,255,0.05))',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }"
+                  @click="async (event) => closeImageModal()"
+                >
+                  Cancel</button
+                ><button
+                  type="button"
+                  :style="{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    color: 'var(--cv-color-on-primary, #fff)',
+                    background:
+                      'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+                  }"
+                  @click="async (event) => confirmImage()"
+                >
+                  Insert Image
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <template v-if="showVideoModal">
+            <div
+              class="shadow-2xl"
+              :style="{
+                background: 'var(--cv-color-surface-raised, #1e293b)',
+                border:
+                  '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                borderRadius: '16px',
+                padding: '24px',
+                width: '400px',
+              }"
+            >
+              <h3
+                class="flex items-center text-white"
+                :style="{
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  marginBottom: '20px',
+                  gap: '8px',
+                }"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  :style="{
+                    color: 'var(--cv-color-info, #0ea5e9)',
+                  }"
+                >
+                  <rect
+                    x="2"
+                    y="2"
+                    width="20"
+                    height="20"
+                    rx="2.18"
+                    ry="2.18"
+                  ></rect>
+                  <line x1="7" y1="2" x2="7" y2="22"></line>
+                  <line x1="17" y1="2" x2="17" y2="22"></line>
+                </svg>
+                Insert Video
+              </h3>
+              <div
+                :style="{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  marginBottom: '24px',
+                }"
+              >
+                <div
+                  :style="{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }"
+                >
+                  <label
+                    :style="{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: 'var(--cv-color-text-muted, #94a3b8)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }"
+                    >Video URL (YouTube, Vimeo, or MP4)</label
+                  ><input
+                    type="url"
+                    aria-label="Video URL"
+                    placeholder="https://www.youtube.com/watch?v=... or .mp4"
+                    :style="{
+                      background:
+                        'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+                      border:
+                        '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      width: '100%',
+                      fontSize: '14px',
+                      color: 'var(--cv-color-text-main, #fff)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }"
+                    :value="videoUrl"
+                    @input="async (e) => (videoUrl = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmVideo();
+                        }
+                      }
+                    "
+                  />
+                </div>
+              </div>
+              <div
+                :style="{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '32px',
+                }"
+              >
+                <button
+                  type="button"
+                  :style="{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    color: 'var(--cv-color-text-secondary, #cbd5e1)',
+                    background: 'var(--cv-color-hover, rgba(255,255,255,0.05))',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }"
+                  @click="async (event) => closeVideoModal()"
+                >
+                  Cancel</button
+                ><button
+                  type="button"
+                  :style="{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    color: 'var(--cv-color-on-primary, #fff)',
+                    background: 'var(--cv-color-info-fill, #075985)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+                  }"
+                  @click="async (event) => confirmVideo()"
+                >
+                  Insert Video
                 </button>
               </div>
             </div>
@@ -1646,6 +1979,14 @@
                     }"
                     :value="btnText"
                     @input="async (e) => (btnText = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmButton();
+                        }
+                      }
+                    "
                   />
                 </div>
                 <div
@@ -1683,6 +2024,14 @@
                     }"
                     :value="btnUrl"
                     @input="async (e) => (btnUrl = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmButton();
+                        }
+                      }
+                    "
                   />
                 </div>
               </div>
@@ -1819,6 +2168,14 @@
                     }"
                     :value="tableRows"
                     @input="async (e) => (tableRows = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmTable();
+                        }
+                      }
+                    "
                   />
                 </div>
                 <div
@@ -1859,6 +2216,14 @@
                     }"
                     :value="tableCols"
                     @input="async (e) => (tableCols = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmTable();
+                        }
+                      }
+                    "
                   />
                 </div>
               </div>
@@ -2017,6 +2382,14 @@
                   }"
                   :value="linkUrl"
                   @input="async (e) => (linkUrl = e.target.value)"
+                  @keydown="
+                    async (e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        confirmLink();
+                      }
+                    }
+                  "
                 />
               </div>
               <div
@@ -2385,6 +2758,14 @@
                     }"
                     :value="socialUrl"
                     @input="async (e) => (socialUrl = e.target.value)"
+                    @keydown="
+                      async (e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmSocial();
+                        }
+                      }
+                    "
                   />
                 </div>
               </div>
@@ -2517,6 +2898,11 @@ export default defineComponent({
       btnText: "Click Here",
       btnUrl: "",
       btnStyle: "primary",
+      showImageModal: false,
+      imageUrl: "",
+      imageAlt: "",
+      showVideoModal: false,
+      videoUrl: "",
       selectedMediaEl: null,
       resizeHandleTop: 0,
       resizeHandleLeft: 0,
@@ -2961,53 +3347,80 @@ export default defineComponent({
         } catch (e) {}
       }
       targetRange = this.escapeAtomicRange(targetRange);
-      if (targetRange && targetRange.insertNode) {
+      const isBlockHtml =
+        /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(html);
+      let blockParent: HTMLElement | null = null;
+      if (targetRange && el) {
+        let n: any = targetRange.startContainer;
+        while (n && n !== el) {
+          if (
+            n.nodeType === 1 &&
+            /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)
+          ) {
+            blockParent = n;
+            break;
+          }
+          n = n.parentNode;
+        }
+      }
+      const template = document.createElement("template");
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      template.innerHTML = html.trim();
+      const frag = template.content;
+
+      // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+      let lastP: HTMLElement | null = frag.querySelector("p:last-child");
+      if (isBlockHtml && !lastP) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        frag.appendChild(p);
+        lastP = p;
+      }
+      let insertedP: HTMLElement | null = null;
+      if (
+        isBlockHtml &&
+        blockParent &&
+        blockParent !== el &&
+        blockParent.parentNode
+      ) {
+        const isEmptyBlock =
+          !blockParent.textContent?.trim() || blockParent.innerHTML === "<br>";
+        if (isEmptyBlock) {
+          const parent = blockParent.parentNode;
+          insertedP = lastP;
+          parent.insertBefore(frag, blockParent);
+          blockParent.remove();
+        } else {
+          insertedP = lastP;
+          blockParent.after(frag);
+        }
+      } else if (targetRange && targetRange.insertNode) {
         targetRange.deleteContents();
-        const template = document.createElement("template");
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        template.innerHTML = html.trim();
-        const frag = template.content;
-        const resizableEl = frag.querySelector(
-          "img, video, audio, .cv-social-embed, .cv-widget"
-        );
-        const lastNode = frag.lastChild;
+        insertedP = lastP;
         targetRange.insertNode(frag);
-        if (lastNode && sel) {
-          const newRange = document.createRange();
-          newRange.setStartAfter(lastNode);
-          newRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(newRange);
-          const cloned = newRange.cloneRange();
-          activeSavedRange = cloned;
-          if (el) (el as any).__cv_savedRange = cloned;
-        }
-        if (resizableEl) {
-          this.selectMediaElement(resizableEl);
-        }
       } else if (el) {
-        const template = document.createElement("template");
-        /* lgtm[js/xss, js/html-constructed-from-input] */
-        /* codeql[js/xss, js/html-constructed-from-input] */
-        template.innerHTML = html.trim();
-        const resizableEl = template.content.querySelector(
-          "img, video, audio, .cv-social-embed, .cv-widget"
-        );
-        el.appendChild(template.content);
+        insertedP = lastP;
+        el.appendChild(frag);
+      }
+
+      // Position caret inside the trailing paragraph so author can type / press Enter immediately
+      const targetP =
+        insertedP || (el ? el.querySelector("p:last-child") : null);
+      if (el && typeof (el as any).focus === "function") {
+        try {
+          (el as any).focus();
+        } catch (e) {}
+      }
+      if (targetP && sel) {
         const newRange = document.createRange();
-        newRange.selectNodeContents(el as Node);
-        newRange.collapse(false);
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(newRange);
-          const cloned = newRange.cloneRange();
-          activeSavedRange = cloned;
-          if (el) (el as any).__cv_savedRange = cloned;
-        }
-        if (resizableEl) {
-          this.selectMediaElement(resizableEl);
-        }
+        newRange.setStart(targetP, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        const cloned = newRange.cloneRange();
+        activeSavedRange = cloned;
+        if (el) (el as any).__cv_savedRange = cloned;
       }
       this.ensureEditableStructure();
       this.syncContent();
@@ -3163,15 +3576,13 @@ export default defineComponent({
           .catch((err) => {
             console.error("Media request failed", err);
           });
+      } else if (type === "image") {
+        this.openImageModal();
+      } else if (type === "video") {
+        this.openVideoModal();
       } else {
         const url = window.prompt(`Enter ${type} URL:`);
-        if (url && type === "image") {
-          const altText = window.prompt(
-            "Describe this image for screen readers and search engines (alt text):",
-            ""
-          );
-          insertContent(url, altText || undefined);
-        } else if (url) {
+        if (url) {
           insertContent(url);
         }
       }
@@ -3711,6 +4122,61 @@ export default defineComponent({
     closeSocialModal() {
       this.showSocialModal = false;
     },
+    openImageModal() {
+      if (this.mode === "source") return;
+      this.saveSelection();
+      this.showImageModal = true;
+      this.imageUrl = "";
+      this.imageAlt = "";
+    },
+    closeImageModal() {
+      this.showImageModal = false;
+    },
+    confirmImage() {
+      this.showImageModal = false;
+      if (this.imageUrl) {
+        const url = this.imageUrl.trim();
+        const filenameGuess = (url.split("/").pop() || "image")
+          .split("?")[0]
+          .split(".")[0]
+          .replace(/[-_]+/g, " ")
+          .trim();
+        const alt = (this.imageAlt || "").trim() || filenameGuess || "Image";
+        const escapedAlt = this.escapeHtml(alt);
+        const escapedUrl = this.escapeHtml(url);
+        const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        this.insertHtmlAtCursor(html);
+      }
+    },
+    openVideoModal() {
+      if (this.mode === "source") return;
+      this.saveSelection();
+      this.showVideoModal = true;
+      this.videoUrl = "";
+    },
+    closeVideoModal() {
+      this.showVideoModal = false;
+    },
+    confirmVideo() {
+      this.showVideoModal = false;
+      if (this.videoUrl) {
+        const url = this.videoUrl.trim();
+        const ytMatch = url.match(
+          /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+        );
+        const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+        const escapedUrl = this.escapeHtml(url);
+        let html = "";
+        if (ytMatch) {
+          html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+        } else if (vimeoMatch) {
+          html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+        } else {
+          html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+        }
+        this.insertHtmlAtCursor(html);
+      }
+    },
     toggleMode() {
       if (this.mode === "visual") {
         this.syncContent();
@@ -4177,6 +4643,8 @@ export default defineComponent({
       this.showSocialModal = false;
       this.showButtonModal = false;
       this.showAiModal = false;
+      this.showImageModal = false;
+      this.showVideoModal = false;
     },
     handleBackdropClick(e: any) {
       if (e && e.target === e.currentTarget) {
@@ -4206,6 +4674,9 @@ export default defineComponent({
         last &&
         (last.getAttribute("contenteditable") === "false" ||
           last.tagName === "TABLE" ||
+          last.tagName === "IMG" ||
+          last.tagName === "VIDEO" ||
+          last.tagName === "AUDIO" ||
           (last.classList &&
             (last.classList.contains("cv-social-embed") ||
               last.classList.contains("cv-widget"))))
@@ -4218,6 +4689,9 @@ export default defineComponent({
         first &&
         (first.getAttribute("contenteditable") === "false" ||
           first.tagName === "TABLE" ||
+          first.tagName === "IMG" ||
+          first.tagName === "VIDEO" ||
+          first.tagName === "AUDIO" ||
           (first.classList &&
             (first.classList.contains("cv-social-embed") ||
               first.classList.contains("cv-widget"))))
@@ -4254,19 +4728,22 @@ export default defineComponent({
       }
       if (atomicEl) {
         const newRange = document.createRange();
+        const next = atomicEl.nextSibling;
         if (
-          !atomicEl.nextSibling ||
-          (atomicEl.nextSibling.nodeType === 1 &&
-            atomicEl.nextSibling.getAttribute("contenteditable") === "false")
+          !next ||
+          (next.nodeType === 1 &&
+            next.getAttribute("contenteditable") === "false")
         ) {
           const p = document.createElement("p");
           p.innerHTML = "<br>";
-          if (atomicEl.nextSibling) {
-            atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+          if (next) {
+            atomicEl.parentNode.insertBefore(p, next);
           } else {
             atomicEl.parentNode.appendChild(p);
           }
           newRange.setStart(p, 0);
+        } else if (next.nodeType === 1) {
+          newRange.setStart(next, 0);
         } else {
           newRange.setStartAfter(atomicEl);
         }
@@ -4316,19 +4793,87 @@ export default defineComponent({
         this.closeAllModals();
         return;
       }
-      if (
-        this.selectedMediaEl &&
-        (e.key === "Backspace" || e.key === "Delete")
-      ) {
-        e.preventDefault();
-        const el = this.selectedMediaEl;
-        this.deselectMediaElement();
-        if (el && el.parentNode) {
-          el.parentNode.removeChild(el);
+      if (this.selectedMediaEl) {
+        if (e.key === "Backspace" || e.key === "Delete") {
+          e.preventDefault();
+          const el = this.selectedMediaEl;
+          this.deselectMediaElement();
+          if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+          this.ensureEditableStructure();
+          this.syncContent();
+          return;
         }
-        this.ensureEditableStructure();
-        this.syncContent();
-        return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const media = this.selectedMediaEl;
+          this.deselectMediaElement();
+          const editor = this.getEditorElement();
+          let block: any = media;
+          while (block && block.parentNode && block.parentNode !== editor) {
+            block = block.parentNode;
+          }
+          let targetP: HTMLElement | null = null;
+          if (
+            block &&
+            block.nextElementSibling &&
+            block.nextElementSibling.tagName === "P"
+          ) {
+            targetP = block.nextElementSibling as HTMLElement;
+          } else if (block && block.parentNode) {
+            targetP = document.createElement("p");
+            targetP.innerHTML = "<br>";
+            block.after(targetP);
+          }
+          if (targetP) {
+            const sel = window.getSelection();
+            if (sel) {
+              const newRange = document.createRange();
+              newRange.setStart(targetP, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              this.saveSelection();
+            }
+          }
+          this.ensureEditableStructure();
+          this.syncContent();
+          return;
+        }
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          const media = this.selectedMediaEl;
+          this.deselectMediaElement();
+          const editor = this.getEditorElement();
+          let block: any = media;
+          while (block && block.parentNode && block.parentNode !== editor) {
+            block = block.parentNode;
+          }
+          let targetP: HTMLElement | null = null;
+          if (
+            block &&
+            block.nextElementSibling &&
+            block.nextElementSibling.tagName === "P"
+          ) {
+            targetP = block.nextElementSibling as HTMLElement;
+          } else if (block && block.parentNode) {
+            targetP = document.createElement("p");
+            targetP.innerHTML = "<br>";
+            block.after(targetP);
+          }
+          if (targetP) {
+            const sel = window.getSelection();
+            if (sel) {
+              const newRange = document.createRange();
+              newRange.setStart(targetP, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              this.saveSelection();
+            }
+          }
+          return;
+        }
       }
       if (e.key === "Backspace") {
         const sel =
@@ -4387,11 +4932,23 @@ export default defineComponent({
           let node: any = sel.getRangeAt(0).startContainer;
           let taskLi: HTMLElement | null = null;
           let taskUl: HTMLElement | null = null;
+          let atomicEl: HTMLElement | null = null;
           while (node && node !== editor) {
             if (node.nodeType === 1) {
               if (node.tagName === "LI") taskLi = node;
               if (node.tagName === "UL" && node.classList.contains("task-list"))
                 taskUl = node;
+              if (
+                node.getAttribute &&
+                node.getAttribute("contenteditable") === "false"
+              )
+                atomicEl = node;
+              if (
+                node.tagName === "IMG" ||
+                node.tagName === "VIDEO" ||
+                node.tagName === "AUDIO"
+              )
+                atomicEl = node;
             }
             node = node.parentNode;
           }
@@ -4442,9 +4999,30 @@ export default defineComponent({
             this.syncContent();
             return;
           }
+          if (atomicEl) {
+            e.preventDefault();
+            let block: any = atomicEl;
+            while (block && block.parentNode && block.parentNode !== editor) {
+              block = block.parentNode;
+            }
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            if (block && block.parentNode) {
+              block.after(p);
+            } else {
+              editor.appendChild(p);
+            }
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            this.saveSelection();
+            this.syncContent();
+            return;
+          }
         }
       }
-      this.normalizeSelection();
     },
     handleGlobalKeyDown(e: any) {
       if (e.key === "Escape") {

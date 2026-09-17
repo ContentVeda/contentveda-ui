@@ -351,53 +351,80 @@
       } catch (e) {}
     }
     targetRange = escapeAtomicRange(targetRange);
-    if (targetRange && targetRange.insertNode) {
+    const isBlockHtml = /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(
+      html
+    );
+    let blockParent: HTMLElement | null = null;
+    if (targetRange && el) {
+      let n: any = targetRange.startContainer;
+      while (n && n !== el) {
+        if (
+          n.nodeType === 1 &&
+          /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)
+        ) {
+          blockParent = n;
+          break;
+        }
+        n = n.parentNode;
+      }
+    }
+    const template = document.createElement("template");
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
+    template.innerHTML = html.trim();
+    const frag = template.content;
+
+    // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+    let lastP: HTMLElement | null = frag.querySelector("p:last-child");
+    if (isBlockHtml && !lastP) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      frag.appendChild(p);
+      lastP = p;
+    }
+    let insertedP: HTMLElement | null = null;
+    if (
+      isBlockHtml &&
+      blockParent &&
+      blockParent !== el &&
+      blockParent.parentNode
+    ) {
+      const isEmptyBlock =
+        !blockParent.textContent?.trim() || blockParent.innerHTML === "<br>";
+      if (isEmptyBlock) {
+        const parent = blockParent.parentNode;
+        insertedP = lastP;
+        parent.insertBefore(frag, blockParent);
+        blockParent.remove();
+      } else {
+        insertedP = lastP;
+        blockParent.after(frag);
+      }
+    } else if (targetRange && targetRange.insertNode) {
       targetRange.deleteContents();
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      const frag = template.content;
-      const resizableEl = frag.querySelector(
-        "img, video, audio, .cv-social-embed, .cv-widget"
-      );
-      const lastNode = frag.lastChild;
+      insertedP = lastP;
       targetRange.insertNode(frag);
-      if (lastNode && sel) {
-        const newRange = document.createRange();
-        newRange.setStartAfter(lastNode);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        const cloned = newRange.cloneRange();
-        activeSavedRange = cloned;
-        if (el) (el as any).__cv_savedRange = cloned;
-      }
-      if (resizableEl) {
-        selectMediaElement(resizableEl);
-      }
     } else if (el) {
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      const resizableEl = template.content.querySelector(
-        "img, video, audio, .cv-social-embed, .cv-widget"
-      );
-      el.appendChild(template.content);
+      insertedP = lastP;
+      el.appendChild(frag);
+    }
+
+    // Position caret inside the trailing paragraph so author can type / press Enter immediately
+    const targetP = insertedP || (el ? el.querySelector("p:last-child") : null);
+    if (el && typeof (el as any).focus === "function") {
+      try {
+        (el as any).focus();
+      } catch (e) {}
+    }
+    if (targetP && sel) {
       const newRange = document.createRange();
-      newRange.selectNodeContents(el as Node);
-      newRange.collapse(false);
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        const cloned = newRange.cloneRange();
-        activeSavedRange = cloned;
-        if (el) (el as any).__cv_savedRange = cloned;
-      }
-      if (resizableEl) {
-        selectMediaElement(resizableEl);
-      }
+      newRange.setStart(targetP, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
     }
     ensureEditableStructure();
     syncContent();
@@ -553,15 +580,13 @@
         .catch((err) => {
           console.error("Media request failed", err);
         });
+    } else if (type === "image") {
+      openImageModal();
+    } else if (type === "video") {
+      openVideoModal();
     } else {
       const url = window.prompt(`Enter ${type} URL:`);
-      if (url && type === "image") {
-        const altText = window.prompt(
-          "Describe this image for screen readers and search engines (alt text):",
-          ""
-        );
-        insertContent(url, altText || undefined);
-      } else if (url) {
+      if (url) {
         insertContent(url);
       }
     }
@@ -1097,6 +1122,61 @@
   function closeSocialModal() {
     showSocialModal = false;
   }
+  function openImageModal() {
+    if (mode === "source") return;
+    saveSelection();
+    showImageModal = true;
+    imageUrl = "";
+    imageAlt = "";
+  }
+  function closeImageModal() {
+    showImageModal = false;
+  }
+  function confirmImage() {
+    showImageModal = false;
+    if (imageUrl) {
+      const url = imageUrl.trim();
+      const filenameGuess = (url.split("/").pop() || "image")
+        .split("?")[0]
+        .split(".")[0]
+        .replace(/[-_]+/g, " ")
+        .trim();
+      const alt = (imageAlt || "").trim() || filenameGuess || "Image";
+      const escapedAlt = escapeHtml(alt);
+      const escapedUrl = escapeHtml(url);
+      const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+      insertHtmlAtCursor(html);
+    }
+  }
+  function openVideoModal() {
+    if (mode === "source") return;
+    saveSelection();
+    showVideoModal = true;
+    videoUrl = "";
+  }
+  function closeVideoModal() {
+    showVideoModal = false;
+  }
+  function confirmVideo() {
+    showVideoModal = false;
+    if (videoUrl) {
+      const url = videoUrl.trim();
+      const ytMatch = url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+      );
+      const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+      const escapedUrl = escapeHtml(url);
+      let html = "";
+      if (ytMatch) {
+        html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+      } else if (vimeoMatch) {
+        html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+      } else {
+        html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+      }
+      insertHtmlAtCursor(html);
+    }
+  }
   function toggleMode() {
     if (mode === "visual") {
       syncContent();
@@ -1545,6 +1625,8 @@
     showSocialModal = false;
     showButtonModal = false;
     showAiModal = false;
+    showImageModal = false;
+    showVideoModal = false;
   }
   function handleBackdropClick(e: any) {
     if (e && e.target === e.currentTarget) {
@@ -1574,6 +1656,9 @@
       last &&
       (last.getAttribute("contenteditable") === "false" ||
         last.tagName === "TABLE" ||
+        last.tagName === "IMG" ||
+        last.tagName === "VIDEO" ||
+        last.tagName === "AUDIO" ||
         (last.classList &&
           (last.classList.contains("cv-social-embed") ||
             last.classList.contains("cv-widget"))))
@@ -1586,6 +1671,9 @@
       first &&
       (first.getAttribute("contenteditable") === "false" ||
         first.tagName === "TABLE" ||
+        first.tagName === "IMG" ||
+        first.tagName === "VIDEO" ||
+        first.tagName === "AUDIO" ||
         (first.classList &&
           (first.classList.contains("cv-social-embed") ||
             first.classList.contains("cv-widget"))))
@@ -1622,19 +1710,22 @@
     }
     if (atomicEl) {
       const newRange = document.createRange();
+      const next = atomicEl.nextSibling;
       if (
-        !atomicEl.nextSibling ||
-        (atomicEl.nextSibling.nodeType === 1 &&
-          atomicEl.nextSibling.getAttribute("contenteditable") === "false")
+        !next ||
+        (next.nodeType === 1 &&
+          next.getAttribute("contenteditable") === "false")
       ) {
         const p = document.createElement("p");
         p.innerHTML = "<br>";
-        if (atomicEl.nextSibling) {
-          atomicEl.parentNode.insertBefore(p, atomicEl.nextSibling);
+        if (next) {
+          atomicEl.parentNode.insertBefore(p, next);
         } else {
           atomicEl.parentNode.appendChild(p);
         }
         newRange.setStart(p, 0);
+      } else if (next.nodeType === 1) {
+        newRange.setStart(next, 0);
       } else {
         newRange.setStartAfter(atomicEl);
       }
@@ -1684,16 +1775,87 @@
       closeAllModals();
       return;
     }
-    if (selectedMediaEl && (e.key === "Backspace" || e.key === "Delete")) {
-      e.preventDefault();
-      const el = selectedMediaEl;
-      deselectMediaElement();
-      if (el && el.parentNode) {
-        el.parentNode.removeChild(el);
+    if (selectedMediaEl) {
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        const el = selectedMediaEl;
+        deselectMediaElement();
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        ensureEditableStructure();
+        syncContent();
+        return;
       }
-      ensureEditableStructure();
-      syncContent();
-      return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const media = selectedMediaEl;
+        deselectMediaElement();
+        const editor = getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+        }
+        ensureEditableStructure();
+        syncContent();
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const media = selectedMediaEl;
+        deselectMediaElement();
+        const editor = getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+        }
+        return;
+      }
     }
     if (e.key === "Backspace") {
       const sel = typeof window !== "undefined" ? window.getSelection() : null;
@@ -1750,11 +1912,23 @@
         let node: any = sel.getRangeAt(0).startContainer;
         let taskLi: HTMLElement | null = null;
         let taskUl: HTMLElement | null = null;
+        let atomicEl: HTMLElement | null = null;
         while (node && node !== editor) {
           if (node.nodeType === 1) {
             if (node.tagName === "LI") taskLi = node;
             if (node.tagName === "UL" && node.classList.contains("task-list"))
               taskUl = node;
+            if (
+              node.getAttribute &&
+              node.getAttribute("contenteditable") === "false"
+            )
+              atomicEl = node;
+            if (
+              node.tagName === "IMG" ||
+              node.tagName === "VIDEO" ||
+              node.tagName === "AUDIO"
+            )
+              atomicEl = node;
           }
           node = node.parentNode;
         }
@@ -1805,9 +1979,30 @@
           syncContent();
           return;
         }
+        if (atomicEl) {
+          e.preventDefault();
+          let block: any = atomicEl;
+          while (block && block.parentNode && block.parentNode !== editor) {
+            block = block.parentNode;
+          }
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (block && block.parentNode) {
+            block.after(p);
+          } else {
+            editor.appendChild(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          syncContent();
+          return;
+        }
       }
     }
-    normalizeSelection();
   }
   function handleGlobalKeyDown(e: any) {
     if (e.key === "Escape") {
@@ -1920,6 +2115,11 @@
   let btnText = "Click Here";
   let btnUrl = "";
   let btnStyle = "primary";
+  let showImageModal = false;
+  let imageUrl = "";
+  let imageAlt = "";
+  let showVideoModal = false;
+  let videoUrl = "";
   let selectedMediaEl = null;
   let resizeHandleTop = 0;
   let resizeHandleLeft = 0;
@@ -3529,7 +3729,7 @@
         >
       </div>
     {/if}
-    {#if showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal}
+    {#if showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal}
       <div
         style={stringifyStyles({
           background: "rgba(0, 0, 0, 0.6)",
@@ -3629,6 +3829,338 @@
                 on:click={(event) => {
                   closeAiModal();
                 }}>Close</button
+              >
+            </div>
+          </div>
+        {/if}
+        {#if showImageModal}
+          <div
+            style={stringifyStyles({
+              background: "var(--cv-color-surface-raised, #1e293b)",
+              border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "400px",
+            })}
+            class="shadow-2xl"
+          >
+            <h3
+              style={stringifyStyles({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                gap: "8px",
+              })}
+              class="flex items-center text-white"
+            >
+              <svg
+                style={stringifyStyles({
+                  color: "var(--cv-color-primary, #7fc4de)",
+                })}
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                /><circle cx="8.5" cy="8.5" r="1.5" /><polyline
+                  points="21 15 16 10 5 21"
+                /></svg
+              >
+              Insert Image
+            </h3>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                marginBottom: "24px",
+              })}
+            >
+              <div
+                style={stringifyStyles({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                })}
+              >
+                <label
+                  style={stringifyStyles({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--cv-color-text-muted, #94a3b8)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  })}>Image URL</label
+                ><input
+                  style={stringifyStyles({
+                    background:
+                      "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                    border:
+                      "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    width: "100%",
+                    fontSize: "14px",
+                    color: "var(--cv-color-text-main, #fff)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  })}
+                  type="url"
+                  aria-label="Image URL"
+                  placeholder="https://example.com/photo.jpg"
+                  value={imageUrl}
+                  on:input={(e) => {
+                    imageUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmImage();
+                    }
+                  }}
+                />
+              </div>
+              <div
+                style={stringifyStyles({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                })}
+              >
+                <label
+                  style={stringifyStyles({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--cv-color-text-muted, #94a3b8)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  })}>Alt Text (Accessibility & SEO)</label
+                ><input
+                  style={stringifyStyles({
+                    background:
+                      "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                    border:
+                      "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    width: "100%",
+                    fontSize: "14px",
+                    color: "var(--cv-color-text-main, #fff)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  })}
+                  type="text"
+                  aria-label="Image Alt Text"
+                  placeholder="Descriptive text for screen readers"
+                  value={imageAlt}
+                  on:input={(e) => {
+                    imageAlt = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmImage();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "32px",
+              })}
+            >
+              <button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-secondary, #cbd5e1)",
+                  background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                })}
+                type="button"
+                on:click={(event) => {
+                  closeImageModal();
+                }}>Cancel</button
+              ><button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-on-primary, #fff)",
+                  background:
+                    "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                })}
+                type="button"
+                on:click={(event) => {
+                  confirmImage();
+                }}>Insert Image</button
+              >
+            </div>
+          </div>
+        {/if}
+        {#if showVideoModal}
+          <div
+            style={stringifyStyles({
+              background: "var(--cv-color-surface-raised, #1e293b)",
+              border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "400px",
+            })}
+            class="shadow-2xl"
+          >
+            <h3
+              style={stringifyStyles({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                gap: "8px",
+              })}
+              class="flex items-center text-white"
+            >
+              <svg
+                style={stringifyStyles({
+                  color: "var(--cv-color-info, #0ea5e9)",
+                })}
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><rect
+                  x="2"
+                  y="2"
+                  width="20"
+                  height="20"
+                  rx="2.18"
+                  ry="2.18"
+                /><line x1="7" y1="2" x2="7" y2="22" /><line
+                  x1="17"
+                  y1="2"
+                  x2="17"
+                  y2="22"
+                /></svg
+              >
+              Insert Video
+            </h3>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                marginBottom: "24px",
+              })}
+            >
+              <div
+                style={stringifyStyles({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                })}
+              >
+                <label
+                  style={stringifyStyles({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--cv-color-text-muted, #94a3b8)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  })}>Video URL (YouTube, Vimeo, or MP4)</label
+                ><input
+                  style={stringifyStyles({
+                    background:
+                      "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                    border:
+                      "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    width: "100%",
+                    fontSize: "14px",
+                    color: "var(--cv-color-text-main, #fff)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  })}
+                  type="url"
+                  aria-label="Video URL"
+                  placeholder="https://www.youtube.com/watch?v=... or .mp4"
+                  value={videoUrl}
+                  on:input={(e) => {
+                    videoUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmVideo();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "32px",
+              })}
+            >
+              <button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-secondary, #cbd5e1)",
+                  background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                })}
+                type="button"
+                on:click={(event) => {
+                  closeVideoModal();
+                }}>Cancel</button
+              ><button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-on-primary, #fff)",
+                  background: "var(--cv-color-info-fill, #075985)",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                })}
+                type="button"
+                on:click={(event) => {
+                  confirmVideo();
+                }}>Insert Video</button
               >
             </div>
           </div>
@@ -3766,6 +4298,12 @@
                   on:input={(e) => {
                     btnText = e.target.value;
                   }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmButton();
+                    }
+                  }}
                 />
               </div>
               <div
@@ -3803,6 +4341,12 @@
                   value={btnUrl}
                   on:input={(e) => {
                     btnUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmButton();
+                    }
                   }}
                 />
               </div>
@@ -3944,6 +4488,12 @@
                   on:input={(e) => {
                     tableRows = e.target.value;
                   }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmTable();
+                    }
+                  }}
                 />
               </div>
               <div
@@ -3984,6 +4534,12 @@
                   value={tableCols}
                   on:input={(e) => {
                     tableCols = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmTable();
+                    }
                   }}
                 />
               </div>
@@ -4139,6 +4695,12 @@
                 value={linkUrl}
                 on:input={(e) => {
                   linkUrl = e.target.value;
+                }}
+                on:keydown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmLink();
+                  }
                 }}
               />
             </div>
@@ -4474,6 +5036,12 @@
                   value={socialUrl}
                   on:input={(e) => {
                     socialUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmSocial();
+                    }
                   }}
                 />
               </div>
