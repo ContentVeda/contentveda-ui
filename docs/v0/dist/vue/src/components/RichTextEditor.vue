@@ -845,7 +845,12 @@
             type="button"
             class="cv-toolbar-action-btn"
             title="Table"
-            @mousedown="async (e) => e.preventDefault()"
+            @mousedown="
+              async (e) => {
+                e.preventDefault();
+                saveSelection();
+              }
+            "
             @click="async (event) => openTableModal()"
           >
             <svg
@@ -1120,6 +1125,7 @@
               type="button"
               title="View HTML Source Code"
               :class="`cv-toolbar-btn ${mode === 'source' ? 'is-active' : ''}`"
+              @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => toggleMode()"
             >
               <svg
@@ -1144,6 +1150,7 @@
               type="button"
               class="cv-toolbar-btn"
               title="Full Screen"
+              @mousedown="async (e) => e.preventDefault()"
               @click="async (event) => toggleFullScreen()"
             >
               <svg

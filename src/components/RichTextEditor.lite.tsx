@@ -1888,7 +1888,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             <button
               type="button"
               class="cv-toolbar-action-btn"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => { e.preventDefault(); state.saveSelection(); }}
               onClick={() => state.openTableModal()}
               title="Table"
             >
@@ -2034,6 +2034,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
               <button
                 type="button"
                 class={`cv-toolbar-btn ${state.mode === 'source' ? 'is-active' : ''}`}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => state.toggleMode()}
                 title="View HTML Source Code"
               >
@@ -2045,6 +2046,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
               <button
                 type="button"
                 class="cv-toolbar-btn"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => state.toggleFullScreen()}
                 title="Full Screen"
               >

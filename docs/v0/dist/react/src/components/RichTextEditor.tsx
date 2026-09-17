@@ -2633,7 +2633,10 @@ function RichTextEditor(props: RichTextEditorProps) {
               type="button"
               className="cv-toolbar-action-btn"
               title="Table"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                saveSelection();
+              }}
               onClick={(event) => openTableModal()}
             >
               <svg
@@ -2906,6 +2909,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                 className={`cv-toolbar-btn ${
                   mode === "source" ? "is-active" : ""
                 }`}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={(event) => toggleMode()}
               >
                 <svg
@@ -2929,6 +2933,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                 type="button"
                 className="cv-toolbar-btn"
                 title="Full Screen"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={(event) => toggleFullScreen()}
               >
                 <svg

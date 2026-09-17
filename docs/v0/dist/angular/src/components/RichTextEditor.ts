@@ -835,7 +835,10 @@ let activeSavedRange: any = null;
               type="button"
               class="cv-toolbar-action-btn"
               title="Table"
-              (mousedown)="$event.preventDefault()"
+              (mousedown)="
+          $event.preventDefault();
+          saveSelection();
+        "
               (click)="openTableModal()"
             >
               <svg
@@ -1114,6 +1117,7 @@ let activeSavedRange: any = null;
                 type="button"
                 title="View HTML Source Code"
                 [class]="'cv-toolbar-btn ' + (mode === 'source' ? 'is-active' : '')"
+                (mousedown)="$event.preventDefault()"
                 (click)="toggleMode()"
               >
                 <svg
@@ -1136,6 +1140,7 @@ let activeSavedRange: any = null;
                 type="button"
                 class="cv-toolbar-btn"
                 title="Full Screen"
+                (mousedown)="$event.preventDefault()"
                 (click)="toggleFullScreen()"
               >
                 <svg

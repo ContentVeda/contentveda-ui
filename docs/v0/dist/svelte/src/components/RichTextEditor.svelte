@@ -2573,6 +2573,7 @@
           title="Table"
           on:mousedown={(e) => {
             e.preventDefault();
+            saveSelection();
           }}
           on:click={(event) => {
             openTableModal();
@@ -2869,6 +2870,9 @@
             type="button"
             title="View HTML Source Code"
             class={`cv-toolbar-btn ${mode === "source" ? "is-active" : ""}`}
+            on:mousedown={(e) => {
+              e.preventDefault();
+            }}
             on:click={(event) => {
               toggleMode();
             }}
@@ -2893,6 +2897,9 @@
             type="button"
             class="cv-toolbar-btn"
             title="Full Screen"
+            on:mousedown={(e) => {
+              e.preventDefault();
+            }}
             on:click={(event) => {
               toggleFullScreen();
             }}

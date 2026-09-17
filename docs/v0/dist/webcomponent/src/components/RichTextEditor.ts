@@ -2124,6 +2124,7 @@ class RichTextEditor extends HTMLElement {
     // Event handler for 'mousedown' event on button-rich-text-editor-25
     this.onButtonRichTextEditor25Mousedown = (e) => {
       e.preventDefault();
+      this.state.saveSelection();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-25
@@ -2232,9 +2233,19 @@ class RichTextEditor extends HTMLElement {
       this.state.handleClassInputKeyDown(e);
     };
 
+    // Event handler for 'mousedown' event on button-rich-text-editor-36
+    this.onButtonRichTextEditor36Mousedown = (e) => {
+      e.preventDefault();
+    };
+
     // Event handler for 'click' event on button-rich-text-editor-36
     this.onButtonRichTextEditor36Click = (event) => {
       this.state.toggleMode();
+    };
+
+    // Event handler for 'mousedown' event on button-rich-text-editor-37
+    this.onButtonRichTextEditor37Mousedown = (e) => {
+      e.preventDefault();
     };
 
     // Event handler for 'click' event on button-rich-text-editor-37
@@ -5272,6 +5283,14 @@ class RichTextEditor extends HTMLElement {
         el.className = `cv-toolbar-btn ${
           this.state.mode === "source" ? "is-active" : ""
         }`;
+        el.removeEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor36Mousedown
+        );
+        el.addEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor36Mousedown
+        );
         el.removeEventListener("click", this.onButtonRichTextEditor36Click);
         el.addEventListener("click", this.onButtonRichTextEditor36Click);
       });
@@ -5288,6 +5307,14 @@ class RichTextEditor extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='button-rich-text-editor-37']")
       .forEach((el) => {
+        el.removeEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor37Mousedown
+        );
+        el.addEventListener(
+          "mousedown",
+          this.onButtonRichTextEditor37Mousedown
+        );
         el.removeEventListener("click", this.onButtonRichTextEditor37Click);
         el.addEventListener("click", this.onButtonRichTextEditor37Click);
       });
