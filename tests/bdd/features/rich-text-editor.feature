@@ -195,3 +195,24 @@ Feature: RichTextEditor
     And I drag the resize handle right by 100px and down by 0px
     Then it should render without any page errors
     And the saved content should include "width: 500px"
+
+  Scenario: Applying highlight or text color does not freeze the editor or break insert modals
+    Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
+      | initial-content | <p>Color test line</p>                               |
+      | config          | {"toolbar":["foreColor","backColor","table","link"]} |
+    When I click into the editable content
+    And I apply the "Highlight" color "#ffeb3b"
+    Then it should render without any page errors
+    And attribute "contenteditable" on ".wysiwyg-content" should contain "true"
+    When I click the toolbar button titled "Table"
+    Then the component should contain a visible ".fixed.inset-0" element
+    When I click the button labeled "Cancel"
+    Then the component should not contain a ".fixed.inset-0" element
+    When I apply the "Text" color "#ff0000"
+    Then it should render without any page errors
+    And attribute "contenteditable" on ".wysiwyg-content" should contain "true"
+    When I click the toolbar button titled "Table"
+    And I click the button labeled "Insert Table"
+    Then it should render without any page errors
+    And it should contain 1 elements matching "table"
+

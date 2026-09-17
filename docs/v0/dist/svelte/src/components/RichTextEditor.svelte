@@ -224,43 +224,48 @@
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
-        if (editorRef) {
+        const el = getEditorElement();
+        if (el) {
           try {
-            if ((editorRef as any).contains(r.commonAncestorContainer)) {
+            if ((el as any).contains(r.commonAncestorContainer)) {
               activeSavedRange = escapeAtomicRange(r.cloneRange());
             }
-          } catch (e) {
-            activeSavedRange = r.cloneRange();
-          }
-        } else {
-          activeSavedRange = r.cloneRange();
+          } catch (e) {}
         }
       }
     }
   }
   function restoreSelection() {
     if (typeof window !== "undefined") {
-      if (editorRef) {
+      const el = getEditorElement();
+      if (el) {
         try {
-          if (typeof (editorRef as any).focus === "function") {
-            (editorRef as any).focus();
+          if (typeof (el as any).focus === "function") {
+            (el as any).focus();
           }
         } catch (e) {}
         if (activeSavedRange) {
-          const sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(activeSavedRange.cloneRange());
-          }
+          try {
+            if (
+              (el as any).contains(activeSavedRange.commonAncestorContainer)
+            ) {
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(activeSavedRange.cloneRange());
+              }
+            }
+          } catch (e) {}
         }
       }
     }
   }
   function escapeAtomicRange(range: any) {
-    if (!range || !editorRef) return range;
+    const el = getEditorElement();
+    if (!range || !el) return range;
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== editorRef) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -278,10 +283,11 @@
   }
   function insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
-    if (editorRef) {
+    const el = getEditorElement();
+    if (el) {
       try {
-        if (typeof (editorRef as any).focus === "function") {
-          (editorRef as any).focus();
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
         }
       } catch (e) {}
     }
@@ -291,10 +297,7 @@
     if (sel && sel.rangeCount > 0) {
       const cur = sel.getRangeAt(0);
       try {
-        if (
-          editorRef &&
-          (editorRef as any).contains(cur.commonAncestorContainer)
-        ) {
+        if (el && (el as any).contains(cur.commonAncestorContainer)) {
           targetRange = cur;
         }
       } catch (e) {}
@@ -302,8 +305,8 @@
     if (!targetRange && activeSavedRange) {
       try {
         if (
-          editorRef &&
-          (editorRef as any).contains(activeSavedRange.commonAncestorContainer)
+          el &&
+          (el as any).contains(activeSavedRange.commonAncestorContainer)
         ) {
           targetRange = activeSavedRange;
         }
@@ -327,14 +330,14 @@
         sel.addRange(newRange);
         activeSavedRange = newRange.cloneRange();
       }
-    } else if (editorRef) {
+    } else if (el) {
       const template = document.createElement("template");
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       template.innerHTML = html.trim();
-      editorRef.appendChild(template.content);
+      el.appendChild(template.content);
       const newRange = document.createRange();
-      newRange.selectNodeContents(editorRef as Node);
+      newRange.selectNodeContents(el as Node);
       newRange.collapse(false);
       if (sel) {
         sel.removeAllRanges();
@@ -389,6 +392,14 @@
       highlightColor = color;
     }
     restoreSelection();
+    const el = getEditorElement();
+    if (el) {
+      try {
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
+        }
+      } catch (e) {}
+    }
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
@@ -408,8 +419,11 @@
     headingFormat = level;
     syncContent();
     checkFormats();
-    if (editorRef) {
-      editorRef.focus();
+    const el = getEditorElement();
+    if (el) {
+      try {
+        (el as any).focus();
+      } catch (e) {}
     }
   }
   function insertMedia(type: "image" | "video" | "audio") {
@@ -546,8 +560,9 @@
     }
   }
   function getCanonicalHtml() {
-    if (!editorRef) return "";
-    const clone = editorRef.cloneNode(true) as HTMLElement;
+    const editor = getEditorElement();
+    if (!editor) return "";
+    const clone = editor.cloneNode(true) as HTMLElement;
     const selected = clone.querySelectorAll(".cv-resizing-selected");
     selected.forEach((el: any) => {
       el.classList.remove("cv-resizing-selected");
@@ -569,8 +584,10 @@
     return clone.innerHTML;
   }
   function renderEmbeds() {
-    if (!editorRef || typeof window === "undefined") return;
-    const socialEmbeds = editorRef.querySelectorAll(
+    if (typeof window === "undefined") return;
+    const editor = getEditorElement();
+    if (!editor) return;
+    const socialEmbeds = editor.querySelectorAll(
       '.cv-social-embed:not([data-cv-rendered="true"])'
     );
     socialEmbeds.forEach((el: any) => {
@@ -712,7 +729,7 @@
         markRendered();
       }
     });
-    const formulas = editorRef.querySelectorAll(
+    const formulas = editor.querySelectorAll(
       '.cv-math-formula:not([data-cv-rendered="true"])'
     );
     if (formulas.length > 0) {
@@ -779,7 +796,8 @@
     }
   }
   function syncContent() {
-    if (editorRef) {
+    const editor = getEditorElement();
+    if (editor) {
       internalContent = getCanonicalHtml();
       if (onChange) {
         onChange(internalContent);
@@ -1447,16 +1465,18 @@
     syncContent();
   }
   function handleSelectionChange() {
-    if (typeof window !== "undefined" && editorRef) {
+    if (typeof window !== "undefined") {
+      const editor = getEditorElement();
+      if (!editor) return;
       const sel = window.getSelection();
       let inEditor = false;
       try {
         if (
           sel &&
           sel.anchorNode &&
-          typeof (editorRef as any).contains === "function"
+          typeof (editor as any).contains === "function"
         ) {
-          inEditor = (editorRef as any).contains(sel.anchorNode as Node);
+          inEditor = (editor as any).contains(sel.anchorNode as Node);
         }
       } catch (e) {}
       if (inEditor) {

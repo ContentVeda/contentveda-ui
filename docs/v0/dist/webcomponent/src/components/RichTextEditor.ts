@@ -303,47 +303,50 @@ class RichTextEditor extends HTMLElement {
           const sel = window.getSelection();
           if (sel && sel.rangeCount > 0) {
             const r = sel.getRangeAt(0);
-            if (self._editorRef) {
+            const el = self.state.getEditorElement();
+            if (el) {
               try {
-                if (
-                  (self._editorRef as any).contains(r.commonAncestorContainer)
-                ) {
+                if ((el as any).contains(r.commonAncestorContainer)) {
                   activeSavedRange = self.state.escapeAtomicRange(
                     r.cloneRange()
                   );
                 }
-              } catch (e) {
-                activeSavedRange = r.cloneRange();
-              }
-            } else {
-              activeSavedRange = r.cloneRange();
+              } catch (e) {}
             }
           }
         }
       },
       restoreSelection() {
         if (typeof window !== "undefined") {
-          if (self._editorRef) {
+          const el = self.state.getEditorElement();
+          if (el) {
             try {
-              if (typeof (self._editorRef as any).focus === "function") {
-                (self._editorRef as any).focus();
+              if (typeof (el as any).focus === "function") {
+                (el as any).focus();
               }
             } catch (e) {}
             if (activeSavedRange) {
-              const sel = window.getSelection();
-              if (sel) {
-                sel.removeAllRanges();
-                sel.addRange(activeSavedRange.cloneRange());
-              }
+              try {
+                if (
+                  (el as any).contains(activeSavedRange.commonAncestorContainer)
+                ) {
+                  const sel = window.getSelection();
+                  if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(activeSavedRange.cloneRange());
+                  }
+                }
+              } catch (e) {}
             }
           }
         }
       },
       escapeAtomicRange(range: any) {
-        if (!range || !self._editorRef) return range;
+        const el = self.state.getEditorElement();
+        if (!range || !el) return range;
         let node: any = range.startContainer;
         let atomicEl: any = null;
-        while (node && node !== self._editorRef) {
+        while (node && node !== el) {
           if (
             node.nodeType === 1 &&
             node.getAttribute &&
@@ -361,10 +364,11 @@ class RichTextEditor extends HTMLElement {
       },
       insertHtmlAtCursor(html: string) {
         if (typeof window === "undefined") return;
-        if (self._editorRef) {
+        const el = self.state.getEditorElement();
+        if (el) {
           try {
-            if (typeof (self._editorRef as any).focus === "function") {
-              (self._editorRef as any).focus();
+            if (typeof (el as any).focus === "function") {
+              (el as any).focus();
             }
           } catch (e) {}
         }
@@ -374,10 +378,7 @@ class RichTextEditor extends HTMLElement {
         if (sel && sel.rangeCount > 0) {
           const cur = sel.getRangeAt(0);
           try {
-            if (
-              self._editorRef &&
-              (self._editorRef as any).contains(cur.commonAncestorContainer)
-            ) {
+            if (el && (el as any).contains(cur.commonAncestorContainer)) {
               targetRange = cur;
             }
           } catch (e) {}
@@ -385,10 +386,8 @@ class RichTextEditor extends HTMLElement {
         if (!targetRange && activeSavedRange) {
           try {
             if (
-              self._editorRef &&
-              (self._editorRef as any).contains(
-                activeSavedRange.commonAncestorContainer
-              )
+              el &&
+              (el as any).contains(activeSavedRange.commonAncestorContainer)
             ) {
               targetRange = activeSavedRange;
             }
@@ -412,14 +411,14 @@ class RichTextEditor extends HTMLElement {
             sel.addRange(newRange);
             activeSavedRange = newRange.cloneRange();
           }
-        } else if (self._editorRef) {
+        } else if (el) {
           const template = document.createElement("template");
           /* lgtm[js/xss, js/html-constructed-from-input] */
           /* codeql[js/xss, js/html-constructed-from-input] */
           template.innerHTML = html.trim();
-          self._editorRef.appendChild(template.content);
+          el.appendChild(template.content);
           const newRange = document.createRange();
-          newRange.selectNodeContents(self._editorRef as Node);
+          newRange.selectNodeContents(el as Node);
           newRange.collapse(false);
           if (sel) {
             sel.removeAllRanges();
@@ -476,6 +475,14 @@ class RichTextEditor extends HTMLElement {
           self.update();
         }
         self.state.restoreSelection();
+        const el = self.state.getEditorElement();
+        if (el) {
+          try {
+            if (typeof (el as any).focus === "function") {
+              (el as any).focus();
+            }
+          } catch (e) {}
+        }
         if (cmd === "foreColor") {
           document.execCommand("foreColor", false, color);
         } else {
@@ -496,8 +503,11 @@ class RichTextEditor extends HTMLElement {
         self.update();
         self.state.syncContent();
         self.state.checkFormats();
-        if (self._editorRef) {
-          self._editorRef.focus();
+        const el = self.state.getEditorElement();
+        if (el) {
+          try {
+            (el as any).focus();
+          } catch (e) {}
         }
       },
       insertMedia(type: "image" | "video" | "audio") {
@@ -644,8 +654,9 @@ class RichTextEditor extends HTMLElement {
         }
       },
       getCanonicalHtml() {
-        if (!self._editorRef) return "";
-        const clone = self._editorRef.cloneNode(true) as HTMLElement;
+        const editor = self.state.getEditorElement();
+        if (!editor) return "";
+        const clone = editor.cloneNode(true) as HTMLElement;
         const selected = clone.querySelectorAll(".cv-resizing-selected");
         selected.forEach((el: any) => {
           el.classList.remove("cv-resizing-selected");
@@ -667,8 +678,10 @@ class RichTextEditor extends HTMLElement {
         return clone.innerHTML;
       },
       renderEmbeds() {
-        if (!self._editorRef || typeof window === "undefined") return;
-        const socialEmbeds = self._editorRef.querySelectorAll(
+        if (typeof window === "undefined") return;
+        const editor = self.state.getEditorElement();
+        if (!editor) return;
+        const socialEmbeds = editor.querySelectorAll(
           '.cv-social-embed:not([data-cv-rendered="true"])'
         );
         socialEmbeds.forEach((el: any) => {
@@ -812,7 +825,7 @@ class RichTextEditor extends HTMLElement {
             markRendered();
           }
         });
-        const formulas = self._editorRef.querySelectorAll(
+        const formulas = editor.querySelectorAll(
           '.cv-math-formula:not([data-cv-rendered="true"])'
         );
         if (formulas.length > 0) {
@@ -880,7 +893,8 @@ class RichTextEditor extends HTMLElement {
         }
       },
       syncContent() {
-        if (self._editorRef) {
+        const editor = self.state.getEditorElement();
+        if (editor) {
           self.state.internalContent = self.state.getCanonicalHtml();
           self.update();
           if (self.props.onChange) {
@@ -1627,18 +1641,18 @@ class RichTextEditor extends HTMLElement {
         self.state.syncContent();
       },
       handleSelectionChange() {
-        if (typeof window !== "undefined" && self._editorRef) {
+        if (typeof window !== "undefined") {
+          const editor = self.state.getEditorElement();
+          if (!editor) return;
           const sel = window.getSelection();
           let inEditor = false;
           try {
             if (
               sel &&
               sel.anchorNode &&
-              typeof (self._editorRef as any).contains === "function"
+              typeof (editor as any).contains === "function"
             ) {
-              inEditor = (self._editorRef as any).contains(
-                sel.anchorNode as Node
-              );
+              inEditor = (editor as any).contains(sel.anchorNode as Node);
             }
           } catch (e) {}
           if (inEditor) {

@@ -2550,49 +2550,48 @@ export default class RichTextEditor {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
-        if (this.editorRef?.nativeElement) {
+        const el = this.getEditorElement();
+        if (el) {
           try {
-            if (
-              (this.editorRef?.nativeElement as any).contains(
-                r.commonAncestorContainer
-              )
-            ) {
+            if ((el as any).contains(r.commonAncestorContainer)) {
               activeSavedRange = this.escapeAtomicRange(r.cloneRange());
             }
-          } catch (e) {
-            activeSavedRange = r.cloneRange();
-          }
-        } else {
-          activeSavedRange = r.cloneRange();
+          } catch (e) {}
         }
       }
     }
   }
   restoreSelection() {
     if (typeof window !== "undefined") {
-      if (this.editorRef?.nativeElement) {
+      const el = this.getEditorElement();
+      if (el) {
         try {
-          if (
-            typeof (this.editorRef?.nativeElement as any).focus === "function"
-          ) {
-            (this.editorRef?.nativeElement as any).focus();
+          if (typeof (el as any).focus === "function") {
+            (el as any).focus();
           }
         } catch (e) {}
         if (activeSavedRange) {
-          const sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(activeSavedRange.cloneRange());
-          }
+          try {
+            if (
+              (el as any).contains(activeSavedRange.commonAncestorContainer)
+            ) {
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(activeSavedRange.cloneRange());
+              }
+            }
+          } catch (e) {}
         }
       }
     }
   }
   escapeAtomicRange(range: any) {
-    if (!range || !this.editorRef?.nativeElement) return range;
+    const el = this.getEditorElement();
+    if (!range || !el) return range;
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== this.editorRef?.nativeElement) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -2610,12 +2609,11 @@ export default class RichTextEditor {
   }
   insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
-    if (this.editorRef?.nativeElement) {
+    const el = this.getEditorElement();
+    if (el) {
       try {
-        if (
-          typeof (this.editorRef?.nativeElement as any).focus === "function"
-        ) {
-          (this.editorRef?.nativeElement as any).focus();
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
         }
       } catch (e) {}
     }
@@ -2625,12 +2623,7 @@ export default class RichTextEditor {
     if (sel && sel.rangeCount > 0) {
       const cur = sel.getRangeAt(0);
       try {
-        if (
-          this.editorRef?.nativeElement &&
-          (this.editorRef?.nativeElement as any).contains(
-            cur.commonAncestorContainer
-          )
-        ) {
+        if (el && (el as any).contains(cur.commonAncestorContainer)) {
           targetRange = cur;
         }
       } catch (e) {}
@@ -2638,10 +2631,8 @@ export default class RichTextEditor {
     if (!targetRange && activeSavedRange) {
       try {
         if (
-          this.editorRef?.nativeElement &&
-          (this.editorRef?.nativeElement as any).contains(
-            activeSavedRange.commonAncestorContainer
-          )
+          el &&
+          (el as any).contains(activeSavedRange.commonAncestorContainer)
         ) {
           targetRange = activeSavedRange;
         }
@@ -2665,14 +2656,14 @@ export default class RichTextEditor {
         sel.addRange(newRange);
         activeSavedRange = newRange.cloneRange();
       }
-    } else if (this.editorRef?.nativeElement) {
+    } else if (el) {
       const template = document.createElement("template");
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       template.innerHTML = html.trim();
-      this.editorRef?.nativeElement.appendChild(template.content);
+      el.appendChild(template.content);
       const newRange = document.createRange();
-      newRange.selectNodeContents(this.editorRef?.nativeElement as Node);
+      newRange.selectNodeContents(el as Node);
       newRange.collapse(false);
       if (sel) {
         sel.removeAllRanges();
@@ -2727,6 +2718,14 @@ export default class RichTextEditor {
       this.highlightColor = color;
     }
     this.restoreSelection();
+    const el = this.getEditorElement();
+    if (el) {
+      try {
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
+        }
+      } catch (e) {}
+    }
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
@@ -2746,8 +2745,11 @@ export default class RichTextEditor {
     this.headingFormat = level;
     this.syncContent();
     this.checkFormats();
-    if (this.editorRef?.nativeElement) {
-      this.editorRef?.nativeElement.focus();
+    const el = this.getEditorElement();
+    if (el) {
+      try {
+        (el as any).focus();
+      } catch (e) {}
     }
   }
   insertMedia(type: "image" | "video" | "audio") {
@@ -2886,8 +2888,9 @@ export default class RichTextEditor {
     }
   }
   getCanonicalHtml() {
-    if (!this.editorRef?.nativeElement) return "";
-    const clone = this.editorRef?.nativeElement.cloneNode(true) as HTMLElement;
+    const editor = this.getEditorElement();
+    if (!editor) return "";
+    const clone = editor.cloneNode(true) as HTMLElement;
     const selected = clone.querySelectorAll(".cv-resizing-selected");
     selected.forEach((el: any) => {
       el.classList.remove("cv-resizing-selected");
@@ -2909,8 +2912,10 @@ export default class RichTextEditor {
     return clone.innerHTML;
   }
   renderEmbeds() {
-    if (!this.editorRef?.nativeElement || typeof window === "undefined") return;
-    const socialEmbeds = this.editorRef?.nativeElement.querySelectorAll(
+    if (typeof window === "undefined") return;
+    const editor = this.getEditorElement();
+    if (!editor) return;
+    const socialEmbeds = editor.querySelectorAll(
       '.cv-social-embed:not([data-cv-rendered="true"])'
     );
     socialEmbeds.forEach((el: any) => {
@@ -3052,7 +3057,7 @@ export default class RichTextEditor {
         markRendered();
       }
     });
-    const formulas = this.editorRef?.nativeElement.querySelectorAll(
+    const formulas = editor.querySelectorAll(
       '.cv-math-formula:not([data-cv-rendered="true"])'
     );
     if (formulas.length > 0) {
@@ -3119,7 +3124,8 @@ export default class RichTextEditor {
     }
   }
   syncContent() {
-    if (this.editorRef?.nativeElement) {
+    const editor = this.getEditorElement();
+    if (editor) {
       this.internalContent = this.getCanonicalHtml();
       if (this.onChange) {
         this.onChange.emit(this.internalContent);
@@ -3806,18 +3812,18 @@ export default class RichTextEditor {
     this.syncContent();
   }
   handleSelectionChange() {
-    if (typeof window !== "undefined" && this.editorRef?.nativeElement) {
+    if (typeof window !== "undefined") {
+      const editor = this.getEditorElement();
+      if (!editor) return;
       const sel = window.getSelection();
       let inEditor = false;
       try {
         if (
           sel &&
           sel.anchorNode &&
-          typeof (this.editorRef?.nativeElement as any).contains === "function"
+          typeof (editor as any).contains === "function"
         ) {
-          inEditor = (this.editorRef?.nativeElement as any).contains(
-            sel.anchorNode as Node
-          );
+          inEditor = (editor as any).contains(sel.anchorNode as Node);
         }
       } catch (e) {}
       if (inEditor) {
