@@ -304,7 +304,7 @@ let activeSavedRange: any = null;
                     class="cv-color-input"
                     [attr.value]="textColor"
                     (mousedown)="saveSelection()"
-                    (input)="applyColor('foreColor', $event.target.value)"
+                    (input)="applyColorPreview('foreColor', $event.target.value)"
                     (change)="applyColor('foreColor', $event.target.value)" /></label
               ></ng-container>
               <ng-container *ngIf="showToolbarOption('backColor')"
@@ -339,7 +339,7 @@ let activeSavedRange: any = null;
                     class="cv-color-input"
                     [attr.value]="highlightColor"
                     (mousedown)="saveSelection()"
-                    (input)="applyColor('backColor', $event.target.value)"
+                    (input)="applyColorPreview('backColor', $event.target.value)"
                     (change)="applyColor('backColor', $event.target.value)" /></label
               ></ng-container></div
           ></ng-container>
@@ -531,6 +531,10 @@ let activeSavedRange: any = null;
               type="button"
               class="cv-toolbar-action-btn"
               title="Insert Options"
+              (mousedown)="
+          $event.preventDefault();
+          saveSelection();
+        "
               (click)="showInsertMenu = !showInsertMenu"
             >
               <svg
@@ -1235,7 +1239,155 @@ let activeSavedRange: any = null;
           boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
         }"
             (mousedown)="startResize($event)"
-          ></div
+          ></div>
+          <div
+            class="cv-media-toolbar"
+            [ngStyle]="{
+          position: 'absolute',
+          top: (resizeToolbarTop) + 'px',
+          left: (resizeToolbarLeft) + 'px',
+          zIndex: 35
+        }"
+          >
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="25% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('25%')"
+            >
+              25%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="50% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('50%')"
+            >
+              50%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="75% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('75%')"
+            >
+              75%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="100% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('100%')"
+            >
+              100%
+            </button>
+            <div
+              class="cv-toolbar-divider"
+              [ngStyle]="{
+          height: '14px',
+          margin: '0 2px'
+        }"
+            ></div>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Left"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageAlign('left')"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+                <line x1="17" y1="18" x2="3" y2="18"></line>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Center"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageAlign('center')"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="6"></line>
+                <line x1="21" y1="12" x2="3" y2="12"></line>
+                <line x1="18" y1="18" x2="6" y2="18"></line>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Right"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageAlign('right')"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+                <line x1="21" y1="18" x2="7" y2="18"></line>
+              </svg>
+            </button>
+            <div
+              class="cv-toolbar-divider"
+              [ngStyle]="{
+          height: '14px',
+          margin: '0 2px'
+        }"
+            ></div>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn cv-btn-danger"
+              title="Remove Media"
+              (mousedown)="$event.preventDefault()"
+              (click)="deleteSelectedMedia()"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                ></path>
+              </svg>
+            </button></div
         ></ng-container>
         <ng-container
           *ngIf="showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal"
@@ -2417,6 +2569,8 @@ export default class RichTextEditor {
   selectedMediaEl = null;
   resizeHandleTop = 0;
   resizeHandleLeft = 0;
+  resizeToolbarTop = 0;
+  resizeToolbarLeft = 0;
   isResizing = false;
   resizeStartX = 0;
   resizeStartWidth = 0;
@@ -2646,6 +2800,9 @@ export default class RichTextEditor {
       /* codeql[js/xss, js/html-constructed-from-input] */
       template.innerHTML = html.trim();
       const frag = template.content;
+      const resizableEl = frag.querySelector(
+        "img, video, audio, .cv-social-embed, .cv-widget"
+      );
       const lastNode = frag.lastChild;
       targetRange.insertNode(frag);
       if (lastNode && sel) {
@@ -2656,11 +2813,17 @@ export default class RichTextEditor {
         sel.addRange(newRange);
         activeSavedRange = newRange.cloneRange();
       }
+      if (resizableEl) {
+        this.selectMediaElement(resizableEl);
+      }
     } else if (el) {
       const template = document.createElement("template");
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       template.innerHTML = html.trim();
+      const resizableEl = template.content.querySelector(
+        "img, video, audio, .cv-social-embed, .cv-widget"
+      );
       el.appendChild(template.content);
       const newRange = document.createRange();
       newRange.selectNodeContents(el as Node);
@@ -2669,6 +2832,9 @@ export default class RichTextEditor {
         sel.removeAllRanges();
         sel.addRange(newRange);
         activeSavedRange = newRange.cloneRange();
+      }
+      if (resizableEl) {
+        this.selectMediaElement(resizableEl);
       }
     }
     this.ensureEditableStructure();
@@ -2710,28 +2876,43 @@ export default class RichTextEditor {
     this.syncContent();
     this.checkFormats();
   }
-  applyColor(cmd: string, color: string) {
+  applyColorPreview(cmd: string, color: string) {
     if (!color) return;
-    if (cmd === "foreColor") {
-      this.textColor = color;
-    } else {
-      this.highlightColor = color;
+    const previewEl = this.getEditorElement();
+    if (previewEl) {
+      try {
+        (previewEl as any).focus();
+      } catch (focusErr) {}
     }
     this.restoreSelection();
-    const el = this.getEditorElement();
-    if (el) {
-      try {
-        if (typeof (el as any).focus === "function") {
-          (el as any).focus();
-        }
-      } catch (e) {}
-    }
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
-      if (!document.execCommand("hiliteColor", false, color)) {
+      const applied = document.execCommand("hiliteColor", false, color);
+      if (!applied) {
         document.execCommand("backColor", false, color);
       }
+    }
+    this.saveSelection();
+  }
+  applyColor(cmd: string, color: string) {
+    if (!color) return;
+    const colorEl = this.getEditorElement();
+    if (colorEl) {
+      try {
+        (colorEl as any).focus();
+      } catch (focusErr2) {}
+    }
+    this.restoreSelection();
+    if (cmd === "foreColor") {
+      document.execCommand("foreColor", false, color);
+      this.textColor = color;
+    } else {
+      const colorApplied = document.execCommand("hiliteColor", false, color);
+      if (!colorApplied) {
+        document.execCommand("backColor", false, color);
+      }
+      this.highlightColor = color;
     }
     this.saveSelection();
     this.syncContent();
@@ -2771,7 +2952,7 @@ export default class RichTextEditor {
         const alt = (altText || "").trim() || filenameGuess || "Image";
         const escapedAlt = this.escapeHtml(alt);
         const escapedUrl = this.escapeHtml(url);
-        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
       } else if (type === "video") {
         const ytMatch = url.match(
           /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
@@ -3580,12 +3761,9 @@ export default class RichTextEditor {
     return false;
   }
   updateResizeHandlePosition() {
-    if (!this.selectedMediaEl || !this.editorRef?.nativeElement) return;
-    // The handle is rendered as a sibling of this.editorRef inside the
-    // scrollable .editor-content wrapper (the nearest `position:
-    // relative` ancestor), not inside this.editorRef itself -- position and
-    // scroll offsets must be measured against that wrapper, not this.editorRef.
-    const container = (this.editorRef?.nativeElement as any).parentElement;
+    const editor = this.getEditorElement();
+    if (!this.selectedMediaEl || !editor) return;
+    const container = (editor as any).parentElement;
     if (!container) return;
     const elRect = this.selectedMediaEl.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -3593,6 +3771,14 @@ export default class RichTextEditor {
       elRect.bottom - containerRect.top + container.scrollTop - 7;
     this.resizeHandleLeft =
       elRect.right - containerRect.left + container.scrollLeft - 7;
+    let tbTop = elRect.top - containerRect.top + container.scrollTop - 40;
+    if (tbTop < 8) {
+      tbTop = elRect.bottom - containerRect.top + container.scrollTop + 8;
+    }
+    let tbLeft = elRect.left - containerRect.left + container.scrollLeft;
+    if (tbLeft < 8) tbLeft = 8;
+    this.resizeToolbarTop = tbTop;
+    this.resizeToolbarLeft = tbLeft;
   }
   selectMediaElement(el: any) {
     if (this.selectedMediaEl && this.selectedMediaEl !== el) {
@@ -3601,6 +3787,58 @@ export default class RichTextEditor {
     this.selectedMediaEl = el;
     el.classList.add("cv-resizing-selected");
     this.updateResizeHandlePosition();
+    if (el.tagName === "IMG" && !el.complete) {
+      el.addEventListener(
+        "load",
+        () => {
+          if (this.selectedMediaEl === el) {
+            this.updateResizeHandlePosition();
+          }
+        },
+        {
+          once: true,
+        }
+      );
+    }
+  }
+  deleteSelectedMedia() {
+    if (this.selectedMediaEl) {
+      const el = this.selectedMediaEl;
+      this.deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      this.ensureEditableStructure();
+      this.syncContent();
+    }
+  }
+  setImageSize(size: string) {
+    if (!this.selectedMediaEl) return;
+    const el = this.selectedMediaEl;
+    el.style.width = size;
+    el.style.maxWidth = "100%";
+    el.style.height = "auto";
+    this.updateResizeHandlePosition();
+    this.syncContent();
+  }
+  setImageAlign(align: string) {
+    if (!this.selectedMediaEl) return;
+    const el = this.selectedMediaEl;
+    if (align === "center") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "auto";
+    } else if (align === "left") {
+      el.style.display = "block";
+      el.style.marginLeft = "0";
+      el.style.marginRight = "auto";
+    } else if (align === "right") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "0";
+    }
+    this.updateResizeHandlePosition();
+    this.syncContent();
   }
   deselectMediaElement() {
     if (this.selectedMediaEl) {
@@ -3765,8 +4003,12 @@ export default class RichTextEditor {
   handleEditorClick(e: any) {
     if (this.isReadOnly()) return;
     const target = e.target;
-    if (this.isResizableTarget(target)) {
-      this.selectMediaElement(target);
+    const resizable =
+      target && target.closest
+        ? target.closest("img, video, audio, .cv-social-embed, .cv-widget")
+        : null;
+    if (resizable && this.isResizableTarget(resizable)) {
+      this.selectMediaElement(resizable);
     } else {
       this.deselectMediaElement();
       this.normalizeSelection();
@@ -3789,9 +4031,8 @@ export default class RichTextEditor {
     const delta = e.clientX - this.resizeStartX;
     let newWidth = Math.round(this.resizeStartWidth + delta);
     const minWidth = 80;
-    const maxWidth = this.editorRef?.nativeElement
-      ? (this.editorRef?.nativeElement as any).clientWidth
-      : 2000;
+    const editor = this.getEditorElement();
+    const maxWidth = editor ? (editor as any).clientWidth : 2000;
     if (newWidth < minWidth) newWidth = minWidth;
     if (newWidth > maxWidth) newWidth = maxWidth;
     const el = this.selectedMediaEl;

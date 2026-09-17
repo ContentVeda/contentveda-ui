@@ -73,6 +73,10 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [resizeHandleLeft, setResizeHandleLeft] = createSignal(0);
 
+  const [resizeToolbarTop, setResizeToolbarTop] = createSignal(0);
+
+  const [resizeToolbarLeft, setResizeToolbarLeft] = createSignal(0);
+
   const [isResizing, setIsResizing] = createSignal(false);
 
   const [resizeStartX, setResizeStartX] = createSignal(0);
@@ -405,6 +409,9 @@ function RichTextEditor(props: RichTextEditorProps) {
       /* codeql[js/xss, js/html-constructed-from-input] */
       template.innerHTML = html.trim();
       const frag = template.content;
+      const resizableEl = frag.querySelector(
+        "img, video, audio, .cv-social-embed, .cv-widget"
+      );
       const lastNode = frag.lastChild;
       targetRange.insertNode(frag);
       if (lastNode && sel) {
@@ -415,11 +422,17 @@ function RichTextEditor(props: RichTextEditorProps) {
         sel.addRange(newRange);
         activeSavedRange = newRange.cloneRange();
       }
+      if (resizableEl) {
+        selectMediaElement(resizableEl);
+      }
     } else if (el) {
       const template = document.createElement("template");
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
       template.innerHTML = html.trim();
+      const resizableEl = template.content.querySelector(
+        "img, video, audio, .cv-social-embed, .cv-widget"
+      );
       el.appendChild(template.content);
       const newRange = document.createRange();
       newRange.selectNodeContents(el as Node);
@@ -428,6 +441,9 @@ function RichTextEditor(props: RichTextEditorProps) {
         sel.removeAllRanges();
         sel.addRange(newRange);
         activeSavedRange = newRange.cloneRange();
+      }
+      if (resizableEl) {
+        selectMediaElement(resizableEl);
       }
     }
     ensureEditableStructure();
@@ -472,28 +488,44 @@ function RichTextEditor(props: RichTextEditorProps) {
     checkFormats();
   }
 
-  function applyColor(cmd: string, color: string) {
+  function applyColorPreview(cmd: string, color: string) {
     if (!color) return;
-    if (cmd === "foreColor") {
-      setTextColor(color);
-    } else {
-      setHighlightColor(color);
+    const previewEl = getEditorElement();
+    if (previewEl) {
+      try {
+        (previewEl as any).focus();
+      } catch (focusErr) {}
     }
     restoreSelection();
-    const el = getEditorElement();
-    if (el) {
-      try {
-        if (typeof (el as any).focus === "function") {
-          (el as any).focus();
-        }
-      } catch (e) {}
-    }
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
-      if (!document.execCommand("hiliteColor", false, color)) {
+      const applied = document.execCommand("hiliteColor", false, color);
+      if (!applied) {
         document.execCommand("backColor", false, color);
       }
+    }
+    saveSelection();
+  }
+
+  function applyColor(cmd: string, color: string) {
+    if (!color) return;
+    const colorEl = getEditorElement();
+    if (colorEl) {
+      try {
+        (colorEl as any).focus();
+      } catch (focusErr2) {}
+    }
+    restoreSelection();
+    if (cmd === "foreColor") {
+      document.execCommand("foreColor", false, color);
+      setTextColor(color);
+    } else {
+      const colorApplied = document.execCommand("hiliteColor", false, color);
+      if (!colorApplied) {
+        document.execCommand("backColor", false, color);
+      }
+      setHighlightColor(color);
     }
     saveSelection();
     syncContent();
@@ -535,7 +567,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         const alt = (altText || "").trim() || filenameGuess || "Image";
         const escapedAlt = escapeHtml(alt);
         const escapedUrl = escapeHtml(url);
-        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
       } else if (type === "video") {
         const ytMatch = url.match(
           /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
@@ -1377,12 +1409,9 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function updateResizeHandlePosition() {
-    if (!selectedMediaEl() || !editorRef) return;
-    // The handle is rendered as a sibling of editorRef inside the
-    // scrollable .editor-content wrapper (the nearest `position:
-    // relative` ancestor), not inside editorRef itself -- position and
-    // scroll offsets must be measured against that wrapper, not editorRef.
-    const container = (editorRef as any).parentElement;
+    const editor = getEditorElement();
+    if (!selectedMediaEl() || !editor) return;
+    const container = (editor as any).parentElement;
     if (!container) return;
     const elRect = selectedMediaEl().getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -1392,6 +1421,14 @@ function RichTextEditor(props: RichTextEditorProps) {
     setResizeHandleLeft(
       elRect.right - containerRect.left + container.scrollLeft - 7
     );
+    let tbTop = elRect.top - containerRect.top + container.scrollTop - 40;
+    if (tbTop < 8) {
+      tbTop = elRect.bottom - containerRect.top + container.scrollTop + 8;
+    }
+    let tbLeft = elRect.left - containerRect.left + container.scrollLeft;
+    if (tbLeft < 8) tbLeft = 8;
+    setResizeToolbarTop(tbTop);
+    setResizeToolbarLeft(tbLeft);
   }
 
   function selectMediaElement(el: any) {
@@ -1401,6 +1438,61 @@ function RichTextEditor(props: RichTextEditorProps) {
     setSelectedMediaEl(el);
     el.classList.add("cv-resizing-selected");
     updateResizeHandlePosition();
+    if (el.tagName === "IMG" && !el.complete) {
+      el.addEventListener(
+        "load",
+        () => {
+          if (selectedMediaEl() === el) {
+            updateResizeHandlePosition();
+          }
+        },
+        {
+          once: true,
+        }
+      );
+    }
+  }
+
+  function deleteSelectedMedia() {
+    if (selectedMediaEl()) {
+      const el = selectedMediaEl();
+      deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      ensureEditableStructure();
+      syncContent();
+    }
+  }
+
+  function setImageSize(size: string) {
+    if (!selectedMediaEl()) return;
+    const el = selectedMediaEl();
+    el.style.width = size;
+    el.style.maxWidth = "100%";
+    el.style.height = "auto";
+    updateResizeHandlePosition();
+    syncContent();
+  }
+
+  function setImageAlign(align: string) {
+    if (!selectedMediaEl()) return;
+    const el = selectedMediaEl();
+    if (align === "center") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "auto";
+    } else if (align === "left") {
+      el.style.display = "block";
+      el.style.marginLeft = "0";
+      el.style.marginRight = "auto";
+    } else if (align === "right") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "0";
+    }
+    updateResizeHandlePosition();
+    syncContent();
   }
 
   function deselectMediaElement() {
@@ -1576,8 +1668,12 @@ function RichTextEditor(props: RichTextEditorProps) {
   function handleEditorClick(e: any) {
     if (isReadOnly()) return;
     const target = e.target;
-    if (isResizableTarget(target)) {
-      selectMediaElement(target);
+    const resizable =
+      target && target.closest
+        ? target.closest("img, video, audio, .cv-social-embed, .cv-widget")
+        : null;
+    if (resizable && isResizableTarget(resizable)) {
+      selectMediaElement(resizable);
     } else {
       deselectMediaElement();
       normalizeSelection();
@@ -1602,7 +1698,8 @@ function RichTextEditor(props: RichTextEditorProps) {
     const delta = e.clientX - resizeStartX();
     let newWidth = Math.round(resizeStartWidth() + delta);
     const minWidth = 80;
-    const maxWidth = editorRef ? (editorRef as any).clientWidth : 2000;
+    const editor = getEditorElement();
+    const maxWidth = editor ? (editor as any).clientWidth : 2000;
     if (newWidth < minWidth) newWidth = minWidth;
     if (newWidth > maxWidth) newWidth = maxWidth;
     const el = selectedMediaEl();
@@ -2005,7 +2102,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                       value={textColor()}
                       onMouseDown={(event) => saveSelection()}
                       onInput={(e) =>
-                        applyColor(
+                        applyColorPreview(
                           "foreColor",
                           (e.target as HTMLInputElement).value
                         )
@@ -2053,7 +2150,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                       value={highlightColor()}
                       onMouseDown={(event) => saveSelection()}
                       onInput={(e) =>
-                        applyColor(
+                        applyColorPreview(
                           "backColor",
                           (e.target as HTMLInputElement).value
                         )
@@ -2278,6 +2375,10 @@ function RichTextEditor(props: RichTextEditorProps) {
                 class="cv-toolbar-action-btn"
                 type="button"
                 title="Insert Options"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  saveSelection();
+                }}
                 onClick={(event) => setShowInsertMenu(!showInsertMenu())}
               >
                 <svg
@@ -2980,6 +3081,153 @@ function RichTextEditor(props: RichTextEditorProps) {
               }}
               onMouseDown={(e) => startResize(e)}
             ></div>
+            <div
+              class="cv-media-toolbar"
+              style={{
+                position: "absolute",
+                top: `${resizeToolbarTop()}px`,
+                left: `${resizeToolbarLeft()}px`,
+                "z-index": 35,
+              }}
+            >
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="25% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("25%")}
+              >
+                25%
+              </button>
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="50% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("50%")}
+              >
+                50%
+              </button>
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="75% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("75%")}
+              >
+                75%
+              </button>
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="100% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("100%")}
+              >
+                100%
+              </button>
+              <div
+                class="cv-toolbar-divider"
+                style={{
+                  height: "14px",
+                  margin: "0 2px",
+                }}
+              ></div>
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="Align Left"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageAlign("left")}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="21" y1="6" x2="3" y2="6"></line>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
+                  <line x1="17" y1="18" x2="3" y2="18"></line>
+                </svg>
+              </button>
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="Align Center"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageAlign("center")}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="6"></line>
+                  <line x1="21" y1="12" x2="3" y2="12"></line>
+                  <line x1="18" y1="18" x2="6" y2="18"></line>
+                </svg>
+              </button>
+              <button
+                class="cv-media-toolbar-btn"
+                type="button"
+                title="Align Right"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageAlign("right")}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="21" y1="6" x2="3" y2="6"></line>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                  <line x1="21" y1="18" x2="7" y2="18"></line>
+                </svg>
+              </button>
+              <div
+                class="cv-toolbar-divider"
+                style={{
+                  height: "14px",
+                  margin: "0 2px",
+                }}
+              ></div>
+              <button
+                class="cv-media-toolbar-btn cv-btn-danger"
+                type="button"
+                title="Remove Media"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => deleteSelectedMedia()}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
           </Show>
           <Show
             when={

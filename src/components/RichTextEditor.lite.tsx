@@ -107,6 +107,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     selectedMediaEl: null as any,
     resizeHandleTop: 0,
     resizeHandleLeft: 0,
+    resizeToolbarTop: 0,
+    resizeToolbarLeft: 0,
     isResizing: false,
     resizeStartX: 0,
     resizeStartWidth: 0,
@@ -321,6 +323,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         /* codeql[js/xss, js/html-constructed-from-input] */
         template.innerHTML = html.trim();
         const frag = template.content;
+        const resizableEl = frag.querySelector('img, video, audio, .cv-social-embed, .cv-widget');
         const lastNode = frag.lastChild;
         targetRange.insertNode(frag);
         if (lastNode && sel) {
@@ -331,11 +334,15 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           sel.addRange(newRange);
           activeSavedRange = newRange.cloneRange();
         }
+        if (resizableEl) {
+          state.selectMediaElement(resizableEl);
+        }
       } else if (el) {
         const template = document.createElement('template');
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
         template.innerHTML = html.trim();
+        const resizableEl = template.content.querySelector('img, video, audio, .cv-social-embed, .cv-widget');
         el.appendChild(template.content);
         const newRange = document.createRange();
         newRange.selectNodeContents(el as Node);
@@ -344,6 +351,9 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           activeSavedRange = newRange.cloneRange();
+        }
+        if (resizableEl) {
+          state.selectMediaElement(resizableEl);
         }
       }
       state.ensureEditableStructure();
@@ -381,28 +391,47 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.syncContent();
       state.checkFormats();
     },
-    applyColor(cmd: string, color: string) {
+    // applyColorPreview: called on every onInput (continuous drag) event.
+    // Must NOT mutate reactive state (textColor / highlightColor) because any
+    // reactive mutation causes a framework re-render that resets the editor's
+    // contenteditable attribute, clears the browser selection and invalidates
+    // activeSavedRange -- so all subsequent inserts silently fail.
+    applyColorPreview(cmd: string, color: string) {
       if (!color) return;
-      if (cmd === 'foreColor') {
-        state.textColor = color;
-      } else {
-        state.highlightColor = color;
+      const previewEl = state.getEditorElement();
+      if (previewEl) {
+        try { (previewEl as any).focus(); } catch (focusErr) {}
       }
       state.restoreSelection();
-      const el = state.getEditorElement();
-      if (el) {
-        try {
-          if (typeof (el as any).focus === 'function') {
-            (el as any).focus();
-          }
-        } catch (e) {}
-      }
       if (cmd === 'foreColor') {
         document.execCommand('foreColor', false, color);
       } else {
-        if (!document.execCommand('hiliteColor', false, color)) {
+        const applied = document.execCommand('hiliteColor', false, color);
+        if (!applied) {
           document.execCommand('backColor', false, color);
         }
+      }
+      state.saveSelection();
+    },
+    // applyColor: called only on onChange (picker closed / committed).
+    // Safe to update reactive state here because execCommand has already
+    // committed to the DOM before the re-render can touch contenteditable.
+    applyColor(cmd: string, color: string) {
+      if (!color) return;
+      const colorEl = state.getEditorElement();
+      if (colorEl) {
+        try { (colorEl as any).focus(); } catch (focusErr2) {}
+      }
+      state.restoreSelection();
+      if (cmd === 'foreColor') {
+        document.execCommand('foreColor', false, color);
+        state.textColor = color;
+      } else {
+        const colorApplied = document.execCommand('hiliteColor', false, color);
+        if (!colorApplied) {
+          document.execCommand('backColor', false, color);
+        }
+        state.highlightColor = color;
       }
       state.saveSelection();
       state.syncContent();
@@ -440,7 +469,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           const alt = (altText || '').trim() || filenameGuess || 'Image';
           const escapedAlt = state.escapeHtml(alt);
           const escapedUrl = state.escapeHtml(url);
-          html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+          html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
         } else if (type === 'video') {
           const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/);
           const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
@@ -1150,17 +1179,23 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       return false;
     },
     updateResizeHandlePosition() {
-      if (!state.selectedMediaEl || !editorRef) return;
-      // The handle is rendered as a sibling of editorRef inside the
-      // scrollable .editor-content wrapper (the nearest `position:
-      // relative` ancestor), not inside editorRef itself -- position and
-      // scroll offsets must be measured against that wrapper, not editorRef.
-      const container = (editorRef as any).parentElement;
+      const editor = state.getEditorElement();
+      if (!state.selectedMediaEl || !editor) return;
+      const container = (editor as any).parentElement;
       if (!container) return;
       const elRect = state.selectedMediaEl.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
       state.resizeHandleTop = elRect.bottom - containerRect.top + container.scrollTop - 7;
       state.resizeHandleLeft = elRect.right - containerRect.left + container.scrollLeft - 7;
+
+      let tbTop = elRect.top - containerRect.top + container.scrollTop - 40;
+      if (tbTop < 8) {
+        tbTop = elRect.bottom - containerRect.top + container.scrollTop + 8;
+      }
+      let tbLeft = elRect.left - containerRect.left + container.scrollLeft;
+      if (tbLeft < 8) tbLeft = 8;
+      state.resizeToolbarTop = tbTop;
+      state.resizeToolbarLeft = tbLeft;
     },
     selectMediaElement(el: any) {
       if (state.selectedMediaEl && state.selectedMediaEl !== el) {
@@ -1169,6 +1204,52 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.selectedMediaEl = el;
       el.classList.add('cv-resizing-selected');
       state.updateResizeHandlePosition();
+      if (el.tagName === 'IMG' && !el.complete) {
+        el.addEventListener('load', () => {
+          if (state.selectedMediaEl === el) {
+            state.updateResizeHandlePosition();
+          }
+        }, { once: true });
+      }
+    },
+    deleteSelectedMedia() {
+      if (state.selectedMediaEl) {
+        const el = state.selectedMediaEl;
+        state.deselectMediaElement();
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        state.ensureEditableStructure();
+        state.syncContent();
+      }
+    },
+    setImageSize(size: string) {
+      if (!state.selectedMediaEl) return;
+      const el = state.selectedMediaEl;
+      el.style.width = size;
+      el.style.maxWidth = '100%';
+      el.style.height = 'auto';
+      state.updateResizeHandlePosition();
+      state.syncContent();
+    },
+    setImageAlign(align: string) {
+      if (!state.selectedMediaEl) return;
+      const el = state.selectedMediaEl;
+      if (align === 'center') {
+        el.style.display = 'block';
+        el.style.marginLeft = 'auto';
+        el.style.marginRight = 'auto';
+      } else if (align === 'left') {
+        el.style.display = 'block';
+        el.style.marginLeft = '0';
+        el.style.marginRight = 'auto';
+      } else if (align === 'right') {
+        el.style.display = 'block';
+        el.style.marginLeft = 'auto';
+        el.style.marginRight = '0';
+      }
+      state.updateResizeHandlePosition();
+      state.syncContent();
     },
     deselectMediaElement() {
       if (state.selectedMediaEl) {
@@ -1311,8 +1392,9 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     handleEditorClick(e: any) {
       if (state.isReadOnly()) return;
       const target = e.target;
-      if (state.isResizableTarget(target)) {
-        state.selectMediaElement(target);
+      const resizable = target && target.closest ? target.closest('img, video, audio, .cv-social-embed, .cv-widget') : null;
+      if (resizable && state.isResizableTarget(resizable)) {
+        state.selectMediaElement(resizable);
       } else {
         state.deselectMediaElement();
         state.normalizeSelection();
@@ -1335,7 +1417,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       const delta = e.clientX - state.resizeStartX;
       let newWidth = Math.round(state.resizeStartWidth + delta);
       const minWidth = 80;
-      const maxWidth = editorRef ? (editorRef as any).clientWidth : 2000;
+      const editor = state.getEditorElement();
+      const maxWidth = editor ? (editor as any).clientWidth : 2000;
       if (newWidth < minWidth) newWidth = minWidth;
       if (newWidth > maxWidth) newWidth = maxWidth;
       const el = state.selectedMediaEl;
@@ -1625,7 +1708,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                     class="cv-color-input"
                     value={state.textColor}
                     onMouseDown={() => state.saveSelection()}
-                    onInput={(e) => state.applyColor('foreColor', (e.target as HTMLInputElement).value)}
+                    onInput={(e) => state.applyColorPreview('foreColor', (e.target as HTMLInputElement).value)}
                     onChange={(e) => state.applyColor('foreColor', (e.target as HTMLInputElement).value)}
                   />
                 </label>
@@ -1644,7 +1727,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                     class="cv-color-input"
                     value={state.highlightColor}
                     onMouseDown={() => state.saveSelection()}
-                    onInput={(e) => state.applyColor('backColor', (e.target as HTMLInputElement).value)}
+                    onInput={(e) => state.applyColorPreview('backColor', (e.target as HTMLInputElement).value)}
                     onChange={(e) => state.applyColor('backColor', (e.target as HTMLInputElement).value)}
                   />
                 </label>
@@ -1749,6 +1832,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             <button
               type="button"
               class="cv-toolbar-action-btn"
+              onMouseDown={(e) => { e.preventDefault(); state.saveSelection(); }}
               onClick={() => state.showInsertMenu = !state.showInsertMenu}
               title="Insert Options"
             >
@@ -2029,6 +2113,91 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             }}
             onMouseDown={(e) => state.startResize(e)}
           ></div>
+
+          <div
+            class="cv-media-toolbar"
+            style={{
+              position: 'absolute',
+              top: `${state.resizeToolbarTop}px`,
+              left: `${state.resizeToolbarLeft}px`,
+              zIndex: 35
+            }}
+          >
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="25% width"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageSize('25%')}
+            >
+              25%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="50% width"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageSize('50%')}
+            >
+              50%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="75% width"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageSize('75%')}
+            >
+              75%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="100% width"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageSize('100%')}
+            >
+              100%
+            </button>
+            <div class="cv-toolbar-divider" style={{ height: '14px', margin: '0 2px' }}></div>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Left"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageAlign('left')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Center"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageAlign('center')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="6"/><line x1="21" y1="12" x2="3" y2="12"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Right"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.setImageAlign('right')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="12" x2="9" y2="12"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+            </button>
+            <div class="cv-toolbar-divider" style={{ height: '14px', margin: '0 2px' }}></div>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn cv-btn-danger"
+              title="Remove Media"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => state.deleteSelectedMedia()}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </Show>
 
         {/* Premium Modals with Guaranteed Inline CSS to prevent Tailwind purging */}

@@ -564,6 +564,59 @@
   outline: 2px solid var(--cv-color-primary, #245066) !important;
   outline-offset: 2px !important;
 }
-.cv-rich-text-editor .cv-resize-handle:hover {
-  transform: scale(1.15);
+.cv-rich-text-editor .cv-resize-handle {
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  user-select: none;
 }
+.cv-rich-text-editor .cv-resize-handle:hover {
+  transform: scale(1.25);
+  background: var(--cv-color-primary-hover, #0284c7) !important;
+}
+
+/* Quick Media Action Toolbar */
+.cv-rich-text-editor .cv-media-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  background: var(--cv-color-surface-raised, #1e293b);
+  border: 1px solid var(--cv-color-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+  z-index: 35;
+  user-select: none;
+  animation: cvMediaFadeIn 0.15s ease-out;
+}
+
+@keyframes cvMediaFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cv-rich-text-editor .cv-media-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--cv-color-text-main, #e2e8f0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.cv-rich-text-editor .cv-media-toolbar-btn:hover {
+  background: var(--cv-color-surface-hover, rgba(255, 255, 255, 0.1));
+  color: #fff;
+}
+
+.cv-rich-text-editor .cv-media-toolbar-btn.cv-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
