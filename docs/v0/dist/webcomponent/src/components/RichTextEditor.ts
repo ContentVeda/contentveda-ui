@@ -42,7 +42,19 @@ class RichTextEditor extends HTMLElement {
     this.state = {
       mode: "visual",
       isFullscreen: false,
+      isMounted: false,
       internalContent: self.props.content || self.props.initialContent || "",
+      getEditorElement() {
+        if (typeof window === "undefined") return null;
+        return (
+          (self._editorRef as any) ||
+          (self._rootRef
+            ? ((self._rootRef as any).querySelector(
+                ".wysiwyg-content"
+              ) as HTMLDivElement)
+            : null)
+        );
+      },
       getTrustedHttpUrl(rawUrl: string) {
         try {
           const parsed = new URL(
@@ -1417,13 +1429,14 @@ class RichTextEditor extends HTMLElement {
         }
       },
       ensureEditableStructure() {
-        if (typeof window === "undefined" || !self._editorRef) return;
-        const html = (self._editorRef.innerHTML || "").trim();
+        const el = self.state.getEditorElement();
+        if (!el) return;
+        const html = (el.innerHTML || "").trim();
         if (!html || html === "<br>" || html === "<p></p>") {
-          self._editorRef.innerHTML = "<p><br></p>";
+          el.innerHTML = "<p><br></p>";
           return;
         }
-        const last = self._editorRef.lastElementChild;
+        const last = el.lastElementChild;
         if (
           last &&
           (last.getAttribute("contenteditable") === "false" ||
@@ -1434,9 +1447,9 @@ class RichTextEditor extends HTMLElement {
         ) {
           const p = document.createElement("p");
           p.innerHTML = "<br>";
-          self._editorRef.appendChild(p);
+          el.appendChild(p);
         }
-        const first = self._editorRef.firstElementChild;
+        const first = el.firstElementChild;
         if (
           first &&
           (first.getAttribute("contenteditable") === "false" ||
@@ -1447,16 +1460,13 @@ class RichTextEditor extends HTMLElement {
         ) {
           const p = document.createElement("p");
           p.innerHTML = "<br>";
-          self._editorRef.insertBefore(p, first);
+          el.insertBefore(p, first);
         }
       },
       normalizeSelection() {
-        if (
-          typeof window === "undefined" ||
-          !self._editorRef ||
-          self.state.isReadOnly()
-        )
-          return;
+        if (self.state.isReadOnly()) return;
+        const el = self.state.getEditorElement();
+        if (!el) return;
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return;
         let range: any = null;
@@ -1467,7 +1477,7 @@ class RichTextEditor extends HTMLElement {
         }
         let node: any = range.startContainer;
         let atomicEl: any = null;
-        while (node && node !== self._editorRef) {
+        while (node && node !== el) {
           if (
             node.nodeType === 1 &&
             node.getAttribute &&
@@ -1503,22 +1513,19 @@ class RichTextEditor extends HTMLElement {
         }
       },
       focusEditorAtEnd() {
-        if (
-          typeof window === "undefined" ||
-          !self._editorRef ||
-          self.state.isReadOnly()
-        )
-          return;
+        if (self.state.isReadOnly()) return;
+        const el = self.state.getEditorElement();
+        if (!el) return;
         self.state.ensureEditableStructure();
         try {
-          if (typeof (self._editorRef as any).focus === "function") {
-            (self._editorRef as any).focus();
+          if (typeof (el as any).focus === "function") {
+            (el as any).focus();
           }
         } catch (e) {}
         const sel = window.getSelection();
         if (sel) {
           const range = document.createRange();
-          range.selectNodeContents(self._editorRef as Node);
+          range.selectNodeContents(el as Node);
           range.collapse(false);
           sel.removeAllRanges();
           sel.addRange(range);
@@ -3874,17 +3881,18 @@ class RichTextEditor extends HTMLElement {
 
   onMount() {
     // onMount
+    this.state.isMounted = true;
+    this.update();
     if (!this.state.internalContent) {
       this.state.internalContent =
         this.props.content || this.props.initialContent || "";
       this.update();
     }
-    if (self._editorRef) {
+    const el = this.state.getEditorElement();
+    if (el) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      self._editorRef.innerHTML = this.state.sanitizeHtml(
-        this.state.internalContent
-      );
+      el.innerHTML = this.state.sanitizeHtml(this.state.internalContent);
       this.state.ensureEditableStructure();
       this.state.renderEmbeds();
     }
@@ -3917,17 +3925,17 @@ class RichTextEditor extends HTMLElement {
     (function (__prev, __next) {
       const __hasChange = __prev.find((val, index) => val !== __next[index]);
       if (__hasChange !== undefined) {
+        if (!self.state.isMounted) return;
+        const el = self.state.getEditorElement();
+        if (!el) return;
         if (
-          self._editorRef &&
           typeof self.props.content === "string" &&
           self.props.content !== self.state.internalContent
         ) {
           self.state.internalContent = self.props.content;
           /* lgtm[js/xss, js/html-constructed-from-input] */
           /* codeql[js/xss, js/html-constructed-from-input] */
-          self._editorRef.innerHTML = self.state.sanitizeHtml(
-            self.state.internalContent
-          );
+          el.innerHTML = self.state.sanitizeHtml(self.state.internalContent);
           self.state.ensureEditableStructure();
           self.state.renderEmbeds();
         }

@@ -27,9 +27,23 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [isFullscreen, setIsFullscreen] = useState(() => false);
 
+  const [isMounted, setIsMounted] = useState(() => false);
+
   const [internalContent, setInternalContent] = useState(
     () => props.content || props.initialContent || ""
   );
+
+  function getEditorElement() {
+    if (typeof window === "undefined") return null;
+    return (
+      (editorRef.current as any) ||
+      (rootRef.current
+        ? ((rootRef.current as any).querySelector(
+            ".wysiwyg-content"
+          ) as HTMLDivElement)
+        : null)
+    );
+  }
 
   function getTrustedHttpUrl(rawUrl: string) {
     try {
@@ -1395,13 +1409,14 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function ensureEditableStructure() {
-    if (typeof window === "undefined" || !editorRef.current) return;
-    const html = (editorRef.current.innerHTML || "").trim();
+    const el = getEditorElement();
+    if (!el) return;
+    const html = (el.innerHTML || "").trim();
     if (!html || html === "<br>" || html === "<p></p>") {
-      editorRef.current.innerHTML = "<p><br></p>";
+      el.innerHTML = "<p><br></p>";
       return;
     }
-    const last = editorRef.current.lastElementChild;
+    const last = el.lastElementChild;
     if (
       last &&
       (last.getAttribute("contenteditable") === "false" ||
@@ -1412,9 +1427,9 @@ function RichTextEditor(props: RichTextEditorProps) {
     ) {
       const p = document.createElement("p");
       p.innerHTML = "<br>";
-      editorRef.current.appendChild(p);
+      el.appendChild(p);
     }
-    const first = editorRef.current.firstElementChild;
+    const first = el.firstElementChild;
     if (
       first &&
       (first.getAttribute("contenteditable") === "false" ||
@@ -1425,13 +1440,14 @@ function RichTextEditor(props: RichTextEditorProps) {
     ) {
       const p = document.createElement("p");
       p.innerHTML = "<br>";
-      editorRef.current.insertBefore(p, first);
+      el.insertBefore(p, first);
     }
   }
 
   function normalizeSelection() {
-    if (typeof window === "undefined" || !editorRef.current || isReadOnly())
-      return;
+    if (isReadOnly()) return;
+    const el = getEditorElement();
+    if (!el) return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let range: any = null;
@@ -1442,7 +1458,7 @@ function RichTextEditor(props: RichTextEditorProps) {
     }
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== editorRef.current) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -1479,18 +1495,19 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function focusEditorAtEnd() {
-    if (typeof window === "undefined" || !editorRef.current || isReadOnly())
-      return;
+    if (isReadOnly()) return;
+    const el = getEditorElement();
+    if (!el) return;
     ensureEditableStructure();
     try {
-      if (typeof (editorRef.current as any).focus === "function") {
-        (editorRef.current as any).focus();
+      if (typeof (el as any).focus === "function") {
+        (el as any).focus();
       }
     } catch (e) {}
     const sel = window.getSelection();
     if (sel) {
       const range = document.createRange();
-      range.selectNodeContents(editorRef.current as Node);
+      range.selectNodeContents(el as Node);
       range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
@@ -1614,13 +1631,15 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   useEffect(() => {
+    setIsMounted(true);
     if (!internalContent) {
       setInternalContent(props.content || props.initialContent || "");
     }
-    if (editorRef.current) {
+    const el = getEditorElement();
+    if (el) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.current.innerHTML = sanitizeHtml(internalContent);
+      el.innerHTML = sanitizeHtml(internalContent);
       ensureEditableStructure();
       renderEmbeds();
     }
@@ -1641,15 +1660,17 @@ function RichTextEditor(props: RichTextEditorProps) {
     }
   }, []);
   useEffect(() => {
+    if (!isMounted) return;
+    const el = getEditorElement();
+    if (!el) return;
     if (
-      editorRef.current &&
       typeof props.content === "string" &&
       props.content !== internalContent
     ) {
       setInternalContent(props.content);
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.current.innerHTML = sanitizeHtml(internalContent);
+      el.innerHTML = sanitizeHtml(internalContent);
       ensureEditableStructure();
       renderEmbeds();
     }

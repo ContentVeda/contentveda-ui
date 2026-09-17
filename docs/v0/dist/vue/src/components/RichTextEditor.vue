@@ -2352,6 +2352,7 @@ export default defineComponent({
     return {
       mode: "visual",
       isFullscreen: false,
+      isMounted: false,
       internalContent: this.content || this.initialContent || "",
       showTableModal: false,
       tableRows: "3",
@@ -2403,13 +2404,15 @@ export default defineComponent({
   },
 
   mounted() {
+    this.isMounted = true;
     if (!this.internalContent) {
       this.internalContent = this.content || this.initialContent || "";
     }
-    if (this.$refs.editorRef) {
+    const el = this.getEditorElement();
+    if (el) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      this.$refs.editorRef.innerHTML = this.sanitizeHtml(this.internalContent);
+      el.innerHTML = this.sanitizeHtml(this.internalContent);
       this.ensureEditableStructure();
       this.renderEmbeds();
     }
@@ -2436,17 +2439,17 @@ export default defineComponent({
   watch: {
     onUpdateHook0: {
       handler() {
+        if (!this.isMounted) return;
+        const el = this.getEditorElement();
+        if (!el) return;
         if (
-          this.$refs.editorRef &&
           typeof this.content === "string" &&
           this.content !== this.internalContent
         ) {
           this.internalContent = this.content;
           /* lgtm[js/xss, js/html-constructed-from-input] */
           /* codeql[js/xss, js/html-constructed-from-input] */
-          this.$refs.editorRef.innerHTML = this.sanitizeHtml(
-            this.internalContent
-          );
+          el.innerHTML = this.sanitizeHtml(this.internalContent);
           this.ensureEditableStructure();
           this.renderEmbeds();
         }
@@ -2479,6 +2482,17 @@ export default defineComponent({
   },
 
   methods: {
+    getEditorElement() {
+      if (typeof window === "undefined") return null;
+      return (
+        (this.$refs.editorRef as any) ||
+        (this.$refs.rootRef
+          ? ((this.$refs.rootRef as any).querySelector(
+              ".wysiwyg-content"
+            ) as HTMLDivElement)
+          : null)
+      );
+    },
     getTrustedHttpUrl(rawUrl: string) {
       try {
         const parsed = new URL(
@@ -3721,13 +3735,14 @@ export default defineComponent({
       }
     },
     ensureEditableStructure() {
-      if (typeof window === "undefined" || !this.$refs.editorRef) return;
-      const html = (this.$refs.editorRef.innerHTML || "").trim();
+      const el = this.getEditorElement();
+      if (!el) return;
+      const html = (el.innerHTML || "").trim();
       if (!html || html === "<br>" || html === "<p></p>") {
-        this.$refs.editorRef.innerHTML = "<p><br></p>";
+        el.innerHTML = "<p><br></p>";
         return;
       }
-      const last = this.$refs.editorRef.lastElementChild;
+      const last = el.lastElementChild;
       if (
         last &&
         (last.getAttribute("contenteditable") === "false" ||
@@ -3738,9 +3753,9 @@ export default defineComponent({
       ) {
         const p = document.createElement("p");
         p.innerHTML = "<br>";
-        this.$refs.editorRef.appendChild(p);
+        el.appendChild(p);
       }
-      const first = this.$refs.editorRef.firstElementChild;
+      const first = el.firstElementChild;
       if (
         first &&
         (first.getAttribute("contenteditable") === "false" ||
@@ -3751,16 +3766,13 @@ export default defineComponent({
       ) {
         const p = document.createElement("p");
         p.innerHTML = "<br>";
-        this.$refs.editorRef.insertBefore(p, first);
+        el.insertBefore(p, first);
       }
     },
     normalizeSelection() {
-      if (
-        typeof window === "undefined" ||
-        !this.$refs.editorRef ||
-        this.isReadOnly()
-      )
-        return;
+      if (this.isReadOnly()) return;
+      const el = this.getEditorElement();
+      if (!el) return;
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       let range: any = null;
@@ -3771,7 +3783,7 @@ export default defineComponent({
       }
       let node: any = range.startContainer;
       let atomicEl: any = null;
-      while (node && node !== this.$refs.editorRef) {
+      while (node && node !== el) {
         if (
           node.nodeType === 1 &&
           node.getAttribute &&
@@ -3807,22 +3819,19 @@ export default defineComponent({
       }
     },
     focusEditorAtEnd() {
-      if (
-        typeof window === "undefined" ||
-        !this.$refs.editorRef ||
-        this.isReadOnly()
-      )
-        return;
+      if (this.isReadOnly()) return;
+      const el = this.getEditorElement();
+      if (!el) return;
       this.ensureEditableStructure();
       try {
-        if (typeof (this.$refs.editorRef as any).focus === "function") {
-          (this.$refs.editorRef as any).focus();
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
         }
       } catch (e) {}
       const sel = window.getSelection();
       if (sel) {
         const range = document.createRange();
-        range.selectNodeContents(this.$refs.editorRef as Node);
+        range.selectNodeContents(el as Node);
         range.collapse(false);
         sel.removeAllRanges();
         sel.addRange(range);

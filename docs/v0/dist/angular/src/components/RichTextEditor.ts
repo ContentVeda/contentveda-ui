@@ -2319,7 +2319,19 @@ export default class RichTextEditor {
 
   mode = "visual";
   isFullscreen = false;
+  isMounted = false;
   internalContent = null;
+  getEditorElement() {
+    if (typeof window === "undefined") return null;
+    return (
+      (this.editorRef?.nativeElement as any) ||
+      (this.rootRef?.nativeElement
+        ? ((this.rootRef?.nativeElement as any).querySelector(
+            ".wysiwyg-content"
+          ) as HTMLDivElement)
+        : null)
+    );
+  }
   getTrustedHttpUrl(rawUrl: string) {
     try {
       const parsed = new URL(
@@ -3607,13 +3619,14 @@ export default class RichTextEditor {
     }
   }
   ensureEditableStructure() {
-    if (typeof window === "undefined" || !this.editorRef?.nativeElement) return;
-    const html = (this.editorRef?.nativeElement.innerHTML || "").trim();
+    const el = this.getEditorElement();
+    if (!el) return;
+    const html = (el.innerHTML || "").trim();
     if (!html || html === "<br>" || html === "<p></p>") {
-      this.editorRef!.nativeElement.innerHTML = "<p><br></p>";
+      el.innerHTML = "<p><br></p>";
       return;
     }
-    const last = this.editorRef?.nativeElement.lastElementChild;
+    const last = el.lastElementChild;
     if (
       last &&
       (last.getAttribute("contenteditable") === "false" ||
@@ -3624,9 +3637,9 @@ export default class RichTextEditor {
     ) {
       const p = document.createElement("p");
       p.innerHTML = "<br>";
-      this.editorRef?.nativeElement.appendChild(p);
+      el.appendChild(p);
     }
-    const first = this.editorRef?.nativeElement.firstElementChild;
+    const first = el.firstElementChild;
     if (
       first &&
       (first.getAttribute("contenteditable") === "false" ||
@@ -3637,16 +3650,13 @@ export default class RichTextEditor {
     ) {
       const p = document.createElement("p");
       p.innerHTML = "<br>";
-      this.editorRef?.nativeElement.insertBefore(p, first);
+      el.insertBefore(p, first);
     }
   }
   normalizeSelection() {
-    if (
-      typeof window === "undefined" ||
-      !this.editorRef?.nativeElement ||
-      this.isReadOnly()
-    )
-      return;
+    if (this.isReadOnly()) return;
+    const el = this.getEditorElement();
+    if (!el) return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let range: any = null;
@@ -3657,7 +3667,7 @@ export default class RichTextEditor {
     }
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== this.editorRef?.nativeElement) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -3693,22 +3703,19 @@ export default class RichTextEditor {
     }
   }
   focusEditorAtEnd() {
-    if (
-      typeof window === "undefined" ||
-      !this.editorRef?.nativeElement ||
-      this.isReadOnly()
-    )
-      return;
+    if (this.isReadOnly()) return;
+    const el = this.getEditorElement();
+    if (!el) return;
     this.ensureEditableStructure();
     try {
-      if (typeof (this.editorRef?.nativeElement as any).focus === "function") {
-        (this.editorRef?.nativeElement as any).focus();
+      if (typeof (el as any).focus === "function") {
+        (el as any).focus();
       }
     } catch (e) {}
     const sel = window.getSelection();
     if (sel) {
       const range = document.createRange();
-      range.selectNodeContents(this.editorRef?.nativeElement as Node);
+      range.selectNodeContents(el as Node);
       range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
@@ -3834,15 +3841,15 @@ export default class RichTextEditor {
     this.internalContent = this.content || this.initialContent || "";
 
     if (typeof window !== "undefined") {
+      this.isMounted = true;
       if (!this.internalContent) {
         this.internalContent = this.content || this.initialContent || "";
       }
-      if (this.editorRef?.nativeElement) {
+      const el = this.getEditorElement();
+      if (el) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
-          this.internalContent
-        );
+        el.innerHTML = this.sanitizeHtml(this.internalContent);
         this.ensureEditableStructure();
         this.renderEmbeds();
       }
@@ -3872,17 +3879,17 @@ export default class RichTextEditor {
 
   ngOnChanges(changes: SimpleChanges) {
     if (typeof window !== "undefined") {
+      if (!this.isMounted) return;
+      const el = this.getEditorElement();
+      if (!el) return;
       if (
-        this.editorRef?.nativeElement &&
         typeof this.content === "string" &&
         this.content !== this.internalContent
       ) {
         this.internalContent = this.content;
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
-          this.internalContent
-        );
+        el.innerHTML = this.sanitizeHtml(this.internalContent);
         this.ensureEditableStructure();
         this.renderEmbeds();
       }
