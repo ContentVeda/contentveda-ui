@@ -30,8 +30,19 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     internalContent: props.content || props.initialContent || '',
     
     getEditorElement(): HTMLDivElement | null {
-      if (typeof window === 'undefined') return null;
-      return (editorRef as any) || (rootRef ? ((rootRef as any).querySelector('.wysiwyg-content') as HTMLDivElement) : null);
+      if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+      if (editorRef) {
+        if ((editorRef as any).current) return (editorRef as any).current;
+        if ((editorRef as any).nodeType === 1) return editorRef as any;
+      }
+      if (rootRef) {
+        const root = (rootRef as any).current || rootRef;
+        if (root && typeof (root as any).querySelector === 'function') {
+          const found = (root as any).querySelector('.wysiwyg-content');
+          if (found) return found as HTMLDivElement;
+        }
+      }
+      return document.querySelector('.wysiwyg-content') as HTMLDivElement;
     },
     
     // Every insert* function below builds its HTML by interpolating a value
@@ -129,7 +140,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     fontSize: '15px',
     textColor: '#0f172a',
     highlightColor: '#fde047',
-    appliedClasses: ['cv-callout', 'variant-blue'],
+    appliedClasses: [] as string[],
     showInsertMenu: false,
     showAiModal: false,
     aiAction: 'improve',
@@ -182,7 +193,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
 
             const classSet: string[] = [];
             let searchNode = currentEl;
-            while (searchNode && searchNode !== editorRef) {
+            const editorEl = state.getEditorElement();
+            while (searchNode && searchNode !== editorEl) {
               if (searchNode.className && typeof searchNode.className === 'string') {
                 if (searchNode.className.indexOf('wysiwyg-content') !== -1) {
                   break;
@@ -190,7 +202,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 const parts = searchNode.className.split(/\s+/);
                 for (let pi = 0; pi < parts.length; pi++) {
                   const p = parts[pi];
-                  if (p && p.indexOf('prose') !== 0 && p !== 'task-list' && !classSet.includes(p)) {
+                  if (p && !p.startsWith('prose') && p !== 'task-list' && p !== 'cv-pending-selection' && p !== 'cv-resizing-selected' && p !== 'outline-none' && p !== 'max-w-none' && p !== 'wysiwyg-content' && !classSet.includes(p)) {
                     classSet.push(p);
                   }
                 }
@@ -612,15 +624,74 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     applyClass(className: string) {
       if (!className) return;
       if (state.mode === 'source') return;
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        const span = document.createElement('span');
-        span.className = className;
-        span.appendChild(range.extractContents());
-        range.insertNode(span);
+      const editor = state.getEditorElement();
+      if (!editor) return;
+
+      const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+      if (rawClasses.length === 0) return;
+
+      // 1. If media element selected:
+      if (state.selectedMediaEl && state.selectedMediaEl.classList) {
+        rawClasses.forEach(c => state.selectedMediaEl.classList.add(c));
         state.syncContent();
+        state.checkFormats();
+        return;
       }
+
+      // 2. Get target range from active selection or saved selection
+      const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+      let targetRange: any = null;
+      if (sel && sel.rangeCount > 0) {
+        const cur = sel.getRangeAt(0);
+        if (editor.contains(cur.commonAncestorContainer)) {
+          targetRange = cur;
+        }
+      }
+      if (!targetRange) {
+        const saved = (editor as any).__cv_savedRange || activeSavedRange;
+        if (saved && editor.contains(saved.commonAncestorContainer)) {
+          targetRange = saved;
+        }
+      }
+
+      if (targetRange && !targetRange.collapsed && targetRange.toString().length > 0) {
+        // Highlighted text selection -> wrap in a span with the class
+        const span = document.createElement('span');
+        rawClasses.forEach(c => span.classList.add(c));
+        span.appendChild(targetRange.extractContents());
+        targetRange.insertNode(span);
+
+        // Re-select the newly styled span
+        if (sel) {
+          const r = document.createRange();
+          r.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(r);
+          activeSavedRange = r.cloneRange();
+          (editor as any).__cv_savedRange = r.cloneRange();
+        }
+      } else if (targetRange) {
+        // Caret inside a block element
+        let node: any = targetRange.startContainer;
+        let block: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1 && /^(P|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH|DIV|FIGURE|TABLE)$/i.test(node.tagName)) {
+            block = node;
+            break;
+          }
+          node = node.parentNode;
+        }
+        if (!block && editor.firstElementChild) {
+          block = editor.firstElementChild as HTMLElement;
+        }
+        if (block && block !== editor) {
+          rawClasses.forEach(c => block!.classList.add(c));
+        }
+      }
+
+      state.syncContent();
+      state.checkFormats();
+      try { (editor as any).focus(); } catch (e) {}
     },
     
     openButtonModal() {
@@ -914,10 +985,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       if (props.onChange) {
         props.onChange(state.internalContent);
       }
-      if (editorRef) {
+      const editor = state.getEditorElement();
+      if (editor) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+        editor.innerHTML = state.sanitizeHtml(state.internalContent);
         state.renderEmbeds();
       }
     },
@@ -1145,10 +1217,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         state.mode = 'source';
       } else {
         state.mode = 'visual';
-        if (editorRef) {
+        const editor = state.getEditorElement();
+        if (editor) {
           /* lgtm[js/xss, js/html-constructed-from-input] */
           /* codeql[js/xss, js/html-constructed-from-input] */
-          editorRef.innerHTML = state.sanitizeHtml(state.internalContent);
+          editor.innerHTML = state.sanitizeHtml(state.internalContent);
           state.renderEmbeds();
         }
       }
@@ -1322,24 +1395,46 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     addClass(className: string) {
       if (!className) return;
       if (state.mode === 'source') return;
-      if (!state.appliedClasses.includes(className)) {
-        state.appliedClasses = [...state.appliedClasses, className];
-      }
+      const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+      let updated = [...state.appliedClasses];
+      rawClasses.forEach(c => {
+        if (!updated.includes(c)) updated.push(c);
+      });
+      state.appliedClasses = updated;
     },
     removeClass(className: string) {
       if (state.mode === 'source') return;
       state.appliedClasses = state.appliedClasses.filter((c: string) => c !== className);
-      if (editorRef) {
-        const elements = editorRef.querySelectorAll(`.${className}`);
+      const editor = state.getEditorElement();
+      if (editor) {
+        if (state.selectedMediaEl && state.selectedMediaEl.classList) {
+          state.selectedMediaEl.classList.remove(className);
+        }
+        const elements = editor.querySelectorAll(`.${className}`);
         elements.forEach((el: any) => {
           el.classList.remove(className);
-          if (el.classList.length === 0 && el.tagName === 'SPAN') {
+          if (el.classList.length === 0 && el.tagName === 'SPAN' && !el.getAttribute('style') && !el.getAttribute('data-platform') && !el.getAttribute('data-widget')) {
             const parent = el.parentNode;
-            while (el.firstChild) parent.insertBefore(el.firstChild, el);
-            parent.removeChild(el);
+            if (parent) {
+              while (el.firstChild) parent.insertBefore(el.firstChild, el);
+              parent.removeChild(el);
+            }
           }
         });
         state.syncContent();
+        state.checkFormats();
+      }
+    },
+    applyClassFromInput(e: any) {
+      const container = e && e.target && e.target.closest ? e.target.closest('.cv-toolbar-classes-group') : null;
+      const input = container ? container.querySelector('.cv-class-input') : null;
+      if (input && input.value) {
+        const val = input.value.trim();
+        if (val) {
+          state.applyClass(val);
+          state.addClass(val);
+          input.value = '';
+        }
       }
     },
     handleClassInputKeyDown(e: any) {
@@ -1351,6 +1446,14 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           state.applyClass(val);
           state.addClass(val);
           target.value = '';
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        const target = e.target as HTMLInputElement;
+        if (target) target.value = '';
+        const editor = state.getEditorElement();
+        if (editor) {
+          try { editor.focus(); } catch (err) {}
         }
       }
     },
@@ -1560,7 +1663,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
     ensureEditableStructure() {
       const el = state.getEditorElement();
       if (!el) return;
-      if (!el.hasChildNodes()) {
+      if (!el.hasChildNodes() || !el.innerHTML || el.innerHTML.trim() === '' || el.innerHTML.trim() === '<br>') {
         el.innerHTML = '<p><br></p>';
         return;
       }
@@ -1568,6 +1671,29 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       if (el.childNodes.length === 1 && first && first.tagName === 'P' && !first.textContent && !first.children.length) {
         first.innerHTML = '<br>';
         return;
+      }
+      // Wrap top-level text nodes or inline non-block elements directly under editor in <p>
+      const nodesToWrap: any[] = [];
+      for (let i = 0; i < el.childNodes.length; i++) {
+        const child = el.childNodes[i];
+        if (child.nodeType === 3) {
+          if (child.textContent && child.textContent.trim() !== '') {
+            nodesToWrap.push(child);
+          }
+        } else if (child.nodeType === 1) {
+          const tag = (child as HTMLElement).tagName;
+          const isBlock = /^(P|DIV|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|TABLE|HR|SECTION|ARTICLE|HEADER|FOOTER)$/.test(tag);
+          if (!isBlock) {
+            nodesToWrap.push(child);
+          }
+        }
+      }
+      if (nodesToWrap.length > 0) {
+        nodesToWrap.forEach((node) => {
+          const p = document.createElement('p');
+          node.replaceWith(p);
+          p.appendChild(node);
+        });
       }
       const last = el.lastElementChild;
       if (last && (last.getAttribute('contenteditable') === 'false' || last.tagName === 'TABLE' || last.tagName === 'IMG' || last.tagName === 'VIDEO' || last.tagName === 'AUDIO' || (last.classList && (last.classList.contains('cv-social-embed') || last.classList.contains('cv-widget'))))) {
@@ -1791,20 +1917,23 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         const editor = state.getEditorElement();
         if (!sel || sel.rangeCount === 0 || !editor) return;
         const range = sel.getRangeAt(0);
-
-        // Soft line break on Shift+Enter
+        // Soft line break on Shift+Enter -> inserts <br> and moves to next line
         if (e.shiftKey) {
           e.preventDefault();
-          const br = document.createElement('br');
-          range.deleteContents();
-          range.insertNode(br);
-          const newRange = document.createRange();
-          newRange.setStartAfter(br);
-          newRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(newRange);
+          try {
+            document.execCommand('insertLineBreak');
+          } catch (err) {
+            const br = document.createElement('br');
+            range.deleteContents();
+            range.insertNode(br);
+            const newRange = document.createRange();
+            newRange.setStartAfter(br);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
@@ -1819,7 +1948,6 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         let calloutEl: HTMLElement | null = null;
         let tableCell: HTMLElement | null = null;
         let atomicEl: HTMLElement | null = null;
-        let blockP: HTMLElement | null = null;
 
         while (node && node !== editor) {
           if (node.nodeType === 1) {
@@ -1837,12 +1965,8 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             if (tag === 'BLOCKQUOTE') quoteEl = node;
             if (tag === 'PRE' || tag === 'CODE') preEl = node;
             if (tag === 'TD' || tag === 'TH') tableCell = node;
-            if (tag === 'P' || tag === 'DIV') {
-              if (node.classList && (node.classList.contains('cv-callout') || node.classList.contains('cv-widget'))) {
-                calloutEl = node;
-              } else if (!blockP && node !== editor) {
-                blockP = node;
-              }
+            if (node.classList && (node.classList.contains('cv-callout') || node.classList.contains('cv-widget'))) {
+              calloutEl = node;
             }
             if (node.getAttribute && node.getAttribute('contenteditable') === 'false') atomicEl = node;
             if (tag === 'IMG' || tag === 'VIDEO' || tag === 'AUDIO') atomicEl = node;
@@ -1866,7 +1990,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
               sel.removeAllRanges();
               sel.addRange(newRange);
               state.saveSelection();
-              state.syncContent();
+              state.handleInput();
               return;
             }
             const p = document.createElement('p');
@@ -1878,7 +2002,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             sel.removeAllRanges();
             sel.addRange(newRange);
             state.saveSelection();
-            state.syncContent();
+            state.handleInput();
             return;
           }
           const newLi = document.createElement('li');
@@ -1894,7 +2018,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             sel.addRange(newRange);
             state.saveSelection();
           }
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
@@ -1918,7 +2042,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
@@ -1944,6 +2068,9 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             }
             headingEl.after(newP);
           }
+          if (!headingEl.textContent || !headingEl.textContent.trim()) {
+            headingEl.innerHTML = '<br>';
+          }
           const newRange = document.createRange();
           newRange.setStart(newP, 0);
           newRange.collapse(true);
@@ -1951,7 +2078,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           sel.addRange(newRange);
           state.headingFormat = 'P';
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           state.checkFormats();
           return;
         }
@@ -1964,7 +2091,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           endRange.setStart(range.endContainer, range.endOffset);
           const remaining = endRange.toString().trim();
 
-          if (!quoteText || quoteText === '' || quoteEl.innerHTML === '<br>' || (!remaining && quoteEl.innerHTML.endsWith('<br>'))) {
+          if (!quoteText || quoteEl.innerHTML === '<br>' || (!remaining && quoteEl.innerHTML.endsWith('<br>'))) {
             e.preventDefault();
             const p = document.createElement('p');
             p.innerHTML = '<br>';
@@ -1979,21 +2106,25 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             sel.removeAllRanges();
             sel.addRange(newRange);
             state.saveSelection();
-            state.syncContent();
+            state.handleInput();
             state.checkFormats();
             return;
           }
           e.preventDefault();
-          const br = document.createElement('br');
-          range.deleteContents();
-          range.insertNode(br);
-          const newRange = document.createRange();
-          newRange.setStartAfter(br);
-          newRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(newRange);
+          try {
+            document.execCommand('insertLineBreak');
+          } catch (err) {
+            const br = document.createElement('br');
+            range.deleteContents();
+            range.insertNode(br);
+            const newRange = document.createRange();
+            newRange.setStartAfter(br);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
@@ -2009,7 +2140,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
@@ -2032,25 +2163,14 @@ export default function RichTextEditor(props: RichTextEditorProps) {
             sel.removeAllRanges();
             sel.addRange(newRange);
             state.saveSelection();
-            state.syncContent();
+            state.handleInput();
             state.checkFormats();
             return;
           }
-          e.preventDefault();
-          const nextLi = document.createElement('li');
-          nextLi.innerHTML = '<br>';
-          listLi.after(nextLi);
-          const newRange = document.createRange();
-          newRange.setStart(nextLi, 0);
-          newRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(newRange);
-          state.saveSelection();
-          state.syncContent();
           return;
         }
 
-        // 7. Callouts / Widgets
+        // 7. Callouts / Widgets: exit to standard paragraph <p>
         if (calloutEl) {
           e.preventDefault();
           const p = document.createElement('p');
@@ -2062,71 +2182,38 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
-        // 8. Table Cells
+        // 8. Table Cells: insert line break (<br>)
         if (tableCell) {
           e.preventDefault();
-          const br = document.createElement('br');
-          range.deleteContents();
-          range.insertNode(br);
-          const newRange = document.createRange();
-          newRange.setStartAfter(br);
-          newRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(newRange);
+          try {
+            document.execCommand('insertLineBreak');
+          } catch (err) {
+            const br = document.createElement('br');
+            range.deleteContents();
+            range.insertNode(br);
+            const newRange = document.createRange();
+            newRange.setStartAfter(br);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
           state.saveSelection();
-          state.syncContent();
+          state.handleInput();
           return;
         }
 
-        // 9. Standard Paragraphs: Explicitly create semantic <p><br></p>
+        // 9. Standard Paragraphs: Explicitly create semantic <p> and move to next line
         e.preventDefault();
-        let targetBlock: HTMLElement | null = blockP;
-        if (!targetBlock || targetBlock === editor) {
-          let n: any = range.startContainer;
-          while (n && n.parentNode && n.parentNode !== editor) {
-            n = n.parentNode;
-          }
-          if (n && n !== editor && n.nodeType === 1) {
-            targetBlock = n as HTMLElement;
-          }
-        }
-
-        const newP = document.createElement('p');
-        newP.innerHTML = '<br>';
-
-        if (targetBlock && targetBlock !== editor && targetBlock.parentNode) {
-          const endRange = range.cloneRange();
-          endRange.selectNodeContents(targetBlock);
-          endRange.setStart(range.endContainer, range.endOffset);
-          const remainingText = endRange.toString();
-
-          if (!remainingText || remainingText.trim() === '') {
-            targetBlock.after(newP);
-          } else {
-            const extracted = endRange.extractContents();
-            newP.innerHTML = '';
-            newP.appendChild(extracted);
-            if (!newP.textContent || !newP.textContent.trim()) {
-              newP.innerHTML = '<br>';
-            }
-            targetBlock.after(newP);
-          }
-        } else {
-          range.deleteContents();
-          range.insertNode(newP);
-        }
-
-        const newRange = document.createRange();
-        newRange.setStart(newP, 0);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
+        try {
+          document.execCommand('defaultParagraphSeparator', false, 'p');
+        } catch (err) {}
+        document.execCommand('insertParagraph');
         state.saveSelection();
-        state.syncContent();
+        state.handleInput();
         state.checkFormats();
         return;
       }
@@ -2189,29 +2276,25 @@ export default function RichTextEditor(props: RichTextEditorProps) {
       state.syncContent();
     },
     handleSelectionChange() {
-      if (typeof window !== 'undefined') {
-        const editor = state.getEditorElement();
-        if (!editor) return;
-        const sel = window.getSelection();
-        let inEditor = false;
+      if (typeof window === 'undefined' || typeof document === 'undefined') return;
+      const editor = (editorRef as any && (editorRef as any).current) || (editorRef as any && (editorRef as any).nodeType === 1 ? editorRef as any : null) || (document.querySelector ? document.querySelector('.wysiwyg-content') : null);
+      if (!editor) return;
+      const sel = window.getSelection();
+      if (!sel) return;
+      let inEditor = false;
+      try {
+        if (sel.anchorNode && typeof (editor as any).contains === 'function') {
+          inEditor = (editor as any).contains(sel.anchorNode as Node);
+        }
+      } catch (e) {}
+      if (inEditor && sel.rangeCount > 0) {
         try {
-          if (sel && sel.anchorNode && typeof (editor as any).contains === 'function') {
-            inEditor = (editor as any).contains(sel.anchorNode as Node);
+          const r = sel.getRangeAt(0);
+          if ((editor as any).contains(r.commonAncestorContainer)) {
+            activeSavedRange = r.cloneRange();
+            (editor as any).__cv_savedRange = r.cloneRange();
           }
         } catch (e) {}
-        if (inEditor) {
-          if (sel && sel.rangeCount > 0) {
-            state.saveSelection();
-          }
-          if ((editor as any).__cv_selectionTimer) {
-            clearTimeout((editor as any).__cv_selectionTimer);
-          }
-          (editor as any).__cv_selectionTimer = setTimeout(() => {
-            (editor as any).__cv_selectionTimer = null;
-            state.checkFormats();
-            state.normalizeSelection();
-          }, 50);
-        }
       }
     },
   });
@@ -2289,7 +2372,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
   return (
     <div 
       ref={rootRef}
-      class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${state.isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full'} ${state.mode === 'source' ? 'cv-source-mode' : ''} ${props.className || ''}`}
+      class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${state.isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full h-full'} ${state.mode === 'source' ? 'cv-source-mode' : ''} ${props.className || ''}`}
       style={{
         boxSizing: 'border-box',
         background: 'var(--cv-color-surface-sunken, #0f172a)',
@@ -2792,8 +2875,31 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 list="editor-class-list"
                 placeholder="+ add class..."
                 class="cv-class-input"
+                onMouseDown={() => state.saveSelection()}
                 onKeyDown={(e) => state.handleClassInputKeyDown(e)}
               />
+              <button
+                type="button"
+                class="cv-class-apply-btn"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  state.applyClassFromInput(e);
+                }}
+                title="Apply Class"
+                style={{
+                  border: 'none',
+                  background: 'var(--cv-color-primary, #0284c7)',
+                  color: '#fff',
+                  borderRadius: '4px',
+                  padding: '1px 6px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  lineHeight: '1.4'
+                }}
+              >
+                Apply
+              </button>
               <Show when={props.availableClasses && props.availableClasses.length > 0}>
                 <datalist id="editor-class-list">
                   {props.availableClasses?.map((cls) => (
@@ -2861,11 +2967,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
 
       {/* Editor Main Content Area */}
       <div
-        class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${state.mode}`}
+        class={`editor-content flex-1 overflow-y-auto relative min-h-0 cv-mode-${state.mode}`}
         onScroll={() => state.handleEditorScroll()}
         onClick={(e) => state.handleEditorContentClick(e)}
         style={{
-          padding: '2rem 3rem',
+          padding: '16px 20px',
           color: 'var(--cv-color-text-main, #f1f5f9)',
           position: 'relative',
           cursor: state.isReadOnly() ? 'default' : 'text'
@@ -2878,9 +2984,15 @@ export default function RichTextEditor(props: RichTextEditorProps) {
           onInput={() => state.handleInput()}
           onFocus={() => state.handleFocus()}
           onBlur={() => state.handleBlur()}
-          onKeyUp={() => state.checkFormats()}
+          onKeyUp={() => {
+            state.saveSelection();
+            state.checkFormats();
+          }}
           onKeyDown={(e) => state.handleKeyDown(e)}
-          onMouseUp={() => state.checkFormats()}
+          onMouseUp={() => {
+            state.saveSelection();
+            state.checkFormats();
+          }}
           onClick={(e) => state.handleEditorClick(e)}
           style={{ minHeight: '350px', fontFamily: 'Inter, sans-serif', lineHeight: '1.7', fontSize: '15px' }}
         ></div>
@@ -3309,10 +3421,11 @@ export default function RichTextEditor(props: RichTextEditorProps) {
         }}
       >
         <textarea
-          class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
+          class="w-full flex-1 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
           value={state.internalContent}
           onInput={(e) => state.handleSourceInput(e)}
           style={{ 
+            padding: '16px 20px',
             whiteSpace: 'pre-wrap', 
             overflowY: 'auto', 
             resize: 'none',

@@ -101,7 +101,7 @@ const DEFAULT_WC_ELEMENTS = {
   
   'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" lazy-load="false" content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
   
-  'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
+  'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
 };
 
 // ── Site header (shared across every page) ─────────────────────────────────
@@ -351,7 +351,7 @@ function buildControlsForm(component) {
     return `
       <div class="control-group">
         <label class="control-label">Initial HTML Content</label>
-        <textarea name="initialContent" class="control-input" style="height:80px;"><p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p></textarea>
+        <textarea name="initialContent" class="control-input" style="height:100px;"><h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul></textarea>
       </div>
       <div class="control-group">
         <label class="control-label">Available Classes (JSON Array)</label>

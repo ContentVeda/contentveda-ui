@@ -105,10 +105,7 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [highlightColor, setHighlightColor] = createSignal("#fde047");
 
-  const [appliedClasses, setAppliedClasses] = createSignal([
-    "cv-callout",
-    "variant-blue",
-  ]);
+  const [appliedClasses, setAppliedClasses] = createSignal([]);
 
   const [showInsertMenu, setShowInsertMenu] = createSignal(false);
 
@@ -137,13 +134,20 @@ function RichTextEditor(props: RichTextEditorProps) {
   const [headingFormat, setHeadingFormat] = createSignal("P");
 
   function getEditorElement() {
-    if (typeof window === "undefined") return null;
-    return (
-      (editorRef as any) ||
-      (rootRef
-        ? ((rootRef as any).querySelector(".wysiwyg-content") as HTMLDivElement)
-        : null)
-    );
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return null;
+    if (editorRef) {
+      if ((editorRef as any).current) return (editorRef as any).current;
+      if ((editorRef as any).nodeType === 1) return editorRef as any;
+    }
+    if (rootRef) {
+      const root = (rootRef as any).current || rootRef;
+      if (root && typeof (root as any).querySelector === "function") {
+        const found = (root as any).querySelector(".wysiwyg-content");
+        if (found) return found as HTMLDivElement;
+      }
+    }
+    return document.querySelector(".wysiwyg-content") as HTMLDivElement;
   }
 
   function getTrustedHttpUrl(rawUrl: string) {
@@ -264,7 +268,8 @@ function RichTextEditor(props: RichTextEditorProps) {
           } catch (err) {}
           const classSet: string[] = [];
           let searchNode = currentEl;
-          while (searchNode && searchNode !== editorRef) {
+          const editorEl = getEditorElement();
+          while (searchNode && searchNode !== editorEl) {
             if (
               searchNode.className &&
               typeof searchNode.className === "string"
@@ -277,8 +282,13 @@ function RichTextEditor(props: RichTextEditorProps) {
                 const p = parts[pi];
                 if (
                   p &&
-                  p.indexOf("prose") !== 0 &&
+                  !p.startsWith("prose") &&
                   p !== "task-list" &&
+                  p !== "cv-pending-selection" &&
+                  p !== "cv-resizing-selected" &&
+                  p !== "outline-none" &&
+                  p !== "max-w-none" &&
+                  p !== "wysiwyg-content" &&
                   !classSet.includes(p)
                 ) {
                   classSet.push(p);
@@ -737,15 +747,82 @@ function RichTextEditor(props: RichTextEditorProps) {
   function applyClass(className: string) {
     if (!className) return;
     if (mode() === "source") return;
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      const span = document.createElement("span");
-      span.className = className;
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
+    const editor = getEditorElement();
+    if (!editor) return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    if (rawClasses.length === 0) return;
+
+    // 1. If media element selected:
+    if (selectedMediaEl() && selectedMediaEl().classList) {
+      rawClasses.forEach((c) => selectedMediaEl().classList.add(c));
       syncContent();
+      checkFormats();
+      return;
     }
+
+    // 2. Get target range from active selection or saved selection
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    let targetRange: any = null;
+    if (sel && sel.rangeCount > 0) {
+      const cur = sel.getRangeAt(0);
+      if (editor.contains(cur.commonAncestorContainer)) {
+        targetRange = cur;
+      }
+    }
+    if (!targetRange) {
+      const saved = (editor as any).__cv_savedRange || activeSavedRange;
+      if (saved && editor.contains(saved.commonAncestorContainer)) {
+        targetRange = saved;
+      }
+    }
+    if (
+      targetRange &&
+      !targetRange.collapsed &&
+      targetRange.toString().length > 0
+    ) {
+      // Highlighted text selection -> wrap in a span with the class
+      const span = document.createElement("span");
+      rawClasses.forEach((c) => span.classList.add(c));
+      span.appendChild(targetRange.extractContents());
+      targetRange.insertNode(span);
+
+      // Re-select the newly styled span
+      if (sel) {
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        activeSavedRange = r.cloneRange();
+        (editor as any).__cv_savedRange = r.cloneRange();
+      }
+    } else if (targetRange) {
+      // Caret inside a block element
+      let node: any = targetRange.startContainer;
+      let block: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (
+          node.nodeType === 1 &&
+          /^(P|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH|DIV|FIGURE|TABLE)$/i.test(
+            node.tagName
+          )
+        ) {
+          block = node;
+          break;
+        }
+        node = node.parentNode;
+      }
+      if (!block && editor.firstElementChild) {
+        block = editor.firstElementChild as HTMLElement;
+      }
+      if (block && block !== editor) {
+        rawClasses.forEach((c) => block!.classList.add(c));
+      }
+    }
+    syncContent();
+    checkFormats();
+    try {
+      (editor as any).focus();
+    } catch (e) {}
   }
 
   function openButtonModal() {
@@ -1069,10 +1146,11 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (props.onChange) {
       props.onChange(internalContent());
     }
-    if (editorRef) {
+    const editor = getEditorElement();
+    if (editor) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.innerHTML = sanitizeHtml(internalContent());
+      editor.innerHTML = sanitizeHtml(internalContent());
       renderEmbeds();
     }
   }
@@ -1337,10 +1415,11 @@ function RichTextEditor(props: RichTextEditorProps) {
       setMode("source");
     } else {
       setMode("visual");
-      if (editorRef) {
+      const editor = getEditorElement();
+      if (editor) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        editorRef.innerHTML = sanitizeHtml(internalContent());
+        editor.innerHTML = sanitizeHtml(internalContent());
         renderEmbeds();
       }
     }
@@ -1538,25 +1617,57 @@ function RichTextEditor(props: RichTextEditorProps) {
   function addClass(className: string) {
     if (!className) return;
     if (mode() === "source") return;
-    if (!appliedClasses().includes(className)) {
-      setAppliedClasses([...appliedClasses(), className]);
-    }
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    let updated = [...appliedClasses()];
+    rawClasses.forEach((c) => {
+      if (!updated.includes(c)) updated.push(c);
+    });
+    setAppliedClasses(updated);
   }
 
   function removeClass(className: string) {
     if (mode() === "source") return;
     setAppliedClasses(appliedClasses().filter((c: string) => c !== className));
-    if (editorRef) {
-      const elements = editorRef.querySelectorAll(`.${className}`);
+    const editor = getEditorElement();
+    if (editor) {
+      if (selectedMediaEl() && selectedMediaEl().classList) {
+        selectedMediaEl().classList.remove(className);
+      }
+      const elements = editor.querySelectorAll(`.${className}`);
       elements.forEach((el: any) => {
         el.classList.remove(className);
-        if (el.classList.length === 0 && el.tagName === "SPAN") {
+        if (
+          el.classList.length === 0 &&
+          el.tagName === "SPAN" &&
+          !el.getAttribute("style") &&
+          !el.getAttribute("data-platform") &&
+          !el.getAttribute("data-widget")
+        ) {
           const parent = el.parentNode;
-          while (el.firstChild) parent.insertBefore(el.firstChild, el);
-          parent.removeChild(el);
+          if (parent) {
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+          }
         }
       });
       syncContent();
+      checkFormats();
+    }
+  }
+
+  function applyClassFromInput(e: any) {
+    const container =
+      e && e.target && e.target.closest
+        ? e.target.closest(".cv-toolbar-classes-group")
+        : null;
+    const input = container ? container.querySelector(".cv-class-input") : null;
+    if (input && input.value) {
+      const val = input.value.trim();
+      if (val) {
+        applyClass(val);
+        addClass(val);
+        input.value = "";
+      }
     }
   }
 
@@ -1569,6 +1680,16 @@ function RichTextEditor(props: RichTextEditorProps) {
         applyClass(val);
         addClass(val);
         target.value = "";
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      if (target) target.value = "";
+      const editor = getEditorElement();
+      if (editor) {
+        try {
+          editor.focus();
+        } catch (err) {}
       }
     }
   }
@@ -1833,7 +1954,12 @@ function RichTextEditor(props: RichTextEditorProps) {
   function ensureEditableStructure() {
     const el = getEditorElement();
     if (!el) return;
-    if (!el.hasChildNodes()) {
+    if (
+      !el.hasChildNodes() ||
+      !el.innerHTML ||
+      el.innerHTML.trim() === "" ||
+      el.innerHTML.trim() === "<br>"
+    ) {
       el.innerHTML = "<p><br></p>";
       return;
     }
@@ -1847,6 +1973,32 @@ function RichTextEditor(props: RichTextEditorProps) {
     ) {
       first.innerHTML = "<br>";
       return;
+    }
+    // Wrap top-level text nodes or inline non-block elements directly under editor in <p>
+    const nodesToWrap: any[] = [];
+    for (let i = 0; i < el.childNodes.length; i++) {
+      const child = el.childNodes[i];
+      if (child.nodeType === 3) {
+        if (child.textContent && child.textContent.trim() !== "") {
+          nodesToWrap.push(child);
+        }
+      } else if (child.nodeType === 1) {
+        const tag = (child as HTMLElement).tagName;
+        const isBlock =
+          /^(P|DIV|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|TABLE|HR|SECTION|ARTICLE|HEADER|FOOTER)$/.test(
+            tag
+          );
+        if (!isBlock) {
+          nodesToWrap.push(child);
+        }
+      }
+    }
+    if (nodesToWrap.length > 0) {
+      nodesToWrap.forEach((node) => {
+        const p = document.createElement("p");
+        node.replaceWith(p);
+        p.appendChild(node);
+      });
     }
     const last = el.lastElementChild;
     if (
@@ -2111,20 +2263,23 @@ function RichTextEditor(props: RichTextEditorProps) {
       const editor = getEditorElement();
       if (!sel || sel.rangeCount === 0 || !editor) return;
       const range = sel.getRangeAt(0);
-
-      // Soft line break on Shift+Enter
+      // Soft line break on Shift+Enter -> inserts <br> and moves to next line
       if (e.shiftKey) {
         e.preventDefault();
-        const br = document.createElement("br");
-        range.deleteContents();
-        range.insertNode(br);
-        const newRange = document.createRange();
-        newRange.setStartAfter(br);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
         saveSelection();
-        syncContent();
+        handleInput();
         return;
       }
       let node: any = range.startContainer;
@@ -2138,7 +2293,6 @@ function RichTextEditor(props: RichTextEditorProps) {
       let calloutEl: HTMLElement | null = null;
       let tableCell: HTMLElement | null = null;
       let atomicEl: HTMLElement | null = null;
-      let blockP: HTMLElement | null = null;
       while (node && node !== editor) {
         if (node.nodeType === 1) {
           const tag = node.tagName;
@@ -2155,16 +2309,12 @@ function RichTextEditor(props: RichTextEditorProps) {
           if (tag === "BLOCKQUOTE") quoteEl = node;
           if (tag === "PRE" || tag === "CODE") preEl = node;
           if (tag === "TD" || tag === "TH") tableCell = node;
-          if (tag === "P" || tag === "DIV") {
-            if (
-              node.classList &&
-              (node.classList.contains("cv-callout") ||
-                node.classList.contains("cv-widget"))
-            ) {
-              calloutEl = node;
-            } else if (!blockP && node !== editor) {
-              blockP = node;
-            }
+          if (
+            node.classList &&
+            (node.classList.contains("cv-callout") ||
+              node.classList.contains("cv-widget"))
+          ) {
+            calloutEl = node;
           }
           if (
             node.getAttribute &&
@@ -2193,7 +2343,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             sel.removeAllRanges();
             sel.addRange(newRange);
             saveSelection();
-            syncContent();
+            handleInput();
             return;
           }
           const p = document.createElement("p");
@@ -2205,7 +2355,7 @@ function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           saveSelection();
-          syncContent();
+          handleInput();
           return;
         }
         const newLi = document.createElement("li");
@@ -2222,7 +2372,7 @@ function RichTextEditor(props: RichTextEditorProps) {
           sel.addRange(newRange);
           saveSelection();
         }
-        syncContent();
+        handleInput();
         return;
       }
 
@@ -2246,7 +2396,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         sel.removeAllRanges();
         sel.addRange(newRange);
         saveSelection();
-        syncContent();
+        handleInput();
         return;
       }
 
@@ -2270,6 +2420,9 @@ function RichTextEditor(props: RichTextEditorProps) {
           }
           headingEl.after(newP);
         }
+        if (!headingEl.textContent || !headingEl.textContent.trim()) {
+          headingEl.innerHTML = "<br>";
+        }
         const newRange = document.createRange();
         newRange.setStart(newP, 0);
         newRange.collapse(true);
@@ -2277,7 +2430,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         sel.addRange(newRange);
         setHeadingFormat("P");
         saveSelection();
-        syncContent();
+        handleInput();
         checkFormats();
         return;
       }
@@ -2291,7 +2444,6 @@ function RichTextEditor(props: RichTextEditorProps) {
         const remaining = endRange.toString().trim();
         if (
           !quoteText ||
-          quoteText === "" ||
           quoteEl.innerHTML === "<br>" ||
           (!remaining && quoteEl.innerHTML.endsWith("<br>"))
         ) {
@@ -2309,21 +2461,25 @@ function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           saveSelection();
-          syncContent();
+          handleInput();
           checkFormats();
           return;
         }
         e.preventDefault();
-        const br = document.createElement("br");
-        range.deleteContents();
-        range.insertNode(br);
-        const newRange = document.createRange();
-        newRange.setStartAfter(br);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
         saveSelection();
-        syncContent();
+        handleInput();
         return;
       }
 
@@ -2339,7 +2495,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         sel.removeAllRanges();
         sel.addRange(newRange);
         saveSelection();
-        syncContent();
+        handleInput();
         return;
       }
 
@@ -2362,25 +2518,14 @@ function RichTextEditor(props: RichTextEditorProps) {
           sel.removeAllRanges();
           sel.addRange(newRange);
           saveSelection();
-          syncContent();
+          handleInput();
           checkFormats();
           return;
         }
-        e.preventDefault();
-        const nextLi = document.createElement("li");
-        nextLi.innerHTML = "<br>";
-        listLi.after(nextLi);
-        const newRange = document.createRange();
-        newRange.setStart(nextLi, 0);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        saveSelection();
-        syncContent();
         return;
       }
 
-      // 7. Callouts / Widgets
+      // 7. Callouts / Widgets: exit to standard paragraph <p>
       if (calloutEl) {
         e.preventDefault();
         const p = document.createElement("p");
@@ -2392,67 +2537,38 @@ function RichTextEditor(props: RichTextEditorProps) {
         sel.removeAllRanges();
         sel.addRange(newRange);
         saveSelection();
-        syncContent();
+        handleInput();
         return;
       }
 
-      // 8. Table Cells
+      // 8. Table Cells: insert line break (<br>)
       if (tableCell) {
         e.preventDefault();
-        const br = document.createElement("br");
-        range.deleteContents();
-        range.insertNode(br);
-        const newRange = document.createRange();
-        newRange.setStartAfter(br);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
         saveSelection();
-        syncContent();
+        handleInput();
         return;
       }
 
-      // 9. Standard Paragraphs: Explicitly create semantic <p><br></p>
+      // 9. Standard Paragraphs: Explicitly create semantic <p> and move to next line
       e.preventDefault();
-      let targetBlock: HTMLElement | null = blockP;
-      if (!targetBlock || targetBlock === editor) {
-        let n: any = range.startContainer;
-        while (n && n.parentNode && n.parentNode !== editor) {
-          n = n.parentNode;
-        }
-        if (n && n !== editor && n.nodeType === 1) {
-          targetBlock = n as HTMLElement;
-        }
-      }
-      const newP = document.createElement("p");
-      newP.innerHTML = "<br>";
-      if (targetBlock && targetBlock !== editor && targetBlock.parentNode) {
-        const endRange = range.cloneRange();
-        endRange.selectNodeContents(targetBlock);
-        endRange.setStart(range.endContainer, range.endOffset);
-        const remainingText = endRange.toString();
-        if (!remainingText || remainingText.trim() === "") {
-          targetBlock.after(newP);
-        } else {
-          const extracted = endRange.extractContents();
-          newP.innerHTML = "";
-          newP.appendChild(extracted);
-          if (!newP.textContent || !newP.textContent.trim()) {
-            newP.innerHTML = "<br>";
-          }
-          targetBlock.after(newP);
-        }
-      } else {
-        range.deleteContents();
-        range.insertNode(newP);
-      }
-      const newRange = document.createRange();
-      newRange.setStart(newP, 0);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (err) {}
+      document.execCommand("insertParagraph");
       saveSelection();
-      syncContent();
+      handleInput();
       checkFormats();
       return;
     }
@@ -2524,33 +2640,33 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function handleSelectionChange() {
-    if (typeof window !== "undefined") {
-      const editor = getEditorElement();
-      if (!editor) return;
-      const sel = window.getSelection();
-      let inEditor = false;
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return;
+    const editor =
+      ((editorRef as any) && (editorRef as any).current) ||
+      ((editorRef as any) && (editorRef as any).nodeType === 1
+        ? (editorRef as any)
+        : null) ||
+      (document.querySelector
+        ? document.querySelector(".wysiwyg-content")
+        : null);
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    let inEditor = false;
+    try {
+      if (sel.anchorNode && typeof (editor as any).contains === "function") {
+        inEditor = (editor as any).contains(sel.anchorNode as Node);
+      }
+    } catch (e) {}
+    if (inEditor && sel.rangeCount > 0) {
       try {
-        if (
-          sel &&
-          sel.anchorNode &&
-          typeof (editor as any).contains === "function"
-        ) {
-          inEditor = (editor as any).contains(sel.anchorNode as Node);
+        const r = sel.getRangeAt(0);
+        if ((editor as any).contains(r.commonAncestorContainer)) {
+          activeSavedRange = r.cloneRange();
+          (editor as any).__cv_savedRange = r.cloneRange();
         }
       } catch (e) {}
-      if (inEditor) {
-        if (sel && sel.rangeCount > 0) {
-          saveSelection();
-        }
-        if ((editor as any).__cv_selectionTimer) {
-          clearTimeout((editor as any).__cv_selectionTimer);
-        }
-        (editor as any).__cv_selectionTimer = setTimeout(() => {
-          (editor as any).__cv_selectionTimer = null;
-          checkFormats();
-          normalizeSelection();
-        }, 50);
-      }
     }
   }
 
@@ -2617,7 +2733,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${
           isFullscreen()
             ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none"
-            : "w-full"
+            : "w-full h-full"
         } ${mode() === "source" ? "cv-source-mode" : ""} ${
           props.className || ""
         }`}
@@ -3787,8 +3903,31 @@ function RichTextEditor(props: RichTextEditorProps) {
                   aria-label="Dynamic CSS Class"
                   list="editor-class-list"
                   placeholder="+ add class..."
+                  onMouseDown={(event) => saveSelection()}
                   onKeyDown={(e) => handleClassInputKeyDown(e)}
                 />
+                <button
+                  class="cv-class-apply-btn"
+                  type="button"
+                  title="Apply Class"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    applyClassFromInput(e);
+                  }}
+                  style={{
+                    border: "none",
+                    background: "var(--cv-color-primary, #0284c7)",
+                    color: "#fff",
+                    "border-radius": "4px",
+                    padding: "1px 6px",
+                    "font-size": "11px",
+                    cursor: "pointer",
+                    "font-weight": 600,
+                    "line-height": "1.4",
+                  }}
+                >
+                  Apply
+                </button>
                 <Show
                   when={
                     props.availableClasses && props.availableClasses.length > 0
@@ -3884,11 +4023,11 @@ function RichTextEditor(props: RichTextEditorProps) {
           </div>
         </div>
         <div
-          class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode()}`}
+          class={`editor-content flex-1 overflow-y-auto relative min-h-0 cv-mode-${mode()}`}
           onScroll={(event) => handleEditorScroll()}
           onClick={(e) => handleEditorContentClick(e)}
           style={{
-            padding: "2rem 3rem",
+            padding: "16px 20px",
             color: "var(--cv-color-text-main, #f1f5f9)",
             position: "relative",
             cursor: isReadOnly() ? "default" : "text",
@@ -3903,9 +4042,15 @@ function RichTextEditor(props: RichTextEditorProps) {
             onInput={(event) => handleInput()}
             onFocus={(event) => handleFocus()}
             onBlur={(event) => handleBlur()}
-            onKeyUp={(event) => checkFormats()}
+            onKeyUp={(event) => {
+              saveSelection();
+              checkFormats();
+            }}
             onKeyDown={(e) => handleKeyDown(e)}
-            onMouseUp={(event) => checkFormats()}
+            onMouseUp={(event) => {
+              saveSelection();
+              checkFormats();
+            }}
             onClick={(e) => handleEditorClick(e)}
             style={{
               "min-height": "350px",
@@ -5669,10 +5814,11 @@ function RichTextEditor(props: RichTextEditorProps) {
           }}
         >
           <textarea
-            class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
+            class="w-full flex-1 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
             value={internalContent()}
             onInput={(e) => handleSourceInput(e)}
             style={{
+              padding: "16px 20px",
               "white-space": "pre-wrap",
               "overflow-y": "auto",
               resize: "none",

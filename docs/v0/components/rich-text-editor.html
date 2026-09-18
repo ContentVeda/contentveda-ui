@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rich Text Editor — ContentVeda UI</title>
-  <meta name="description" content="Advanced headless WYSIWYG editor with custom inline styles, table builder, media embedding, and dark premium aesthetics." />
+  <meta name="description" content="Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant." />
   <link rel="canonical" href="https://docs.contentveda.com/ui/v0/components/rich-text-editor.html" />
   <link rel="icon" href="../assets/brand/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="../assets/brand/favicon-32.png" sizes="32x32" type="image/png" />
@@ -228,7 +228,7 @@ z"/>
       <div class="page-header">
         <div class="page-badge">📝 Component</div>
         <h1 class="page-title">Rich Text Editor</h1>
-        <p class="page-description">Advanced headless WYSIWYG editor with custom inline styles, table builder, media embedding, and dark premium aesthetics.</p>
+        <p class="page-description">Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p>
       </div>
 
       <!-- Install -->
@@ -237,7 +237,7 @@ z"/>
         <button class="copy-btn install-copy" style="position:static;flex-shrink:0">⎘ Copy</button>
       </div>
 
-      
+      <div class="demo-feature-banner" style="background: linear-gradient(135deg, rgba(36,80,102,0.25) 0%, rgba(15,23,42,0.6) 100%); border: 1px solid rgba(127,196,222,0.3); border-radius: 14px; padding: 20px 24px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.25);"><div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;"><h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px;"><span>✨</span> Rich Text Editor Toolbar Redesign</h3><span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 9999px; background: rgba(14,165,233,0.15); color: #38bdf8; border: 1px solid rgba(14,165,233,0.3); letter-spacing: 0.05em; text-transform: uppercase;">Two-Row Layout</span></div><p style="margin: 0 0 14px 0; color: #94a3b8; font-size: 0.95rem; line-height: 1.6;">Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;"><div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 14px;"><div style="font-size: 0.8rem; font-weight: 600; color: #7fc4de; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">🎨 Row 1: Typography</div><div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">Headings, font family (Inter, Outfit, Fira Code), font size scale, inline colors, & alignment.</div></div><div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 14px;"><div style="font-size: 0.8rem; font-weight: 600; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">⚡ Row 2: Media & Controls</div><div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">Direct media insertion, formula Fx, dynamic CSS class chips, and contextual table tools.</div></div></div></div>
 
       <!-- Interactive Playground -->
       <h2 class="section-heading">Interactive Demo Playground</h2>
@@ -251,7 +251,7 @@ z"/>
               <span class="preview-url">&lt;cv-rich-text-editor&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>
+              <cv-rich-text-editor id="interactive-preview" initial-content="<h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>
             </div>
           </div>
         </div>
@@ -267,7 +267,7 @@ z"/>
                 
       <div class="control-group">
         <label class="control-label">Initial HTML Content</label>
-        <textarea name="initialContent" class="control-input" style="height:80px;"><p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p></textarea>
+        <textarea name="initialContent" class="control-input" style="height:100px;"><h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul></textarea>
       </div>
       <div class="control-group">
         <label class="control-label">Available Classes (JSON Array)</label>
