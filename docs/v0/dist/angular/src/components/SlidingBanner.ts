@@ -410,9 +410,7 @@ export default class SlidingBanner {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {

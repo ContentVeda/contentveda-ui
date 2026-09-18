@@ -1,14 +1,9 @@
-"use strict";
 // Shared canvas background-effect engine used by contentveda-ui widgets (Banner, SlidingBanner,
 // and anything else that renders a full-bleed <canvas> layer behind its content). This is
 // deliberately a plain, framework-agnostic module — not a .lite.tsx component — so it compiles
 // once and can be dropped into any component's onMount/onUpdate lifecycle without going through
 // Mitosis codegen. New effects are added by registering a renderer in EFFECT_RENDERERS below;
 // nothing else needs to change to make an effect available everywhere this engine is used.
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.defaultBackgroundEffectPlugin = void 0;
-exports.startBackgroundEffect = startBackgroundEffect;
-exports.stopBackgroundEffect = stopBackgroundEffect;
 function renderParticles(ctx, canvas, ctxBox) {
     const particles = [];
     for (let i = 0; i < 70; i++) {
@@ -1123,7 +1118,7 @@ const EFFECT_RENDERERS = {
 // Starts (or restarts) the given effect on `canvas`, tracking its RAF id and resize
 // listener on `ctxBox` so a caller can stop it later with `stopBackgroundEffect`.
 // Safe to call repeatedly — always stops any effect already running via this ctxBox first.
-function startBackgroundEffect(canvas, effect, ctxBox) {
+export function startBackgroundEffect(canvas, effect, ctxBox) {
     stopBackgroundEffect(ctxBox);
     if (!canvas || !effect || effect === 'none')
         return;
@@ -1162,7 +1157,7 @@ function startBackgroundEffect(canvas, effect, ctxBox) {
     }
     renderer(ctx, canvas, ctxBox);
 }
-function stopBackgroundEffect(ctxBox) {
+export function stopBackgroundEffect(ctxBox) {
     if (ctxBox.animationFrameId) {
         cancelAnimationFrame(ctxBox.animationFrameId);
         ctxBox.animationFrameId = null;
@@ -1176,7 +1171,7 @@ function stopBackgroundEffect(ctxBox) {
         ctxBox.resizeObserver = null;
     }
 }
-exports.defaultBackgroundEffectPlugin = {
+export const defaultBackgroundEffectPlugin = {
     start: startBackgroundEffect,
     stop: stopBackgroundEffect
 };

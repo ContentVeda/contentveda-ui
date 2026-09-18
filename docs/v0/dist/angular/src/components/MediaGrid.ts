@@ -120,9 +120,7 @@ export default class MediaGrid {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {

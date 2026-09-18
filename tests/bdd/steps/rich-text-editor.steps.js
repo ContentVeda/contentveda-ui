@@ -62,3 +62,20 @@ Then('exactly one of the visual editor or the source view should be visible', as
   const sourceVisible = await this.subject().locator('.editor-source textarea').isVisible();
   assert.notEqual(visualVisible, sourceVisible, `Expected exactly one of visual/source to be visible, got visual=${visualVisible} source=${sourceVisible}`);
 });
+
+// Regression coverage for the color picker InvalidStateError / frozen update cycle bug:
+// Interacting with <input type="color"> leaves activeElement on the color input.
+// hydrateDom previously attempted el.selectionStart on the color input, throwing
+// InvalidStateError and freezing pendingUpdate=true permanently.
+When('I apply the {string} color {string}', async function (colorType, hexColor) {
+  const label = this.subject().locator(`label[title="${colorType} Color"]`);
+  await label.click();
+  const ariaLabel = colorType === 'Highlight' ? 'Background Color' : 'Text Color';
+  const input = this.subject().locator(`input[type="color"][aria-label="${ariaLabel}"]`);
+  await input.evaluate((el, val) => {
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }, hexColor);
+});
+

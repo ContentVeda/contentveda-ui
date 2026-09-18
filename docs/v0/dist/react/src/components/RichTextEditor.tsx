@@ -13,6 +13,8 @@ export interface RichTextEditorProps {
   availableClasses?: string[];
   onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
   config?: RichTextEditorConfig;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
 import DOMPurify from "isomorphic-dompurify";
@@ -25,9 +27,30 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [isFullscreen, setIsFullscreen] = useState(() => false);
 
+  const [isMounted, setIsMounted] = useState(() => false);
+
   const [internalContent, setInternalContent] = useState(
     () => props.content || props.initialContent || ""
   );
+
+  function getEditorElement() {
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return null;
+    if (editorRef.current) {
+      if ((editorRef.current as any).current)
+        return (editorRef.current as any).current;
+      if ((editorRef.current as any).nodeType === 1)
+        return editorRef.current as any;
+    }
+    if (rootRef.current) {
+      const root = (rootRef.current as any).current || rootRef.current;
+      if (root && typeof (root as any).querySelector === "function") {
+        const found = (root as any).querySelector(".wysiwyg-content");
+        if (found) return found as HTMLDivElement;
+      }
+    }
+    return document.querySelector(".wysiwyg-content") as HTMLDivElement;
+  }
 
   function getTrustedHttpUrl(rawUrl: string) {
     try {
@@ -65,7 +88,18 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function escapeHtml(value: string) {
-    return String(value == null ? "" : value)
+    if (value == null) return "";
+    const str = String(value);
+    if (
+      str.indexOf("&") === -1 &&
+      str.indexOf("<") === -1 &&
+      str.indexOf(">") === -1 &&
+      str.indexOf('"') === -1 &&
+      str.indexOf("'") === -1
+    ) {
+      return str;
+    }
+    return str
       .split("&")
       .join("&amp;")
       .split("<")
@@ -131,11 +165,29 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [btnStyle, setBtnStyle] = useState(() => "primary");
 
+  const [showImageModal, setShowImageModal] = useState(() => false);
+
+  const [imageUrl, setImageUrl] = useState(() => "");
+
+  const [imageAlt, setImageAlt] = useState(() => "");
+
+  const [showVideoModal, setShowVideoModal] = useState(() => false);
+
+  const [videoUrl, setVideoUrl] = useState(() => "");
+
+  const [showFormulaModal, setShowFormulaModal] = useState(() => false);
+
+  const [formulaInput, setFormulaInput] = useState(() => "E = mc²");
+
   const [selectedMediaEl, setSelectedMediaEl] = useState(() => null);
 
   const [resizeHandleTop, setResizeHandleTop] = useState(() => 0);
 
   const [resizeHandleLeft, setResizeHandleLeft] = useState(() => 0);
+
+  const [resizeToolbarTop, setResizeToolbarTop] = useState(() => 0);
+
+  const [resizeToolbarLeft, setResizeToolbarLeft] = useState(() => 0);
 
   const [isResizing, setIsResizing] = useState(() => false);
 
@@ -145,16 +197,13 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   const [fontFamily, setFontFamily] = useState(() => "Inter");
 
-  const [fontSize, setFontSize] = useState(() => "16px");
+  const [fontSize, setFontSize] = useState(() => "15px");
 
   const [textColor, setTextColor] = useState(() => "#0f172a");
 
   const [highlightColor, setHighlightColor] = useState(() => "#fde047");
 
-  const [appliedClasses, setAppliedClasses] = useState(() => [
-    "cv-callout",
-    "variant-blue",
-  ]);
+  const [appliedClasses, setAppliedClasses] = useState(() => []);
 
   const [showInsertMenu, setShowInsertMenu] = useState(() => false);
 
@@ -187,6 +236,9 @@ function RichTextEditor(props: RichTextEditorProps) {
       let isQuote = false;
       let isCode = false;
       let inTable = false;
+      let nextFontSize = fontSize;
+      let nextFontFamily = fontFamily;
+      let nextAppliedClasses = appliedClasses;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
@@ -196,7 +248,8 @@ function RichTextEditor(props: RichTextEditorProps) {
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              setFontSize(computed.fontSize);
+              const pxVal = Math.round(parseFloat(computed.fontSize));
+              nextFontSize = `${pxVal}px`;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -207,13 +260,14 @@ function RichTextEditor(props: RichTextEditorProps) {
                 .join("")
                 .trim();
               if (primaryFont) {
-                setFontFamily(primaryFont);
+                nextFontFamily = primaryFont;
               }
             }
           } catch (err) {}
           const classSet: string[] = [];
           let searchNode = currentEl;
-          while (searchNode && searchNode !== editorRef.current) {
+          const editorEl = getEditorElement();
+          while (searchNode && searchNode !== editorEl) {
             if (
               searchNode.className &&
               typeof searchNode.className === "string"
@@ -226,8 +280,13 @@ function RichTextEditor(props: RichTextEditorProps) {
                 const p = parts[pi];
                 if (
                   p &&
-                  p.indexOf("prose") !== 0 &&
+                  !p.startsWith("prose") &&
                   p !== "task-list" &&
+                  p !== "cv-pending-selection" &&
+                  p !== "cv-resizing-selected" &&
+                  p !== "outline-none" &&
+                  p !== "max-w-none" &&
+                  p !== "wysiwyg-content" &&
                   !classSet.includes(p)
                 ) {
                   classSet.push(p);
@@ -236,7 +295,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             }
             searchNode = searchNode.parentElement;
           }
-          setAppliedClasses(classSet);
+          nextAppliedClasses = classSet;
         }
         while (
           node &&
@@ -250,7 +309,23 @@ function RichTextEditor(props: RichTextEditorProps) {
           node = node.parentNode;
         }
       }
-      setActiveFormats({
+      let nextHeadingFormat = "P";
+      const formatBlock = document.queryCommandValue("formatBlock");
+      if (formatBlock) {
+        if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+        else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+        else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+        else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+        else if (formatBlock.toLowerCase().includes("blockquote")) {
+          isQuote = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.toLowerCase().includes("pre")) {
+          isCode = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+        else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+      }
+      const nextActiveFormats = {
         bold: document.queryCommandState("bold"),
         italic: document.queryCommandState("italic"),
         underline: document.queryCommandState("underline"),
@@ -264,21 +339,26 @@ function RichTextEditor(props: RichTextEditorProps) {
         quote: isQuote,
         code: isCode,
         inTable: inTable,
-      });
-      const formatBlock = document.queryCommandValue("formatBlock");
-      if (formatBlock) {
-        if (formatBlock.includes("1")) setHeadingFormat("H1");
-        else if (formatBlock.includes("2")) setHeadingFormat("H2");
-        else if (formatBlock.includes("3")) setHeadingFormat("H3");
-        else if (formatBlock.includes("4")) setHeadingFormat("H4");
-        else if (formatBlock.toLowerCase().includes("blockquote")) {
-          activeFormats.quote = true;
-          setHeadingFormat("P");
-        } else if (formatBlock.toLowerCase().includes("pre")) {
-          activeFormats.code = true;
-          setHeadingFormat("P");
-        } else if (formatBlock.includes("p")) setHeadingFormat("P");
-        else if (formatBlock.includes("div")) setHeadingFormat("P");
+      };
+      if (fontSize !== nextFontSize) setFontSize(nextFontSize);
+      if (fontFamily !== nextFontFamily) setFontFamily(nextFontFamily);
+      if (headingFormat !== nextHeadingFormat)
+        setHeadingFormat(nextHeadingFormat);
+      if (
+        appliedClasses.length !== nextAppliedClasses.length ||
+        appliedClasses.some((c, i) => c !== nextAppliedClasses[i])
+      ) {
+        setAppliedClasses(nextAppliedClasses);
+      }
+      let formatsChanged = false;
+      for (const k in nextActiveFormats) {
+        if ((activeFormats as any)[k] !== (nextActiveFormats as any)[k]) {
+          formatsChanged = true;
+          break;
+        }
+      }
+      if (formatsChanged) {
+        setActiveFormats(nextActiveFormats);
       }
     }
   }
@@ -288,18 +368,15 @@ function RichTextEditor(props: RichTextEditorProps) {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
-        if (editorRef.current) {
+        const el = getEditorElement();
+        if (el) {
           try {
-            if (
-              (editorRef.current as any).contains(r.commonAncestorContainer)
-            ) {
-              activeSavedRange = escapeAtomicRange(r.cloneRange());
+            if ((el as any).contains(r.commonAncestorContainer)) {
+              const escaped = escapeAtomicRange(r.cloneRange());
+              activeSavedRange = escaped;
+              (el as any).__cv_savedRange = escaped;
             }
-          } catch (e) {
-            activeSavedRange = r.cloneRange();
-          }
-        } else {
-          activeSavedRange = r.cloneRange();
+          } catch (e) {}
         }
       }
     }
@@ -307,28 +384,35 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function restoreSelection() {
     if (typeof window !== "undefined") {
-      if (editorRef.current) {
+      const el = getEditorElement();
+      if (el) {
         try {
-          if (typeof (editorRef.current as any).focus === "function") {
-            (editorRef.current as any).focus();
+          if (typeof (el as any).focus === "function") {
+            (el as any).focus();
           }
         } catch (e) {}
-        if (activeSavedRange) {
-          const sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(activeSavedRange.cloneRange());
-          }
+        const target = (el as any).__cv_savedRange || activeSavedRange;
+        if (target) {
+          try {
+            if ((el as any).contains(target.commonAncestorContainer)) {
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(target.cloneRange());
+              }
+            }
+          } catch (e) {}
         }
       }
     }
   }
 
   function escapeAtomicRange(range: any) {
-    if (!range || !editorRef.current) return range;
+    const el = getEditorElement();
+    if (!range || !el) return range;
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== editorRef.current) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -347,10 +431,12 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
-    if (editorRef.current) {
+    if (mode === "source") return;
+    const el = getEditorElement();
+    if (el) {
       try {
-        if (typeof (editorRef.current as any).focus === "function") {
-          (editorRef.current as any).focus();
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
         }
       } catch (e) {}
     }
@@ -360,62 +446,106 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (sel && sel.rangeCount > 0) {
       const cur = sel.getRangeAt(0);
       try {
-        if (
-          editorRef.current &&
-          (editorRef.current as any).contains(cur.commonAncestorContainer)
-        ) {
+        if (el && (el as any).contains(cur.commonAncestorContainer)) {
           targetRange = cur;
         }
       } catch (e) {}
     }
-    if (!targetRange && activeSavedRange) {
+    const targetSaved = el
+      ? (el as any).__cv_savedRange || activeSavedRange
+      : activeSavedRange;
+    if (!targetRange && targetSaved) {
       try {
-        if (
-          editorRef.current &&
-          (editorRef.current as any).contains(
-            activeSavedRange.commonAncestorContainer
-          )
-        ) {
-          targetRange = activeSavedRange;
+        if (el && (el as any).contains(targetSaved.commonAncestorContainer)) {
+          targetRange = targetSaved;
         }
       } catch (e) {}
     }
     targetRange = escapeAtomicRange(targetRange);
-    if (targetRange && targetRange.insertNode) {
-      targetRange.deleteContents();
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      const frag = template.content;
-      const lastNode = frag.lastChild;
-      targetRange.insertNode(frag);
-      if (lastNode && sel) {
-        const newRange = document.createRange();
-        newRange.setStartAfter(lastNode);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
-      }
-    } else if (editorRef.current) {
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      editorRef.current.appendChild(template.content);
-      const newRange = document.createRange();
-      newRange.selectNodeContents(editorRef.current as Node);
-      newRange.collapse(false);
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+    const isBlockHtml = /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(
+      html
+    );
+    let blockParent: HTMLElement | null = null;
+    if (targetRange && el) {
+      let n: any = targetRange.startContainer;
+      while (n && n !== el) {
+        if (
+          n.nodeType === 1 &&
+          /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)
+        ) {
+          blockParent = n;
+          break;
+        }
+        n = n.parentNode;
       }
     }
+    const template = document.createElement("template");
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
+    template.innerHTML = html.trim();
+    const frag = template.content;
+
+    // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+    let lastP: HTMLElement | null = frag.querySelector("p:last-child");
+    if (isBlockHtml && !lastP) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      frag.appendChild(p);
+      lastP = p;
+    }
+    let insertedP: HTMLElement | null = null;
+    if (
+      isBlockHtml &&
+      blockParent &&
+      blockParent !== el &&
+      blockParent.parentNode
+    ) {
+      const isEmptyBlock =
+        !blockParent.textContent?.trim() || blockParent.innerHTML === "<br>";
+      if (isEmptyBlock) {
+        const parent = blockParent.parentNode;
+        insertedP = lastP;
+        parent.insertBefore(frag, blockParent);
+        blockParent.remove();
+      } else {
+        insertedP = lastP;
+        blockParent.after(frag);
+      }
+    } else if (targetRange && targetRange.insertNode) {
+      targetRange.deleteContents();
+      insertedP = lastP;
+      targetRange.insertNode(frag);
+    } else if (el) {
+      insertedP = lastP;
+      el.appendChild(frag);
+    }
+
+    // Position caret inside the trailing paragraph so author can type / press Enter immediately
+    const targetP = insertedP || (el ? el.querySelector("p:last-child") : null);
+    if (el && typeof (el as any).focus === "function") {
+      try {
+        (el as any).focus();
+      } catch (e) {}
+    }
+    if (targetP && sel) {
+      const newRange = document.createRange();
+      newRange.setStart(targetP, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+    ensureEditableStructure();
     syncContent();
     checkFormats();
-    renderEmbeds();
+    if (
+      html.indexOf("cv-social-embed") !== -1 ||
+      html.indexOf("cv-math-formula") !== -1
+    ) {
+      renderEmbeds();
+    }
   }
 
   function formatHTML(html: string) {
@@ -445,6 +575,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function format(cmd: string, val?: string) {
+    if (mode === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -454,20 +585,46 @@ function RichTextEditor(props: RichTextEditorProps) {
     checkFormats();
   }
 
-  function applyColor(cmd: string, color: string) {
+  function applyColorPreview(cmd: string, color: string) {
     if (!color) return;
-    if (cmd === "foreColor") {
-      setTextColor(color);
-    } else {
-      setHighlightColor(color);
+    if (mode === "source") return;
+    const previewEl = getEditorElement();
+    if (previewEl) {
+      try {
+        (previewEl as any).focus();
+      } catch (focusErr) {}
     }
     restoreSelection();
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
-      if (!document.execCommand("hiliteColor", false, color)) {
+      const applied = document.execCommand("hiliteColor", false, color);
+      if (!applied) {
         document.execCommand("backColor", false, color);
       }
+    }
+    saveSelection();
+  }
+
+  function applyColor(cmd: string, color: string) {
+    if (!color) return;
+    if (mode === "source") return;
+    const colorEl = getEditorElement();
+    if (colorEl) {
+      try {
+        (colorEl as any).focus();
+      } catch (focusErr2) {}
+    }
+    restoreSelection();
+    if (cmd === "foreColor") {
+      document.execCommand("foreColor", false, color);
+      setTextColor(color);
+    } else {
+      const colorApplied = document.execCommand("hiliteColor", false, color);
+      if (!colorApplied) {
+        document.execCommand("backColor", false, color);
+      }
+      setHighlightColor(color);
     }
     saveSelection();
     syncContent();
@@ -475,6 +632,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function formatHeading(level: string) {
+    if (mode === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -482,12 +640,16 @@ function RichTextEditor(props: RichTextEditorProps) {
     setHeadingFormat(level);
     syncContent();
     checkFormats();
-    if (editorRef.current) {
-      editorRef.current.focus();
+    const el = getEditorElement();
+    if (el) {
+      try {
+        (el as any).focus();
+      } catch (e) {}
     }
   }
 
   function insertMedia(type: "image" | "video" | "audio") {
+    if (mode === "source") return;
     saveSelection();
     const insertContent = (url: string, altText?: string) => {
       if (!url) return;
@@ -506,7 +668,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         const alt = (altText || "").trim() || filenameGuess || "Image";
         const escapedAlt = escapeHtml(alt);
         const escapedUrl = escapeHtml(url);
-        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
       } else if (type === "video") {
         const ytMatch = url.match(
           /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
@@ -536,21 +698,19 @@ function RichTextEditor(props: RichTextEditorProps) {
         .catch((err) => {
           console.error("Media request failed", err);
         });
+    } else if (type === "image") {
+      openImageModal();
+    } else if (type === "video") {
+      openVideoModal();
     } else {
-      const url = window.prompt(`Enter ${type} URL:`);
-      if (url && type === "image") {
-        const altText = window.prompt(
-          "Describe this image for screen readers and search engines (alt text):",
-          ""
-        );
-        insertContent(url, altText || undefined);
-      } else if (url) {
-        insertContent(url);
-      }
+      const escaped = escapeHtml(type);
+      const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+      insertHtmlAtCursor(html);
     }
   }
 
   function clearAllFormatting() {
+    if (mode === "source") return;
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("removeFormat", false, undefined);
@@ -565,6 +725,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function toggleBlock(type: string) {
+    if (mode === "source") return;
     checkFormats();
     const isActive = type === "PRE" ? activeFormats.code : activeFormats.quote;
     if (isActive) {
@@ -582,18 +743,87 @@ function RichTextEditor(props: RichTextEditorProps) {
 
   function applyClass(className: string) {
     if (!className) return;
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      const span = document.createElement("span");
-      span.className = className;
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
+    if (mode === "source") return;
+    const editor = getEditorElement();
+    if (!editor) return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    if (rawClasses.length === 0) return;
+
+    // 1. If media element selected:
+    if (selectedMediaEl && selectedMediaEl.classList) {
+      rawClasses.forEach((c) => selectedMediaEl.classList.add(c));
       syncContent();
+      checkFormats();
+      return;
     }
+
+    // 2. Get target range from active selection or saved selection
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    let targetRange: any = null;
+    if (sel && sel.rangeCount > 0) {
+      const cur = sel.getRangeAt(0);
+      if (editor.contains(cur.commonAncestorContainer)) {
+        targetRange = cur;
+      }
+    }
+    if (!targetRange) {
+      const saved = (editor as any).__cv_savedRange || activeSavedRange;
+      if (saved && editor.contains(saved.commonAncestorContainer)) {
+        targetRange = saved;
+      }
+    }
+    if (
+      targetRange &&
+      !targetRange.collapsed &&
+      targetRange.toString().length > 0
+    ) {
+      // Highlighted text selection -> wrap in a span with the class
+      const span = document.createElement("span");
+      rawClasses.forEach((c) => span.classList.add(c));
+      span.appendChild(targetRange.extractContents());
+      targetRange.insertNode(span);
+
+      // Re-select the newly styled span
+      if (sel) {
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        activeSavedRange = r.cloneRange();
+        (editor as any).__cv_savedRange = r.cloneRange();
+      }
+    } else if (targetRange) {
+      // Caret inside a block element
+      let node: any = targetRange.startContainer;
+      let block: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (
+          node.nodeType === 1 &&
+          /^(P|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH|DIV|FIGURE|TABLE)$/i.test(
+            node.tagName
+          )
+        ) {
+          block = node;
+          break;
+        }
+        node = node.parentNode;
+      }
+      if (!block && editor.firstElementChild) {
+        block = editor.firstElementChild as HTMLElement;
+      }
+      if (block && block !== editor) {
+        rawClasses.forEach((c) => block!.classList.add(c));
+      }
+    }
+    syncContent();
+    checkFormats();
+    try {
+      (editor as any).focus();
+    } catch (e) {}
   }
 
   function openButtonModal() {
+    if (mode === "source") return;
     saveSelection();
     setShowButtonModal(true);
     setBtnText("Click Here");
@@ -629,8 +859,9 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function getCanonicalHtml() {
-    if (!editorRef.current) return "";
-    const clone = editorRef.current.cloneNode(true) as HTMLElement;
+    const editor = getEditorElement();
+    if (!editor) return "";
+    const clone = editor.cloneNode(true) as HTMLElement;
     const selected = clone.querySelectorAll(".cv-resizing-selected");
     selected.forEach((el: any) => {
       el.classList.remove("cv-resizing-selected");
@@ -653,8 +884,10 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function renderEmbeds() {
-    if (!editorRef.current || typeof window === "undefined") return;
-    const socialEmbeds = editorRef.current.querySelectorAll(
+    if (typeof window === "undefined") return;
+    const editor = getEditorElement();
+    if (!editor) return;
+    const socialEmbeds = editor.querySelectorAll(
       '.cv-social-embed:not([data-cv-rendered="true"])'
     );
     socialEmbeds.forEach((el: any) => {
@@ -796,7 +1029,7 @@ function RichTextEditor(props: RichTextEditorProps) {
         markRendered();
       }
     });
-    const formulas = editorRef.current.querySelectorAll(
+    const formulas = editor.querySelectorAll(
       '.cv-math-formula:not([data-cv-rendered="true"])'
     );
     if (formulas.length > 0) {
@@ -863,7 +1096,8 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function syncContent() {
-    if (editorRef.current) {
+    const editor = getEditorElement();
+    if (editor) {
       setInternalContent(getCanonicalHtml());
       if (props.onChange) {
         props.onChange(internalContent);
@@ -872,7 +1106,35 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function handleInput() {
-    syncContent();
+    const el = getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+      }
+      (el as any).__cv_inputTimer = setTimeout(() => {
+        (el as any).__cv_inputTimer = null;
+        syncContent();
+      }, 250);
+    } else {
+      syncContent();
+    }
+  }
+
+  function handleFocus() {
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
+  }
+
+  function handleBlur() {
+    const el = getEditorElement();
+    if (el && (el as any).__cv_inputTimer) {
+      clearTimeout((el as any).__cv_inputTimer);
+      (el as any).__cv_inputTimer = null;
+      syncContent();
+    }
   }
 
   function handleSourceInput(e: any) {
@@ -880,15 +1142,17 @@ function RichTextEditor(props: RichTextEditorProps) {
     if (props.onChange) {
       props.onChange(internalContent);
     }
-    if (editorRef.current) {
+    const editor = getEditorElement();
+    if (editor) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.current.innerHTML = sanitizeHtml(internalContent);
+      editor.innerHTML = sanitizeHtml(internalContent);
       renderEmbeds();
     }
   }
 
   function openTableModal() {
+    if (mode === "source") return;
     saveSelection();
     setShowTableModal(true);
     setTableRows("3");
@@ -933,6 +1197,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   function modifyTable(
     action: "addRow" | "removeRow" | "addCol" | "removeCol"
   ) {
+    if (mode === "source") return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let node = sel.getRangeAt(0).startContainer as any;
@@ -1005,6 +1270,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openLinkModal() {
+    if (mode === "source") return;
     saveSelection();
     setShowLinkModal(true);
     setLinkUrl("");
@@ -1026,6 +1292,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openWidgetModal() {
+    if (mode === "source") return;
     saveSelection();
     setShowWidgetModal(true);
   }
@@ -1044,6 +1311,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function openSocialModal() {
+    if (mode === "source") return;
     saveSelection();
     setShowSocialModal(true);
     setSocialUrl("");
@@ -1072,6 +1340,67 @@ function RichTextEditor(props: RichTextEditorProps) {
     setShowSocialModal(false);
   }
 
+  function openImageModal() {
+    if (mode === "source") return;
+    saveSelection();
+    setShowImageModal(true);
+    setImageUrl("");
+    setImageAlt("");
+  }
+
+  function closeImageModal() {
+    setShowImageModal(false);
+  }
+
+  function confirmImage() {
+    setShowImageModal(false);
+    if (imageUrl) {
+      const url = imageUrl.trim();
+      const filenameGuess = (url.split("/").pop() || "image")
+        .split("?")[0]
+        .split(".")[0]
+        .replace(/[-_]+/g, " ")
+        .trim();
+      const alt = (imageAlt || "").trim() || filenameGuess || "Image";
+      const escapedAlt = escapeHtml(alt);
+      const escapedUrl = escapeHtml(url);
+      const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+      insertHtmlAtCursor(html);
+    }
+  }
+
+  function openVideoModal() {
+    if (mode === "source") return;
+    saveSelection();
+    setShowVideoModal(true);
+    setVideoUrl("");
+  }
+
+  function closeVideoModal() {
+    setShowVideoModal(false);
+  }
+
+  function confirmVideo() {
+    setShowVideoModal(false);
+    if (videoUrl) {
+      const url = videoUrl.trim();
+      const ytMatch = url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+      );
+      const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+      const escapedUrl = escapeHtml(url);
+      let html = "";
+      if (ytMatch) {
+        html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+      } else if (vimeoMatch) {
+        html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+      } else {
+        html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+      }
+      insertHtmlAtCursor(html);
+    }
+  }
+
   function toggleMode() {
     if (mode === "visual") {
       syncContent();
@@ -1079,10 +1408,11 @@ function RichTextEditor(props: RichTextEditorProps) {
       setMode("source");
     } else {
       setMode("visual");
-      if (editorRef.current) {
+      const editor = getEditorElement();
+      if (editor) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        editorRef.current.innerHTML = sanitizeHtml(internalContent);
+        editor.innerHTML = sanitizeHtml(internalContent);
         renderEmbeds();
       }
     }
@@ -1105,6 +1435,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function changeFontFamily(font: string) {
+    if (mode === "source") return;
     setFontFamily(font);
     restoreSelection();
     document.execCommand("fontName", false, font);
@@ -1113,6 +1444,7 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function changeFontSize(size: string) {
+    if (mode === "source") return;
     setFontSize(size);
     restoreSelection();
     const sel = window.getSelection();
@@ -1131,6 +1463,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       const sizeMap: any = {
         "12px": "1",
         "14px": "2",
+        "15px": "2",
         "16px": "3",
         "18px": "4",
         "20px": "5",
@@ -1144,56 +1477,190 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function insertChecklist() {
-    // The checkbox and its text must share one <label> (implicit
-    // association, no id needed) -- as separate sibling elements a screen
-    // reader announces an unlabelled checkbox with no indication of what
-    // it controls, and clicking the text would not toggle it either.
-    const html =
-      '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-    insertHtmlAtCursor(html);
+    if (mode === "source") return;
+    restoreSelection();
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const editor = getEditorElement();
+    if (!sel || !editor) return;
+    let node: any =
+      sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+    let currentLi: HTMLElement | null = null;
+    let currentUl: HTMLElement | null = null;
+    let currentP: HTMLElement | null = null;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        if (node.tagName === "LI") currentLi = node;
+        if (node.tagName === "UL" && node.classList.contains("task-list"))
+          currentUl = node;
+        if (node.tagName === "P" || node.tagName === "DIV") currentP = node;
+      }
+      node = node.parentNode;
+    }
+
+    // 1. If currently inside a task list: append a new <li> to the existing <ul>
+    if (currentUl) {
+      const li = document.createElement("li");
+      li.style.cssText = "margin: 4px 0;";
+      li.innerHTML =
+        '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      if (currentLi && currentLi.parentNode === currentUl) {
+        currentLi.after(li);
+      } else {
+        currentUl.appendChild(li);
+      }
+      const span = li.querySelector("span");
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+      }
+      syncContent();
+      checkFormats();
+      return;
+    }
+
+    // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+    if (currentP) {
+      const prev = currentP.previousElementSibling;
+      if (
+        prev &&
+        prev.tagName === "UL" &&
+        prev.classList.contains("task-list")
+      ) {
+        const text = currentP.textContent ? currentP.textContent.trim() : "";
+        const li = document.createElement("li");
+        li.style.cssText = "margin: 4px 0;";
+        const itemText = text && text !== "" ? escapeHtml(text) : "Task item";
+        li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+        prev.appendChild(li);
+        currentP.remove();
+        const span = li.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        syncContent();
+        checkFormats();
+        return;
+      }
+    }
+
+    // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+    const ul = document.createElement("ul");
+    ul.className = "task-list";
+    ul.style.cssText = "list-style: none; padding-left: 0.25rem;";
+    const li = document.createElement("li");
+    li.style.cssText = "margin: 4px 0;";
+    li.innerHTML =
+      '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+    ul.appendChild(li);
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(ul);
+    } else {
+      editor.appendChild(ul);
+    }
+    const span = li.querySelector("span");
+    if (span) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveSelection();
+    }
+    syncContent();
+    checkFormats();
   }
 
-  function insertFormula() {
+  function openFormulaModal() {
+    if (mode === "source") return;
     saveSelection();
-    const formula = window.prompt(
-      "Enter math formula or expression:",
-      "E = mc²"
-    );
+    setShowFormulaModal(true);
+    setFormulaInput("E = mc²");
+  }
+
+  function closeFormulaModal() {
+    setShowFormulaModal(false);
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+
+  function confirmFormula() {
+    setShowFormulaModal(false);
+    const formula = (formulaInput || "").trim();
     if (formula) {
-      const escaped = formula
-        .split("&")
-        .join("&amp;")
-        .split("<")
-        .join("&lt;")
-        .split(">")
-        .join("&gt;")
-        .split('"')
-        .join("&quot;");
+      const escaped = escapeHtml(formula);
       const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
       insertHtmlAtCursor(html);
     }
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+
+  function insertFormula() {
+    openFormulaModal();
   }
 
   function addClass(className: string) {
     if (!className) return;
-    if (!appliedClasses.includes(className)) {
-      setAppliedClasses([...appliedClasses, className]);
-    }
+    if (mode === "source") return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    let updated = [...appliedClasses];
+    rawClasses.forEach((c) => {
+      if (!updated.includes(c)) updated.push(c);
+    });
+    setAppliedClasses(updated);
   }
 
   function removeClass(className: string) {
+    if (mode === "source") return;
     setAppliedClasses(appliedClasses.filter((c: string) => c !== className));
-    if (editorRef.current) {
-      const elements = editorRef.current.querySelectorAll(`.${className}`);
+    const editor = getEditorElement();
+    if (editor) {
+      if (selectedMediaEl && selectedMediaEl.classList) {
+        selectedMediaEl.classList.remove(className);
+      }
+      const elements = editor.querySelectorAll(`.${className}`);
       elements.forEach((el: any) => {
         el.classList.remove(className);
-        if (el.classList.length === 0 && el.tagName === "SPAN") {
+        if (
+          el.classList.length === 0 &&
+          el.tagName === "SPAN" &&
+          !el.getAttribute("style") &&
+          !el.getAttribute("data-platform") &&
+          !el.getAttribute("data-widget")
+        ) {
           const parent = el.parentNode;
-          while (el.firstChild) parent.insertBefore(el.firstChild, el);
-          parent.removeChild(el);
+          if (parent) {
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+          }
         }
       });
       syncContent();
+      checkFormats();
+    }
+  }
+
+  function applyClassFromInput(e: any) {
+    const container =
+      e && e.target && e.target.closest
+        ? e.target.closest(".cv-toolbar-classes-group")
+        : null;
+    const input = container ? container.querySelector(".cv-class-input") : null;
+    if (input && input.value) {
+      const val = input.value.trim();
+      if (val) {
+        applyClass(val);
+        addClass(val);
+        input.value = "";
+      }
     }
   }
 
@@ -1206,6 +1673,16 @@ function RichTextEditor(props: RichTextEditorProps) {
         applyClass(val);
         addClass(val);
         target.value = "";
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      if (target) target.value = "";
+      const editor = getEditorElement();
+      if (editor) {
+        try {
+          editor.focus();
+        } catch (err) {}
       }
     }
   }
@@ -1298,6 +1775,7 @@ function RichTextEditor(props: RichTextEditorProps) {
       [
         "image",
         "link",
+        "formula",
         "table",
         "unorderedList",
         "orderedList",
@@ -1339,12 +1817,9 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function updateResizeHandlePosition() {
-    if (!selectedMediaEl || !editorRef.current) return;
-    // The handle is rendered as a sibling of editorRef inside the
-    // scrollable .editor-content wrapper (the nearest `position:
-    // relative` ancestor), not inside editorRef itself -- position and
-    // scroll offsets must be measured against that wrapper, not editorRef.
-    const container = (editorRef.current as any).parentElement;
+    const editor = getEditorElement();
+    if (!selectedMediaEl || !editor) return;
+    const container = (editor as any).parentElement;
     if (!container) return;
     const elRect = selectedMediaEl.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -1354,6 +1829,25 @@ function RichTextEditor(props: RichTextEditorProps) {
     setResizeHandleLeft(
       elRect.right - containerRect.left + container.scrollLeft - 7
     );
+    let tbTop = elRect.top - containerRect.top + container.scrollTop - 40;
+    if (tbTop < 8) {
+      tbTop = elRect.bottom - containerRect.top + container.scrollTop + 8;
+    }
+    let tbLeft = elRect.left - containerRect.left + container.scrollLeft;
+    if (tbLeft < 8) tbLeft = 8;
+    setResizeToolbarTop(tbTop);
+    setResizeToolbarLeft(tbLeft);
+  }
+
+  function handleEditorScroll() {
+    if (!selectedMediaEl) return;
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        updateResizeHandlePosition();
+      });
+    } else {
+      updateResizeHandlePosition();
+    }
   }
 
   function selectMediaElement(el: any) {
@@ -1363,6 +1857,61 @@ function RichTextEditor(props: RichTextEditorProps) {
     setSelectedMediaEl(el);
     el.classList.add("cv-resizing-selected");
     updateResizeHandlePosition();
+    if (el.tagName === "IMG" && !el.complete) {
+      el.addEventListener(
+        "load",
+        () => {
+          if (selectedMediaEl === el) {
+            updateResizeHandlePosition();
+          }
+        },
+        {
+          once: true,
+        }
+      );
+    }
+  }
+
+  function deleteSelectedMedia() {
+    if (selectedMediaEl) {
+      const el = selectedMediaEl;
+      deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      ensureEditableStructure();
+      syncContent();
+    }
+  }
+
+  function setImageSize(size: string) {
+    if (!selectedMediaEl) return;
+    const el = selectedMediaEl;
+    el.style.width = size;
+    el.style.maxWidth = "100%";
+    el.style.height = "auto";
+    updateResizeHandlePosition();
+    syncContent();
+  }
+
+  function setImageAlign(align: string) {
+    if (!selectedMediaEl) return;
+    const el = selectedMediaEl;
+    if (align === "center") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "auto";
+    } else if (align === "left") {
+      el.style.display = "block";
+      el.style.marginLeft = "0";
+      el.style.marginRight = "auto";
+    } else if (align === "right") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "0";
+    }
+    updateResizeHandlePosition();
+    syncContent();
   }
 
   function deselectMediaElement() {
@@ -1372,17 +1921,678 @@ function RichTextEditor(props: RichTextEditorProps) {
     setSelectedMediaEl(null);
   }
 
-  function handleEditorClick(e: any) {
-    const target = e.target;
-    if (isResizableTarget(target)) {
-      selectMediaElement(target);
-    } else {
+  function isReadOnly() {
+    return !!(props.readOnly || props.disabled);
+  }
+
+  function closeAllModals() {
+    setShowInsertMenu(false);
+    setShowTableModal(false);
+    setShowLinkModal(false);
+    setShowWidgetModal(false);
+    setShowSocialModal(false);
+    setShowButtonModal(false);
+    setShowAiModal(false);
+    setShowImageModal(false);
+    setShowVideoModal(false);
+    setShowFormulaModal(false);
+  }
+
+  function handleBackdropClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      closeAllModals();
+    }
+  }
+
+  function ensureEditableStructure() {
+    const el = getEditorElement();
+    if (!el) return;
+    if (
+      !el.hasChildNodes() ||
+      !el.innerHTML ||
+      el.innerHTML.trim() === "" ||
+      el.innerHTML.trim() === "<br>"
+    ) {
+      el.innerHTML = "<p><br></p>";
+      return;
+    }
+    const first = el.firstElementChild;
+    if (
+      el.childNodes.length === 1 &&
+      first &&
+      first.tagName === "P" &&
+      !first.textContent &&
+      !first.children.length
+    ) {
+      first.innerHTML = "<br>";
+      return;
+    }
+    // Wrap top-level text nodes or inline non-block elements directly under editor in <p>
+    const nodesToWrap: any[] = [];
+    for (let i = 0; i < el.childNodes.length; i++) {
+      const child = el.childNodes[i];
+      if (child.nodeType === 3) {
+        if (child.textContent && child.textContent.trim() !== "") {
+          nodesToWrap.push(child);
+        }
+      } else if (child.nodeType === 1) {
+        const tag = (child as HTMLElement).tagName;
+        const isBlock =
+          /^(P|DIV|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|TABLE|HR|SECTION|ARTICLE|HEADER|FOOTER)$/.test(
+            tag
+          );
+        if (!isBlock) {
+          nodesToWrap.push(child);
+        }
+      }
+    }
+    if (nodesToWrap.length > 0) {
+      nodesToWrap.forEach((node) => {
+        const p = document.createElement("p");
+        node.replaceWith(p);
+        p.appendChild(node);
+      });
+    }
+    const last = el.lastElementChild;
+    if (
+      last &&
+      (last.getAttribute("contenteditable") === "false" ||
+        last.tagName === "TABLE" ||
+        last.tagName === "IMG" ||
+        last.tagName === "VIDEO" ||
+        last.tagName === "AUDIO" ||
+        (last.classList &&
+          (last.classList.contains("cv-social-embed") ||
+            last.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      el.appendChild(p);
+    }
+    if (
+      first &&
+      (first.getAttribute("contenteditable") === "false" ||
+        first.tagName === "TABLE" ||
+        first.tagName === "IMG" ||
+        first.tagName === "VIDEO" ||
+        first.tagName === "AUDIO" ||
+        (first.classList &&
+          (first.classList.contains("cv-social-embed") ||
+            first.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      el.insertBefore(p, first);
+    }
+  }
+
+  function normalizeSelection() {
+    if (isReadOnly()) return;
+    const el = getEditorElement();
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let range: any = null;
+    try {
+      range = sel.getRangeAt(0);
+    } catch (e) {
+      return;
+    }
+    let node: any = range.startContainer;
+    let atomicEl: any = null;
+    while (node && node !== el) {
+      if (
+        node.nodeType === 1 &&
+        node.getAttribute &&
+        node.getAttribute("contenteditable") === "false"
+      ) {
+        atomicEl = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    if (atomicEl) {
+      const newRange = document.createRange();
+      const next = atomicEl.nextSibling;
+      if (
+        !next ||
+        (next.nodeType === 1 &&
+          next.getAttribute("contenteditable") === "false")
+      ) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (next) {
+          atomicEl.parentNode.insertBefore(p, next);
+        } else {
+          atomicEl.parentNode.appendChild(p);
+        }
+        newRange.setStart(p, 0);
+      } else if (next.nodeType === 1) {
+        newRange.setStart(next, 0);
+      } else {
+        newRange.setStartAfter(atomicEl);
+      }
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+  }
+
+  function focusEditorAtEnd() {
+    if (isReadOnly()) return;
+    const el = getEditorElement();
+    if (!el) return;
+    ensureEditableStructure();
+    try {
+      if (typeof (el as any).focus === "function") {
+        (el as any).focus();
+      }
+    } catch (e) {}
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el as Node);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const cloned = range.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+  }
+
+  function handleEditorContentClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      focusEditorAtEnd();
+    }
+  }
+
+  function handleKeyDown(e: any) {
+    if (isReadOnly()) {
+      e.preventDefault();
+      return;
+    }
+    if (mode === "source") return;
+    if (e.key === "Escape") {
+      deselectMediaElement();
+      closeAllModals();
+      return;
+    }
+    if (selectedMediaEl) {
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        const el = selectedMediaEl;
+        deselectMediaElement();
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        ensureEditableStructure();
+        syncContent();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const media = selectedMediaEl;
+        deselectMediaElement();
+        const editor = getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+        }
+        ensureEditableStructure();
+        syncContent();
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const media = selectedMediaEl;
+        deselectMediaElement();
+        const editor = getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+        }
+        return;
+      }
+    }
+    if (e.key === "Backspace") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            e.preventDefault();
+            const prevLi = taskLi.previousElementSibling;
+            taskLi.remove();
+            if (prevLi) {
+              const span = prevLi.querySelector("span");
+              if (span) {
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                saveSelection();
+              }
+            } else if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              saveSelection();
+            }
+            syncContent();
+            return;
+          }
+        }
+      }
+    }
+    if (e.key === "Enter") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (!sel || sel.rangeCount === 0 || !editor) return;
+      const range = sel.getRangeAt(0);
+      // Soft line break on Shift+Enter -> inserts <br> and moves to next line
+      if (e.shiftKey) {
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        saveSelection();
+        handleInput();
+        return;
+      }
+      let node: any = range.startContainer;
+      let taskLi: HTMLElement | null = null;
+      let taskUl: HTMLElement | null = null;
+      let listLi: HTMLElement | null = null;
+      let listParent: HTMLElement | null = null;
+      let headingEl: HTMLElement | null = null;
+      let quoteEl: HTMLElement | null = null;
+      let preEl: HTMLElement | null = null;
+      let calloutEl: HTMLElement | null = null;
+      let tableCell: HTMLElement | null = null;
+      let atomicEl: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          const tag = node.tagName;
+          if (tag === "LI") {
+            if (node.closest && node.closest("ul.task-list")) {
+              taskLi = node;
+              taskUl = node.closest("ul.task-list");
+            } else {
+              listLi = node;
+              listParent = node.parentElement;
+            }
+          }
+          if (/^H[1-6]$/.test(tag)) headingEl = node;
+          if (tag === "BLOCKQUOTE") quoteEl = node;
+          if (tag === "PRE" || tag === "CODE") preEl = node;
+          if (tag === "TD" || tag === "TH") tableCell = node;
+          if (
+            node.classList &&
+            (node.classList.contains("cv-callout") ||
+              node.classList.contains("cv-widget"))
+          ) {
+            calloutEl = node;
+          }
+          if (
+            node.getAttribute &&
+            node.getAttribute("contenteditable") === "false"
+          )
+            atomicEl = node;
+          if (tag === "IMG" || tag === "VIDEO" || tag === "AUDIO")
+            atomicEl = node;
+        }
+        node = node.parentNode;
+      }
+
+      // 1. Task List Items
+      if (taskUl && taskLi) {
+        e.preventDefault();
+        const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+        if (!text || text === "") {
+          taskLi.remove();
+          if (taskUl.children.length === 0) {
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            taskUl.replaceWith(p);
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+            handleInput();
+            return;
+          }
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          taskUl.after(p);
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          handleInput();
+          return;
+        }
+        const newLi = document.createElement("li");
+        newLi.style.cssText = "margin: 4px 0;";
+        newLi.innerHTML =
+          '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+        taskLi.after(newLi);
+        const span = newLi.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.setStart(span, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        handleInput();
+        return;
+      }
+
+      // 2. Atomic Elements (Embeds, Widgets, Media)
+      if (atomicEl) {
+        e.preventDefault();
+        let block: any = atomicEl;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (block && block.parentNode) {
+          block.after(p);
+        } else {
+          editor.appendChild(p);
+        }
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 3. Headings: exit to standard paragraph <p> when at end of heading
+      if (headingEl) {
+        e.preventDefault();
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(headingEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remainingText = endRange.toString();
+        const newP = document.createElement("p");
+        newP.innerHTML = "<br>";
+        if (!remainingText || remainingText.trim() === "") {
+          headingEl.after(newP);
+        } else {
+          const extracted = endRange.extractContents();
+          newP.innerHTML = "";
+          newP.appendChild(extracted);
+          if (!newP.textContent || !newP.textContent.trim()) {
+            newP.innerHTML = "<br>";
+          }
+          headingEl.after(newP);
+        }
+        if (!headingEl.textContent || !headingEl.textContent.trim()) {
+          headingEl.innerHTML = "<br>";
+        }
+        const newRange = document.createRange();
+        newRange.setStart(newP, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        setHeadingFormat("P");
+        saveSelection();
+        handleInput();
+        checkFormats();
+        return;
+      }
+
+      // 4. Blockquotes: break out on empty line, otherwise insert clean <br>
+      if (quoteEl) {
+        const quoteText = quoteEl.textContent ? quoteEl.textContent.trim() : "";
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(quoteEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remaining = endRange.toString().trim();
+        if (
+          !quoteText ||
+          quoteEl.innerHTML === "<br>" ||
+          (!remaining && quoteEl.innerHTML.endsWith("<br>"))
+        ) {
+          e.preventDefault();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (!quoteText || quoteText === "") {
+            quoteEl.replaceWith(p);
+          } else {
+            quoteEl.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          handleInput();
+          checkFormats();
+          return;
+        }
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 5. Code / Pre Blocks
+      if (preEl) {
+        e.preventDefault();
+        const textNode = document.createTextNode(String.fromCharCode(10));
+        range.deleteContents();
+        range.insertNode(textNode);
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 6. Regular Lists (UL/OL items)
+      if (listLi && listParent) {
+        const itemText = listLi.textContent ? listLi.textContent.trim() : "";
+        if (!itemText || itemText === "") {
+          e.preventDefault();
+          listLi.remove();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (listParent.children.length === 0) {
+            listParent.replaceWith(p);
+          } else {
+            listParent.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          handleInput();
+          checkFormats();
+          return;
+        }
+        return;
+      }
+
+      // 7. Callouts / Widgets: exit to standard paragraph <p>
+      if (calloutEl) {
+        e.preventDefault();
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        calloutEl.after(p);
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 8. Table Cells: insert line break (<br>)
+      if (tableCell) {
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 9. Standard Paragraphs: Explicitly create semantic <p> and move to next line
+      e.preventDefault();
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (err) {}
+      document.execCommand("insertParagraph");
+      saveSelection();
+      handleInput();
+      checkFormats();
+      return;
+    }
+  }
+
+  function handleGlobalKeyDown(e: any) {
+    if (e.key === "Escape") {
+      setShowInsertMenu(false);
+      closeAllModals();
       deselectMediaElement();
     }
   }
 
+  function handleEditorClick(e: any) {
+    setShowInsertMenu(false);
+    if (isReadOnly()) return;
+    const target = e.target;
+    const resizable =
+      target && target.closest
+        ? target.closest("img, video, audio, .cv-social-embed, .cv-widget")
+        : null;
+    if (resizable && isResizableTarget(resizable)) {
+      selectMediaElement(resizable);
+    } else {
+      deselectMediaElement();
+      normalizeSelection();
+    }
+  }
+
   function startResize(e: any) {
-    if (!selectedMediaEl) return;
+    if (!selectedMediaEl || isReadOnly()) return;
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
@@ -1399,9 +2609,8 @@ function RichTextEditor(props: RichTextEditorProps) {
     const delta = e.clientX - resizeStartX;
     let newWidth = Math.round(resizeStartWidth + delta);
     const minWidth = 80;
-    const maxWidth = editorRef.current
-      ? (editorRef.current as any).clientWidth
-      : 2000;
+    const editor = getEditorElement();
+    const maxWidth = editor ? (editor as any).clientWidth : 2000;
     if (newWidth < minWidth) newWidth = minWidth;
     if (newWidth > maxWidth) newWidth = maxWidth;
     const el = selectedMediaEl;
@@ -1424,37 +2633,52 @@ function RichTextEditor(props: RichTextEditorProps) {
   }
 
   function handleSelectionChange() {
-    if (typeof window !== "undefined" && editorRef.current) {
-      const sel = window.getSelection();
-      let inEditor = false;
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return;
+    const editor =
+      ((editorRef.current as any) && (editorRef.current as any).current) ||
+      ((editorRef.current as any) && (editorRef.current as any).nodeType === 1
+        ? (editorRef.current as any)
+        : null) ||
+      (document.querySelector
+        ? document.querySelector(".wysiwyg-content")
+        : null);
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    let inEditor = false;
+    try {
+      if (sel.anchorNode && typeof (editor as any).contains === "function") {
+        inEditor = (editor as any).contains(sel.anchorNode as Node);
+      }
+    } catch (e) {}
+    if (inEditor && sel.rangeCount > 0) {
       try {
-        if (
-          sel &&
-          sel.anchorNode &&
-          typeof (editorRef.current as any).contains === "function"
-        ) {
-          inEditor = (editorRef.current as any).contains(
-            sel.anchorNode as Node
-          );
+        const r = sel.getRangeAt(0);
+        if ((editor as any).contains(r.commonAncestorContainer)) {
+          activeSavedRange = r.cloneRange();
+          (editor as any).__cv_savedRange = r.cloneRange();
         }
       } catch (e) {}
-      if (inEditor) {
-        if (sel && sel.rangeCount > 0) {
-          saveSelection();
-        }
-        checkFormats();
-      }
     }
   }
 
   useEffect(() => {
+    setIsMounted(true);
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
     if (!internalContent) {
       setInternalContent(props.content || props.initialContent || "");
     }
-    if (editorRef.current) {
+    const el = getEditorElement();
+    if (el) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.current.innerHTML = sanitizeHtml(internalContent);
+      el.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
       renderEmbeds();
     }
     if (typeof document !== "undefined") {
@@ -1470,17 +2694,47 @@ function RichTextEditor(props: RichTextEditorProps) {
       }
       document.addEventListener("fullscreenchange", handleFullscreenChange);
       document.addEventListener("selectionchange", handleSelectionChange);
+      document.addEventListener("keydown", handleGlobalKeyDown);
     }
   }, []);
-
+  useEffect(() => {
+    if (!isMounted) return;
+    const el = getEditorElement();
+    if (!el) return;
+    if (
+      typeof props.content === "string" &&
+      props.content !== internalContent
+    ) {
+      setInternalContent(props.content);
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      el.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
+      renderEmbeds();
+    }
+  }, [props.content]);
   useEffect(() => {
     return () => {
+      const el = getEditorElement();
+      if (el) {
+        if ((el as any).__cv_inputTimer) {
+          clearTimeout((el as any).__cv_inputTimer);
+          (el as any).__cv_inputTimer = null;
+        }
+        if ((el as any).__cv_selectionTimer) {
+          clearTimeout((el as any).__cv_selectionTimer);
+          (el as any).__cv_selectionTimer = null;
+        }
+      }
       if (typeof document !== "undefined") {
         document.removeEventListener(
           "fullscreenchange",
           handleFullscreenChange
         );
         document.removeEventListener("selectionchange", handleSelectionChange);
+        document.removeEventListener("keydown", handleGlobalKeyDown);
+        document.removeEventListener("mousemove", handleResizeMove);
+        document.removeEventListener("mouseup", stopResize);
       }
     };
   }, []);
@@ -1491,8 +2745,8 @@ function RichTextEditor(props: RichTextEditorProps) {
       className={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${
         isFullscreen
           ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none"
-          : "w-full"
-      } ${props.className || ""}`}
+          : "w-full h-full"
+      } ${mode === "source" ? "cv-source-mode" : ""} ${props.className || ""}`}
       style={{
         boxSizing: "border-box",
         background: "var(--cv-color-surface-sunken, #0f172a)",
@@ -1502,7 +2756,11 @@ function RichTextEditor(props: RichTextEditorProps) {
         boxShadow: "var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))",
       }}
     >
-      <div className="editor-toolbar select-none sticky top-0 z-10 w-full">
+      <div
+        className={`editor-toolbar select-none sticky top-0 z-10 w-full ${
+          isReadOnly() ? "opacity-60 pointer-events-none" : ""
+        }`}
+      >
         <div className="cv-toolbar-row cv-toolbar-row-1">
           <div className="cv-toolbar-group">
             <button
@@ -1647,6 +2905,7 @@ function RichTextEditor(props: RichTextEditorProps) {
             >
               <option value="12px">12px</option>
               <option value="14px">14px</option>
+              <option value="15px">15px</option>
               <option value="16px">16px</option>
               <option value="18px">18px</option>
               <option value="20px">20px</option>
@@ -1780,7 +3039,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                     value={textColor}
                     onMouseDown={(event) => saveSelection()}
                     onInput={(e) =>
-                      applyColor(
+                      applyColorPreview(
                         "foreColor",
                         (e.target as HTMLInputElement).value
                       )
@@ -1828,7 +3087,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                     value={highlightColor}
                     onMouseDown={(event) => saveSelection()}
                     onInput={(e) =>
-                      applyColor(
+                      applyColorPreview(
                         "backColor",
                         (e.target as HTMLInputElement).value
                       )
@@ -2044,11 +3303,21 @@ function RichTextEditor(props: RichTextEditorProps) {
             </button>
           </div>
           <div className="cv-toolbar-divider" />
-          <div className="cv-toolbar-group relative">
+          <div
+            className="cv-toolbar-group cv-insert-dropdown relative"
+            style={{
+              position: "relative",
+              display: "inline-flex",
+            }}
+          >
             <button
               type="button"
               className="cv-toolbar-action-btn"
               title="Insert Options"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                saveSelection();
+              }}
               onClick={(event) => setShowInsertMenu(!showInsertMenu)}
             >
               <svg
@@ -2081,7 +3350,16 @@ function RichTextEditor(props: RichTextEditorProps) {
               </svg>
             </button>
             {showInsertMenu ? (
-              <div className="cv-insert-menu shadow-xl">
+              <div
+                className="cv-insert-menu shadow-xl"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: "0",
+                  zIndex: 50,
+                  minWidth: "170px",
+                }}
+              >
                 <button
                   type="button"
                   className="cv-insert-item"
@@ -2240,6 +3518,26 @@ function RichTextEditor(props: RichTextEditorProps) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => {
                     setShowInsertMenu(false);
+                    openFormulaModal();
+                  }}
+                >
+                  <span
+                    className="font-serif italic font-bold text-xs"
+                    style={{
+                      width: "14px",
+                      textAlign: "center",
+                    }}
+                  >
+                    Fx
+                  </span>
+                  Formula
+                </button>
+                <button
+                  type="button"
+                  className="cv-insert-item"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => {
+                    setShowInsertMenu(false);
                     format("insertHorizontalRule");
                   }}
                 >
@@ -2311,7 +3609,10 @@ function RichTextEditor(props: RichTextEditorProps) {
               type="button"
               className="cv-toolbar-action-btn"
               title="Table"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                saveSelection();
+              }}
               onClick={(event) => openTableModal()}
             >
               <svg
@@ -2469,15 +3770,20 @@ function RichTextEditor(props: RichTextEditorProps) {
                 </svg>
               </button>
             ) : null}
-            <button
-              type="button"
-              className="cv-toolbar-btn"
-              title="Formula"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(event) => insertFormula()}
-            >
-              <span className="font-serif italic font-bold text-xs">Fx</span>
-            </button>
+            {showToolbarOption("formula") ? (
+              <button
+                type="button"
+                className="cv-toolbar-btn"
+                title="Formula"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  saveSelection();
+                }}
+                onClick={(event) => openFormulaModal()}
+              >
+                <span className="font-serif italic font-bold text-xs">Fx</span>
+              </button>
+            ) : null}
             {showToolbarOption("social") ? (
               <button
                 type="button"
@@ -2565,8 +3871,31 @@ function RichTextEditor(props: RichTextEditorProps) {
                 list="editor-class-list"
                 placeholder="+ add class..."
                 className="cv-class-input"
+                onMouseDown={(event) => saveSelection()}
                 onKeyDown={(e) => handleClassInputKeyDown(e)}
               />
+              <button
+                type="button"
+                className="cv-class-apply-btn"
+                title="Apply Class"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  applyClassFromInput(e);
+                }}
+                style={{
+                  border: "none",
+                  background: "var(--cv-color-primary, #0284c7)",
+                  color: "#fff",
+                  borderRadius: "4px",
+                  padding: "1px 6px",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  lineHeight: "1.4",
+                }}
+              >
+                Apply
+              </button>
               {props.availableClasses && props.availableClasses.length > 0 ? (
                 <datalist id="editor-class-list">
                   {props.availableClasses?.map((cls) => (
@@ -2581,9 +3910,10 @@ function RichTextEditor(props: RichTextEditorProps) {
               <button
                 type="button"
                 title="View HTML Source Code"
-                className={`cv-toolbar-btn ${
+                className={`cv-toolbar-btn cv-source-toggle-btn ${
                   mode === "source" ? "is-active" : ""
                 }`}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={(event) => toggleMode()}
               >
                 <svg
@@ -2607,6 +3937,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                 type="button"
                 className="cv-toolbar-btn"
                 title="Full Screen"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={(event) => toggleFullScreen()}
               >
                 <svg
@@ -2653,25 +3984,34 @@ function RichTextEditor(props: RichTextEditorProps) {
         </div>
       </div>
       <div
-        className={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode}`}
-        onScroll={(event) => updateResizeHandlePosition()}
+        className={`editor-content flex-1 overflow-y-auto relative min-h-0 cv-mode-${mode}`}
+        onScroll={(event) => handleEditorScroll()}
+        onClick={(e) => handleEditorContentClick(e)}
         style={{
-          padding: "2rem 3rem",
+          padding: "16px 20px",
           color: "var(--cv-color-text-main, #f1f5f9)",
           position: "relative",
+          cursor: isReadOnly() ? "default" : "text",
         }}
       >
         <div
-          contentEditable="true"
-          className="wysiwyg-content outline-none prose prose-invert max-w-none"
           ref={editorRef}
-          onInput={(event) => {
-            handleInput();
+          contentEditable={isReadOnly() ? "false" : "true"}
+          className={`wysiwyg-content outline-none prose prose-invert max-w-none ${
+            isReadOnly() ? "cv-readonly" : ""
+          }`}
+          onInput={(event) => handleInput()}
+          onFocus={(event) => handleFocus()}
+          onBlur={(event) => handleBlur()}
+          onKeyUp={(event) => {
+            saveSelection();
             checkFormats();
           }}
-          onBlur={(event) => handleInput()}
-          onKeyUp={(event) => checkFormats()}
-          onMouseUp={(event) => checkFormats()}
+          onKeyDown={(e) => handleKeyDown(e)}
+          onMouseUp={(event) => {
+            saveSelection();
+            checkFormats();
+          }}
           onClick={(e) => handleEditorClick(e)}
           style={{
             minHeight: "350px",
@@ -2680,37 +4020,190 @@ function RichTextEditor(props: RichTextEditorProps) {
             fontSize: "15px",
           }}
         />
-        {selectedMediaEl ? (
-          <div
-            className="cv-resize-handle"
-            title="Drag to resize"
-            style={{
-              position: "absolute",
-              top: `${resizeHandleTop}px`,
-              left: `${resizeHandleLeft}px`,
-              width: "14px",
-              height: "14px",
-              borderRadius: "3px",
-              background: "var(--cv-color-primary, #245066)",
-              border: "2px solid var(--cv-color-surface-raised, #fff)",
-              cursor: "nwse-resize",
-              zIndex: 30,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
-            }}
-            onMouseDown={(e) => startResize(e)}
-          />
+        {selectedMediaEl && !isReadOnly() ? (
+          <>
+            <div
+              className="cv-resize-handle"
+              title="Drag to resize"
+              style={{
+                position: "absolute",
+                top: `${resizeHandleTop}px`,
+                left: `${resizeHandleLeft}px`,
+                width: "14px",
+                height: "14px",
+                borderRadius: "3px",
+                background: "var(--cv-color-primary, #245066)",
+                border: "2px solid var(--cv-color-surface-raised, #fff)",
+                cursor: "nwse-resize",
+                zIndex: 30,
+                boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+              }}
+              onMouseDown={(e) => startResize(e)}
+            />
+            <div
+              className="cv-media-toolbar"
+              style={{
+                position: "absolute",
+                top: `${resizeToolbarTop}px`,
+                left: `${resizeToolbarLeft}px`,
+                zIndex: 35,
+              }}
+            >
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="25% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("25%")}
+              >
+                25%
+              </button>
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="50% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("50%")}
+              >
+                50%
+              </button>
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="75% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("75%")}
+              >
+                75%
+              </button>
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="100% width"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageSize("100%")}
+              >
+                100%
+              </button>
+              <div
+                className="cv-toolbar-divider"
+                style={{
+                  height: "14px",
+                  margin: "0 2px",
+                }}
+              />
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="Align Left"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageAlign("left")}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="21" y1="6" x2="3" y2="6" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                  <line x1="17" y1="18" x2="3" y2="18" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="Align Center"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageAlign("center")}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="6" />
+                  <line x1="21" y1="12" x2="3" y2="12" />
+                  <line x1="18" y1="18" x2="6" y2="18" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="cv-media-toolbar-btn"
+                title="Align Right"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => setImageAlign("right")}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="21" y1="6" x2="3" y2="6" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                  <line x1="21" y1="18" x2="7" y2="18" />
+                </svg>
+              </button>
+              <div
+                className="cv-toolbar-divider"
+                style={{
+                  height: "14px",
+                  margin: "0 2px",
+                }}
+              />
+              <button
+                type="button"
+                className="cv-media-toolbar-btn cv-btn-danger"
+                title="Remove Media"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(event) => deleteSelectedMedia()}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </div>
+          </>
         ) : null}
         {showTableModal ||
         showLinkModal ||
         showWidgetModal ||
         showSocialModal ||
         showButtonModal ||
-        showAiModal ? (
+        showAiModal ||
+        showImageModal ||
+        showVideoModal ||
+        showFormulaModal ? (
           <div
             className="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
             style={{
               background: "rgba(0, 0, 0, 0.6)",
             }}
+            onClick={(e) => handleBackdropClick(e)}
           >
             {showAiModal ? (
               <div className="cv-ai-modal shadow-2xl">
@@ -2794,6 +4287,339 @@ function RichTextEditor(props: RichTextEditorProps) {
                     onClick={(event) => closeAiModal()}
                   >
                     Close
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {showImageModal ? (
+              <div
+                className="shadow-2xl"
+                style={{
+                  background: "var(--cv-color-surface-raised, #1e293b)",
+                  border:
+                    "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  width: "400px",
+                }}
+              >
+                <h3
+                  className="flex items-center text-white"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    marginBottom: "20px",
+                    gap: "8px",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style={{
+                      color: "var(--cv-color-primary, #7fc4de)",
+                    }}
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  Insert Image
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: "var(--cv-color-text-muted, #94a3b8)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      aria-label="Image URL"
+                      placeholder="https://example.com/photo.jpg"
+                      style={{
+                        background:
+                          "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                        border:
+                          "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        width: "100%",
+                        fontSize: "14px",
+                        color: "var(--cv-color-text-main, #fff)",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                      value={imageUrl}
+                      onInput={(e) => setImageUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmImage();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: "var(--cv-color-text-muted, #94a3b8)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Alt Text (Accessibility & SEO)
+                    </label>
+                    <input
+                      type="text"
+                      aria-label="Image Alt Text"
+                      placeholder="Descriptive text for screen readers"
+                      style={{
+                        background:
+                          "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                        border:
+                          "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        width: "100%",
+                        fontSize: "14px",
+                        color: "var(--cv-color-text-main, #fff)",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                      value={imageAlt}
+                      onInput={(e) => setImageAlt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmImage();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    marginTop: "32px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-text-secondary, #cbd5e1)",
+                      background:
+                        "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                    }}
+                    onClick={(event) => closeImageModal()}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-on-primary, #fff)",
+                      background:
+                        "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                    }}
+                    onClick={(event) => confirmImage()}
+                  >
+                    Insert Image
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {showVideoModal ? (
+              <div
+                className="shadow-2xl"
+                style={{
+                  background: "var(--cv-color-surface-raised, #1e293b)",
+                  border:
+                    "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  width: "400px",
+                }}
+              >
+                <h3
+                  className="flex items-center text-white"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    marginBottom: "20px",
+                    gap: "8px",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style={{
+                      color: "var(--cv-color-info, #0ea5e9)",
+                    }}
+                  >
+                    <rect
+                      x="2"
+                      y="2"
+                      width="20"
+                      height="20"
+                      rx="2.18"
+                      ry="2.18"
+                    />
+                    <line x1="7" y1="2" x2="7" y2="22" />
+                    <line x1="17" y1="2" x2="17" y2="22" />
+                  </svg>
+                  Insert Video
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: "var(--cv-color-text-muted, #94a3b8)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Video URL (YouTube, Vimeo, or MP4)
+                    </label>
+                    <input
+                      type="url"
+                      aria-label="Video URL"
+                      placeholder="https://www.youtube.com/watch?v=... or .mp4"
+                      style={{
+                        background:
+                          "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                        border:
+                          "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        width: "100%",
+                        fontSize: "14px",
+                        color: "var(--cv-color-text-main, #fff)",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                      value={videoUrl}
+                      onInput={(e) => setVideoUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmVideo();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    marginTop: "32px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-text-secondary, #cbd5e1)",
+                      background:
+                        "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                    }}
+                    onClick={(event) => closeVideoModal()}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-on-primary, #fff)",
+                      background: "var(--cv-color-info-fill, #075985)",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                    }}
+                    onClick={(event) => confirmVideo()}
+                  >
+                    Insert Video
                   </button>
                 </div>
               </div>
@@ -2944,6 +4770,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                       }}
                       value={btnText}
                       onInput={(e) => setBtnText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmButton();
+                        }
+                      }}
                     />
                   </div>
                   <div
@@ -2983,6 +4815,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                       }}
                       value={btnUrl}
                       onInput={(e) => setBtnUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmButton();
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -3122,6 +4960,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                       }}
                       value={tableRows}
                       onInput={(e) => setTableRows(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmTable();
+                        }
+                      }}
                     />
                   </div>
                   <div
@@ -3164,6 +5008,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                       }}
                       value={tableCols}
                       onInput={(e) => setTableCols(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmTable();
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -3323,6 +5173,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                     }}
                     value={linkUrl}
                     onInput={(e) => setLinkUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        confirmLink();
+                      }
+                    }}
                   />
                 </div>
                 <div
@@ -3697,6 +5553,12 @@ function RichTextEditor(props: RichTextEditorProps) {
                       }}
                       value={socialUrl}
                       onInput={(e) => setSocialUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmSocial();
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -3745,6 +5607,130 @@ function RichTextEditor(props: RichTextEditorProps) {
                 </div>
               </div>
             ) : null}
+            {showFormulaModal ? (
+              <div
+                className="shadow-2xl"
+                style={{
+                  background: "var(--cv-color-surface-raised, #1e293b)",
+                  border:
+                    "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  width: "380px",
+                }}
+              >
+                <h3
+                  className="flex items-center text-white"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    marginBottom: "20px",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    className="font-serif italic font-bold text-base"
+                    style={{
+                      color: "var(--cv-color-primary, #7fc4de)",
+                    }}
+                  >
+                    Fx
+                  </span>
+                  Insert Math Formula
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "var(--cv-color-text-muted, #94a3b8)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Formula Expression
+                  </label>
+                  <input
+                    type="text"
+                    aria-label="Formula Expression"
+                    placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                    style={{
+                      background:
+                        "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                      border:
+                        "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                      borderRadius: "8px",
+                      padding: "12px 16px",
+                      width: "100%",
+                      fontSize: "14px",
+                      color: "var(--cv-color-text-main, #fff)",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "monospace",
+                    }}
+                    value={formulaInput}
+                    onInput={(e) => setFormulaInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        confirmFormula();
+                      }
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    marginTop: "32px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-text-secondary, #cbd5e1)",
+                      background:
+                        "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                    }}
+                    onClick={(event) => closeFormulaModal()}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      color: "var(--cv-color-on-primary, #fff)",
+                      background:
+                        "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                    }}
+                    onClick={(event) => confirmFormula()}
+                  >
+                    Insert Formula
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -3757,10 +5743,11 @@ function RichTextEditor(props: RichTextEditorProps) {
         }}
       >
         <textarea
-          className="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
+          className="w-full flex-1 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
           value={internalContent}
           onInput={(e) => handleSourceInput(e)}
           style={{
+            padding: "16px 20px",
             whiteSpace: "pre-wrap",
             overflowY: "auto",
             resize: "none",

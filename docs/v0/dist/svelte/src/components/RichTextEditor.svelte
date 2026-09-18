@@ -12,6 +12,8 @@
     availableClasses?: string[];
     onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
     config?: RichTextEditorConfig;
+    readOnly?: boolean;
+    disabled?: boolean;
   }
 </script>
 
@@ -26,6 +28,8 @@
   export let onMediaRequest: RichTextEditorProps["onMediaRequest"];
   export let onChange: RichTextEditorProps["onChange"];
   export let config: RichTextEditorProps["config"];
+  export let readOnly: RichTextEditorProps["readOnly"];
+  export let disabled: RichTextEditorProps["disabled"];
   export let className: RichTextEditorProps["className"];
   export let availableClasses: RichTextEditorProps["availableClasses"];
   function stringifyStyles(stylesObj) {
@@ -39,6 +43,22 @@
     return styles;
   }
 
+  function getEditorElement() {
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return null;
+    if (editorRef) {
+      if ((editorRef as any).current) return (editorRef as any).current;
+      if ((editorRef as any).nodeType === 1) return editorRef as any;
+    }
+    if (rootRef) {
+      const root = (rootRef as any).current || rootRef;
+      if (root && typeof (root as any).querySelector === "function") {
+        const found = (root as any).querySelector(".wysiwyg-content");
+        if (found) return found as HTMLDivElement;
+      }
+    }
+    return document.querySelector(".wysiwyg-content") as HTMLDivElement;
+  }
   function getTrustedHttpUrl(rawUrl: string) {
     try {
       const parsed = new URL(
@@ -72,7 +92,18 @@
     return host === domain || host.endsWith("." + domain);
   }
   function escapeHtml(value: string) {
-    return String(value == null ? "" : value)
+    if (value == null) return "";
+    const str = String(value);
+    if (
+      str.indexOf("&") === -1 &&
+      str.indexOf("<") === -1 &&
+      str.indexOf(">") === -1 &&
+      str.indexOf('"') === -1 &&
+      str.indexOf("'") === -1
+    ) {
+      return str;
+    }
+    return str
       .split("&")
       .join("&amp;")
       .split("<")
@@ -111,6 +142,9 @@
       let isQuote = false;
       let isCode = false;
       let inTable = false;
+      let nextFontSize = fontSize;
+      let nextFontFamily = fontFamily;
+      let nextAppliedClasses = appliedClasses;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
@@ -120,7 +154,8 @@
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              fontSize = computed.fontSize;
+              const pxVal = Math.round(parseFloat(computed.fontSize));
+              nextFontSize = `${pxVal}px`;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -131,13 +166,14 @@
                 .join("")
                 .trim();
               if (primaryFont) {
-                fontFamily = primaryFont;
+                nextFontFamily = primaryFont;
               }
             }
           } catch (err) {}
           const classSet: string[] = [];
           let searchNode = currentEl;
-          while (searchNode && searchNode !== editorRef) {
+          const editorEl = getEditorElement();
+          while (searchNode && searchNode !== editorEl) {
             if (
               searchNode.className &&
               typeof searchNode.className === "string"
@@ -150,8 +186,13 @@
                 const p = parts[pi];
                 if (
                   p &&
-                  p.indexOf("prose") !== 0 &&
+                  !p.startsWith("prose") &&
                   p !== "task-list" &&
+                  p !== "cv-pending-selection" &&
+                  p !== "cv-resizing-selected" &&
+                  p !== "outline-none" &&
+                  p !== "max-w-none" &&
+                  p !== "wysiwyg-content" &&
                   !classSet.includes(p)
                 ) {
                   classSet.push(p);
@@ -160,7 +201,7 @@
             }
             searchNode = searchNode.parentElement;
           }
-          appliedClasses = classSet;
+          nextAppliedClasses = classSet;
         }
         while (
           node &&
@@ -174,7 +215,23 @@
           node = node.parentNode;
         }
       }
-      activeFormats = {
+      let nextHeadingFormat = "P";
+      const formatBlock = document.queryCommandValue("formatBlock");
+      if (formatBlock) {
+        if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+        else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+        else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+        else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+        else if (formatBlock.toLowerCase().includes("blockquote")) {
+          isQuote = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.toLowerCase().includes("pre")) {
+          isCode = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+        else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+      }
+      const nextActiveFormats = {
         bold: document.queryCommandState("bold"),
         italic: document.queryCommandState("italic"),
         underline: document.queryCommandState("underline"),
@@ -189,20 +246,25 @@
         code: isCode,
         inTable: inTable,
       };
-      const formatBlock = document.queryCommandValue("formatBlock");
-      if (formatBlock) {
-        if (formatBlock.includes("1")) headingFormat = "H1";
-        else if (formatBlock.includes("2")) headingFormat = "H2";
-        else if (formatBlock.includes("3")) headingFormat = "H3";
-        else if (formatBlock.includes("4")) headingFormat = "H4";
-        else if (formatBlock.toLowerCase().includes("blockquote")) {
-          activeFormats.quote = true;
-          headingFormat = "P";
-        } else if (formatBlock.toLowerCase().includes("pre")) {
-          activeFormats.code = true;
-          headingFormat = "P";
-        } else if (formatBlock.includes("p")) headingFormat = "P";
-        else if (formatBlock.includes("div")) headingFormat = "P";
+      if (fontSize !== nextFontSize) fontSize = nextFontSize;
+      if (fontFamily !== nextFontFamily) fontFamily = nextFontFamily;
+      if (headingFormat !== nextHeadingFormat)
+        headingFormat = nextHeadingFormat;
+      if (
+        appliedClasses.length !== nextAppliedClasses.length ||
+        appliedClasses.some((c, i) => c !== nextAppliedClasses[i])
+      ) {
+        appliedClasses = nextAppliedClasses;
+      }
+      let formatsChanged = false;
+      for (const k in nextActiveFormats) {
+        if ((activeFormats as any)[k] !== (nextActiveFormats as any)[k]) {
+          formatsChanged = true;
+          break;
+        }
+      }
+      if (formatsChanged) {
+        activeFormats = nextActiveFormats;
       }
     }
   }
@@ -211,43 +273,49 @@
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
-        if (editorRef) {
+        const el = getEditorElement();
+        if (el) {
           try {
-            if ((editorRef as any).contains(r.commonAncestorContainer)) {
-              activeSavedRange = escapeAtomicRange(r.cloneRange());
+            if ((el as any).contains(r.commonAncestorContainer)) {
+              const escaped = escapeAtomicRange(r.cloneRange());
+              activeSavedRange = escaped;
+              (el as any).__cv_savedRange = escaped;
             }
-          } catch (e) {
-            activeSavedRange = r.cloneRange();
-          }
-        } else {
-          activeSavedRange = r.cloneRange();
+          } catch (e) {}
         }
       }
     }
   }
   function restoreSelection() {
     if (typeof window !== "undefined") {
-      if (editorRef) {
+      const el = getEditorElement();
+      if (el) {
         try {
-          if (typeof (editorRef as any).focus === "function") {
-            (editorRef as any).focus();
+          if (typeof (el as any).focus === "function") {
+            (el as any).focus();
           }
         } catch (e) {}
-        if (activeSavedRange) {
-          const sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(activeSavedRange.cloneRange());
-          }
+        const target = (el as any).__cv_savedRange || activeSavedRange;
+        if (target) {
+          try {
+            if ((el as any).contains(target.commonAncestorContainer)) {
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(target.cloneRange());
+              }
+            }
+          } catch (e) {}
         }
       }
     }
   }
   function escapeAtomicRange(range: any) {
-    if (!range || !editorRef) return range;
+    const el = getEditorElement();
+    if (!range || !el) return range;
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== editorRef) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -265,10 +333,12 @@
   }
   function insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
-    if (editorRef) {
+    if (mode === "source") return;
+    const el = getEditorElement();
+    if (el) {
       try {
-        if (typeof (editorRef as any).focus === "function") {
-          (editorRef as any).focus();
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
         }
       } catch (e) {}
     }
@@ -278,60 +348,106 @@
     if (sel && sel.rangeCount > 0) {
       const cur = sel.getRangeAt(0);
       try {
-        if (
-          editorRef &&
-          (editorRef as any).contains(cur.commonAncestorContainer)
-        ) {
+        if (el && (el as any).contains(cur.commonAncestorContainer)) {
           targetRange = cur;
         }
       } catch (e) {}
     }
-    if (!targetRange && activeSavedRange) {
+    const targetSaved = el
+      ? (el as any).__cv_savedRange || activeSavedRange
+      : activeSavedRange;
+    if (!targetRange && targetSaved) {
       try {
-        if (
-          editorRef &&
-          (editorRef as any).contains(activeSavedRange.commonAncestorContainer)
-        ) {
-          targetRange = activeSavedRange;
+        if (el && (el as any).contains(targetSaved.commonAncestorContainer)) {
+          targetRange = targetSaved;
         }
       } catch (e) {}
     }
     targetRange = escapeAtomicRange(targetRange);
-    if (targetRange && targetRange.insertNode) {
-      targetRange.deleteContents();
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      const frag = template.content;
-      const lastNode = frag.lastChild;
-      targetRange.insertNode(frag);
-      if (lastNode && sel) {
-        const newRange = document.createRange();
-        newRange.setStartAfter(lastNode);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
-      }
-    } else if (editorRef) {
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      editorRef.appendChild(template.content);
-      const newRange = document.createRange();
-      newRange.selectNodeContents(editorRef as Node);
-      newRange.collapse(false);
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+    const isBlockHtml = /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(
+      html
+    );
+    let blockParent: HTMLElement | null = null;
+    if (targetRange && el) {
+      let n: any = targetRange.startContainer;
+      while (n && n !== el) {
+        if (
+          n.nodeType === 1 &&
+          /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)
+        ) {
+          blockParent = n;
+          break;
+        }
+        n = n.parentNode;
       }
     }
+    const template = document.createElement("template");
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
+    template.innerHTML = html.trim();
+    const frag = template.content;
+
+    // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+    let lastP: HTMLElement | null = frag.querySelector("p:last-child");
+    if (isBlockHtml && !lastP) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      frag.appendChild(p);
+      lastP = p;
+    }
+    let insertedP: HTMLElement | null = null;
+    if (
+      isBlockHtml &&
+      blockParent &&
+      blockParent !== el &&
+      blockParent.parentNode
+    ) {
+      const isEmptyBlock =
+        !blockParent.textContent?.trim() || blockParent.innerHTML === "<br>";
+      if (isEmptyBlock) {
+        const parent = blockParent.parentNode;
+        insertedP = lastP;
+        parent.insertBefore(frag, blockParent);
+        blockParent.remove();
+      } else {
+        insertedP = lastP;
+        blockParent.after(frag);
+      }
+    } else if (targetRange && targetRange.insertNode) {
+      targetRange.deleteContents();
+      insertedP = lastP;
+      targetRange.insertNode(frag);
+    } else if (el) {
+      insertedP = lastP;
+      el.appendChild(frag);
+    }
+
+    // Position caret inside the trailing paragraph so author can type / press Enter immediately
+    const targetP = insertedP || (el ? el.querySelector("p:last-child") : null);
+    if (el && typeof (el as any).focus === "function") {
+      try {
+        (el as any).focus();
+      } catch (e) {}
+    }
+    if (targetP && sel) {
+      const newRange = document.createRange();
+      newRange.setStart(targetP, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+    ensureEditableStructure();
     syncContent();
     checkFormats();
-    renderEmbeds();
+    if (
+      html.indexOf("cv-social-embed") !== -1 ||
+      html.indexOf("cv-math-formula") !== -1
+    ) {
+      renderEmbeds();
+    }
   }
   function formatHTML(html: string) {
     if (!html) return "";
@@ -359,6 +475,7 @@
     return html;
   }
   function format(cmd: string, val?: string) {
+    if (mode === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -367,26 +484,52 @@
     syncContent();
     checkFormats();
   }
-  function applyColor(cmd: string, color: string) {
+  function applyColorPreview(cmd: string, color: string) {
     if (!color) return;
-    if (cmd === "foreColor") {
-      textColor = color;
-    } else {
-      highlightColor = color;
+    if (mode === "source") return;
+    const previewEl = getEditorElement();
+    if (previewEl) {
+      try {
+        (previewEl as any).focus();
+      } catch (focusErr) {}
     }
     restoreSelection();
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
-      if (!document.execCommand("hiliteColor", false, color)) {
+      const applied = document.execCommand("hiliteColor", false, color);
+      if (!applied) {
         document.execCommand("backColor", false, color);
       }
+    }
+    saveSelection();
+  }
+  function applyColor(cmd: string, color: string) {
+    if (!color) return;
+    if (mode === "source") return;
+    const colorEl = getEditorElement();
+    if (colorEl) {
+      try {
+        (colorEl as any).focus();
+      } catch (focusErr2) {}
+    }
+    restoreSelection();
+    if (cmd === "foreColor") {
+      document.execCommand("foreColor", false, color);
+      textColor = color;
+    } else {
+      const colorApplied = document.execCommand("hiliteColor", false, color);
+      if (!colorApplied) {
+        document.execCommand("backColor", false, color);
+      }
+      highlightColor = color;
     }
     saveSelection();
     syncContent();
     checkFormats();
   }
   function formatHeading(level: string) {
+    if (mode === "source") return;
     restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -394,11 +537,15 @@
     headingFormat = level;
     syncContent();
     checkFormats();
-    if (editorRef) {
-      editorRef.focus();
+    const el = getEditorElement();
+    if (el) {
+      try {
+        (el as any).focus();
+      } catch (e) {}
     }
   }
   function insertMedia(type: "image" | "video" | "audio") {
+    if (mode === "source") return;
     saveSelection();
     const insertContent = (url: string, altText?: string) => {
       if (!url) return;
@@ -417,7 +564,7 @@
         const alt = (altText || "").trim() || filenameGuess || "Image";
         const escapedAlt = escapeHtml(alt);
         const escapedUrl = escapeHtml(url);
-        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
       } else if (type === "video") {
         const ytMatch = url.match(
           /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
@@ -446,20 +593,18 @@
         .catch((err) => {
           console.error("Media request failed", err);
         });
+    } else if (type === "image") {
+      openImageModal();
+    } else if (type === "video") {
+      openVideoModal();
     } else {
-      const url = window.prompt(`Enter ${type} URL:`);
-      if (url && type === "image") {
-        const altText = window.prompt(
-          "Describe this image for screen readers and search engines (alt text):",
-          ""
-        );
-        insertContent(url, altText || undefined);
-      } else if (url) {
-        insertContent(url);
-      }
+      const escaped = escapeHtml(type);
+      const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+      insertHtmlAtCursor(html);
     }
   }
   function clearAllFormatting() {
+    if (mode === "source") return;
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("removeFormat", false, undefined);
@@ -473,6 +618,7 @@
     checkFormats();
   }
   function toggleBlock(type: string) {
+    if (mode === "source") return;
     checkFormats();
     const isActive = type === "PRE" ? activeFormats.code : activeFormats.quote;
     if (isActive) {
@@ -489,17 +635,86 @@
   }
   function applyClass(className: string) {
     if (!className) return;
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      const span = document.createElement("span");
-      span.className = className;
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
+    if (mode === "source") return;
+    const editor = getEditorElement();
+    if (!editor) return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    if (rawClasses.length === 0) return;
+
+    // 1. If media element selected:
+    if (selectedMediaEl && selectedMediaEl.classList) {
+      rawClasses.forEach((c) => selectedMediaEl.classList.add(c));
       syncContent();
+      checkFormats();
+      return;
     }
+
+    // 2. Get target range from active selection or saved selection
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    let targetRange: any = null;
+    if (sel && sel.rangeCount > 0) {
+      const cur = sel.getRangeAt(0);
+      if (editor.contains(cur.commonAncestorContainer)) {
+        targetRange = cur;
+      }
+    }
+    if (!targetRange) {
+      const saved = (editor as any).__cv_savedRange || activeSavedRange;
+      if (saved && editor.contains(saved.commonAncestorContainer)) {
+        targetRange = saved;
+      }
+    }
+    if (
+      targetRange &&
+      !targetRange.collapsed &&
+      targetRange.toString().length > 0
+    ) {
+      // Highlighted text selection -> wrap in a span with the class
+      const span = document.createElement("span");
+      rawClasses.forEach((c) => span.classList.add(c));
+      span.appendChild(targetRange.extractContents());
+      targetRange.insertNode(span);
+
+      // Re-select the newly styled span
+      if (sel) {
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        activeSavedRange = r.cloneRange();
+        (editor as any).__cv_savedRange = r.cloneRange();
+      }
+    } else if (targetRange) {
+      // Caret inside a block element
+      let node: any = targetRange.startContainer;
+      let block: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (
+          node.nodeType === 1 &&
+          /^(P|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH|DIV|FIGURE|TABLE)$/i.test(
+            node.tagName
+          )
+        ) {
+          block = node;
+          break;
+        }
+        node = node.parentNode;
+      }
+      if (!block && editor.firstElementChild) {
+        block = editor.firstElementChild as HTMLElement;
+      }
+      if (block && block !== editor) {
+        rawClasses.forEach((c) => block!.classList.add(c));
+      }
+    }
+    syncContent();
+    checkFormats();
+    try {
+      (editor as any).focus();
+    } catch (e) {}
   }
   function openButtonModal() {
+    if (mode === "source") return;
     saveSelection();
     showButtonModal = true;
     btnText = "Click Here";
@@ -532,8 +747,9 @@
     }
   }
   function getCanonicalHtml() {
-    if (!editorRef) return "";
-    const clone = editorRef.cloneNode(true) as HTMLElement;
+    const editor = getEditorElement();
+    if (!editor) return "";
+    const clone = editor.cloneNode(true) as HTMLElement;
     const selected = clone.querySelectorAll(".cv-resizing-selected");
     selected.forEach((el: any) => {
       el.classList.remove("cv-resizing-selected");
@@ -555,8 +771,10 @@
     return clone.innerHTML;
   }
   function renderEmbeds() {
-    if (!editorRef || typeof window === "undefined") return;
-    const socialEmbeds = editorRef.querySelectorAll(
+    if (typeof window === "undefined") return;
+    const editor = getEditorElement();
+    if (!editor) return;
+    const socialEmbeds = editor.querySelectorAll(
       '.cv-social-embed:not([data-cv-rendered="true"])'
     );
     socialEmbeds.forEach((el: any) => {
@@ -698,7 +916,7 @@
         markRendered();
       }
     });
-    const formulas = editorRef.querySelectorAll(
+    const formulas = editor.querySelectorAll(
       '.cv-math-formula:not([data-cv-rendered="true"])'
     );
     if (formulas.length > 0) {
@@ -765,7 +983,8 @@
     }
   }
   function syncContent() {
-    if (editorRef) {
+    const editor = getEditorElement();
+    if (editor) {
       internalContent = getCanonicalHtml();
       if (onChange) {
         onChange(internalContent);
@@ -773,21 +992,49 @@
     }
   }
   function handleInput() {
-    syncContent();
+    const el = getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+      }
+      (el as any).__cv_inputTimer = setTimeout(() => {
+        (el as any).__cv_inputTimer = null;
+        syncContent();
+      }, 250);
+    } else {
+      syncContent();
+    }
+  }
+  function handleFocus() {
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
+  }
+  function handleBlur() {
+    const el = getEditorElement();
+    if (el && (el as any).__cv_inputTimer) {
+      clearTimeout((el as any).__cv_inputTimer);
+      (el as any).__cv_inputTimer = null;
+      syncContent();
+    }
   }
   function handleSourceInput(e: any) {
     internalContent = e.target.value;
     if (onChange) {
       onChange(internalContent);
     }
-    if (editorRef) {
+    const editor = getEditorElement();
+    if (editor) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.innerHTML = sanitizeHtml(internalContent);
+      editor.innerHTML = sanitizeHtml(internalContent);
       renderEmbeds();
     }
   }
   function openTableModal() {
+    if (mode === "source") return;
     saveSelection();
     showTableModal = true;
     tableRows = "3";
@@ -829,6 +1076,7 @@
   function modifyTable(
     action: "addRow" | "removeRow" | "addCol" | "removeCol"
   ) {
+    if (mode === "source") return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let node = sel.getRangeAt(0).startContainer as any;
@@ -900,6 +1148,7 @@
     syncContent();
   }
   function openLinkModal() {
+    if (mode === "source") return;
     saveSelection();
     showLinkModal = true;
     linkUrl = "";
@@ -918,6 +1167,7 @@
     showLinkModal = false;
   }
   function openWidgetModal() {
+    if (mode === "source") return;
     saveSelection();
     showWidgetModal = true;
   }
@@ -933,6 +1183,7 @@
     showWidgetModal = false;
   }
   function openSocialModal() {
+    if (mode === "source") return;
     saveSelection();
     showSocialModal = true;
     socialUrl = "";
@@ -958,6 +1209,61 @@
   function closeSocialModal() {
     showSocialModal = false;
   }
+  function openImageModal() {
+    if (mode === "source") return;
+    saveSelection();
+    showImageModal = true;
+    imageUrl = "";
+    imageAlt = "";
+  }
+  function closeImageModal() {
+    showImageModal = false;
+  }
+  function confirmImage() {
+    showImageModal = false;
+    if (imageUrl) {
+      const url = imageUrl.trim();
+      const filenameGuess = (url.split("/").pop() || "image")
+        .split("?")[0]
+        .split(".")[0]
+        .replace(/[-_]+/g, " ")
+        .trim();
+      const alt = (imageAlt || "").trim() || filenameGuess || "Image";
+      const escapedAlt = escapeHtml(alt);
+      const escapedUrl = escapeHtml(url);
+      const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+      insertHtmlAtCursor(html);
+    }
+  }
+  function openVideoModal() {
+    if (mode === "source") return;
+    saveSelection();
+    showVideoModal = true;
+    videoUrl = "";
+  }
+  function closeVideoModal() {
+    showVideoModal = false;
+  }
+  function confirmVideo() {
+    showVideoModal = false;
+    if (videoUrl) {
+      const url = videoUrl.trim();
+      const ytMatch = url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+      );
+      const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+      const escapedUrl = escapeHtml(url);
+      let html = "";
+      if (ytMatch) {
+        html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+      } else if (vimeoMatch) {
+        html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+      } else {
+        html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+      }
+      insertHtmlAtCursor(html);
+    }
+  }
   function toggleMode() {
     if (mode === "visual") {
       syncContent();
@@ -965,10 +1271,11 @@
       mode = "source";
     } else {
       mode = "visual";
-      if (editorRef) {
+      const editor = getEditorElement();
+      if (editor) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        editorRef.innerHTML = sanitizeHtml(internalContent);
+        editor.innerHTML = sanitizeHtml(internalContent);
         renderEmbeds();
       }
     }
@@ -989,6 +1296,7 @@
     }
   }
   function changeFontFamily(font: string) {
+    if (mode === "source") return;
     fontFamily = font;
     restoreSelection();
     document.execCommand("fontName", false, font);
@@ -996,6 +1304,7 @@
     checkFormats();
   }
   function changeFontSize(size: string) {
+    if (mode === "source") return;
     fontSize = size;
     restoreSelection();
     const sel = window.getSelection();
@@ -1014,6 +1323,7 @@
       const sizeMap: any = {
         "12px": "1",
         "14px": "2",
+        "15px": "2",
         "16px": "3",
         "18px": "4",
         "20px": "5",
@@ -1026,53 +1336,183 @@
     checkFormats();
   }
   function insertChecklist() {
-    // The checkbox and its text must share one <label> (implicit
-    // association, no id needed) -- as separate sibling elements a screen
-    // reader announces an unlabelled checkbox with no indication of what
-    // it controls, and clicking the text would not toggle it either.
-    const html =
-      '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-    insertHtmlAtCursor(html);
+    if (mode === "source") return;
+    restoreSelection();
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const editor = getEditorElement();
+    if (!sel || !editor) return;
+    let node: any =
+      sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+    let currentLi: HTMLElement | null = null;
+    let currentUl: HTMLElement | null = null;
+    let currentP: HTMLElement | null = null;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        if (node.tagName === "LI") currentLi = node;
+        if (node.tagName === "UL" && node.classList.contains("task-list"))
+          currentUl = node;
+        if (node.tagName === "P" || node.tagName === "DIV") currentP = node;
+      }
+      node = node.parentNode;
+    }
+
+    // 1. If currently inside a task list: append a new <li> to the existing <ul>
+    if (currentUl) {
+      const li = document.createElement("li");
+      li.style.cssText = "margin: 4px 0;";
+      li.innerHTML =
+        '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      if (currentLi && currentLi.parentNode === currentUl) {
+        currentLi.after(li);
+      } else {
+        currentUl.appendChild(li);
+      }
+      const span = li.querySelector("span");
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+      }
+      syncContent();
+      checkFormats();
+      return;
+    }
+
+    // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+    if (currentP) {
+      const prev = currentP.previousElementSibling;
+      if (
+        prev &&
+        prev.tagName === "UL" &&
+        prev.classList.contains("task-list")
+      ) {
+        const text = currentP.textContent ? currentP.textContent.trim() : "";
+        const li = document.createElement("li");
+        li.style.cssText = "margin: 4px 0;";
+        const itemText = text && text !== "" ? escapeHtml(text) : "Task item";
+        li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+        prev.appendChild(li);
+        currentP.remove();
+        const span = li.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        syncContent();
+        checkFormats();
+        return;
+      }
+    }
+
+    // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+    const ul = document.createElement("ul");
+    ul.className = "task-list";
+    ul.style.cssText = "list-style: none; padding-left: 0.25rem;";
+    const li = document.createElement("li");
+    li.style.cssText = "margin: 4px 0;";
+    li.innerHTML =
+      '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+    ul.appendChild(li);
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(ul);
+    } else {
+      editor.appendChild(ul);
+    }
+    const span = li.querySelector("span");
+    if (span) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveSelection();
+    }
+    syncContent();
+    checkFormats();
   }
-  function insertFormula() {
+  function openFormulaModal() {
+    if (mode === "source") return;
     saveSelection();
-    const formula = window.prompt(
-      "Enter math formula or expression:",
-      "E = mc²"
-    );
+    showFormulaModal = true;
+    formulaInput = "E = mc²";
+  }
+  function closeFormulaModal() {
+    showFormulaModal = false;
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+  function confirmFormula() {
+    showFormulaModal = false;
+    const formula = (formulaInput || "").trim();
     if (formula) {
-      const escaped = formula
-        .split("&")
-        .join("&amp;")
-        .split("<")
-        .join("&lt;")
-        .split(">")
-        .join("&gt;")
-        .split('"')
-        .join("&quot;");
+      const escaped = escapeHtml(formula);
       const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
       insertHtmlAtCursor(html);
     }
+    const el = getEditorElement();
+    if (el) el.focus();
+  }
+  function insertFormula() {
+    openFormulaModal();
   }
   function addClass(className: string) {
     if (!className) return;
-    if (!appliedClasses.includes(className)) {
-      appliedClasses = [...appliedClasses, className];
-    }
+    if (mode === "source") return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    let updated = [...appliedClasses];
+    rawClasses.forEach((c) => {
+      if (!updated.includes(c)) updated.push(c);
+    });
+    appliedClasses = updated;
   }
   function removeClass(className: string) {
+    if (mode === "source") return;
     appliedClasses = appliedClasses.filter((c: string) => c !== className);
-    if (editorRef) {
-      const elements = editorRef.querySelectorAll(`.${className}`);
+    const editor = getEditorElement();
+    if (editor) {
+      if (selectedMediaEl && selectedMediaEl.classList) {
+        selectedMediaEl.classList.remove(className);
+      }
+      const elements = editor.querySelectorAll(`.${className}`);
       elements.forEach((el: any) => {
         el.classList.remove(className);
-        if (el.classList.length === 0 && el.tagName === "SPAN") {
+        if (
+          el.classList.length === 0 &&
+          el.tagName === "SPAN" &&
+          !el.getAttribute("style") &&
+          !el.getAttribute("data-platform") &&
+          !el.getAttribute("data-widget")
+        ) {
           const parent = el.parentNode;
-          while (el.firstChild) parent.insertBefore(el.firstChild, el);
-          parent.removeChild(el);
+          if (parent) {
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+          }
         }
       });
       syncContent();
+      checkFormats();
+    }
+  }
+  function applyClassFromInput(e: any) {
+    const container =
+      e && e.target && e.target.closest
+        ? e.target.closest(".cv-toolbar-classes-group")
+        : null;
+    const input = container ? container.querySelector(".cv-class-input") : null;
+    if (input && input.value) {
+      const val = input.value.trim();
+      if (val) {
+        applyClass(val);
+        addClass(val);
+        input.value = "";
+      }
     }
   }
   function handleClassInputKeyDown(e: any) {
@@ -1084,6 +1524,16 @@
         applyClass(val);
         addClass(val);
         target.value = "";
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      if (target) target.value = "";
+      const editor = getEditorElement();
+      if (editor) {
+        try {
+          editor.focus();
+        } catch (err) {}
       }
     }
   }
@@ -1165,6 +1615,7 @@
       [
         "image",
         "link",
+        "formula",
         "table",
         "unorderedList",
         "orderedList",
@@ -1203,12 +1654,9 @@
     return false;
   }
   function updateResizeHandlePosition() {
-    if (!selectedMediaEl || !editorRef) return;
-    // The handle is rendered as a sibling of editorRef inside the
-    // scrollable .editor-content wrapper (the nearest `position:
-    // relative` ancestor), not inside editorRef itself -- position and
-    // scroll offsets must be measured against that wrapper, not editorRef.
-    const container = (editorRef as any).parentElement;
+    const editor = getEditorElement();
+    if (!selectedMediaEl || !editor) return;
+    const container = (editor as any).parentElement;
     if (!container) return;
     const elRect = selectedMediaEl.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -1216,6 +1664,24 @@
       elRect.bottom - containerRect.top + container.scrollTop - 7;
     resizeHandleLeft =
       elRect.right - containerRect.left + container.scrollLeft - 7;
+    let tbTop = elRect.top - containerRect.top + container.scrollTop - 40;
+    if (tbTop < 8) {
+      tbTop = elRect.bottom - containerRect.top + container.scrollTop + 8;
+    }
+    let tbLeft = elRect.left - containerRect.left + container.scrollLeft;
+    if (tbLeft < 8) tbLeft = 8;
+    resizeToolbarTop = tbTop;
+    resizeToolbarLeft = tbLeft;
+  }
+  function handleEditorScroll() {
+    if (!selectedMediaEl) return;
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        updateResizeHandlePosition();
+      });
+    } else {
+      updateResizeHandlePosition();
+    }
   }
   function selectMediaElement(el: any) {
     if (selectedMediaEl && selectedMediaEl !== el) {
@@ -1224,6 +1690,58 @@
     selectedMediaEl = el;
     el.classList.add("cv-resizing-selected");
     updateResizeHandlePosition();
+    if (el.tagName === "IMG" && !el.complete) {
+      el.addEventListener(
+        "load",
+        () => {
+          if (selectedMediaEl === el) {
+            updateResizeHandlePosition();
+          }
+        },
+        {
+          once: true,
+        }
+      );
+    }
+  }
+  function deleteSelectedMedia() {
+    if (selectedMediaEl) {
+      const el = selectedMediaEl;
+      deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      ensureEditableStructure();
+      syncContent();
+    }
+  }
+  function setImageSize(size: string) {
+    if (!selectedMediaEl) return;
+    const el = selectedMediaEl;
+    el.style.width = size;
+    el.style.maxWidth = "100%";
+    el.style.height = "auto";
+    updateResizeHandlePosition();
+    syncContent();
+  }
+  function setImageAlign(align: string) {
+    if (!selectedMediaEl) return;
+    const el = selectedMediaEl;
+    if (align === "center") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "auto";
+    } else if (align === "left") {
+      el.style.display = "block";
+      el.style.marginLeft = "0";
+      el.style.marginRight = "auto";
+    } else if (align === "right") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "0";
+    }
+    updateResizeHandlePosition();
+    syncContent();
   }
   function deselectMediaElement() {
     if (selectedMediaEl) {
@@ -1231,16 +1749,668 @@
     }
     selectedMediaEl = null;
   }
-  function handleEditorClick(e: any) {
-    const target = e.target;
-    if (isResizableTarget(target)) {
-      selectMediaElement(target);
-    } else {
+  function isReadOnly() {
+    return !!(readOnly || disabled);
+  }
+  function closeAllModals() {
+    showInsertMenu = false;
+    showTableModal = false;
+    showLinkModal = false;
+    showWidgetModal = false;
+    showSocialModal = false;
+    showButtonModal = false;
+    showAiModal = false;
+    showImageModal = false;
+    showVideoModal = false;
+    showFormulaModal = false;
+  }
+  function handleBackdropClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      closeAllModals();
+    }
+  }
+  function ensureEditableStructure() {
+    const el = getEditorElement();
+    if (!el) return;
+    if (
+      !el.hasChildNodes() ||
+      !el.innerHTML ||
+      el.innerHTML.trim() === "" ||
+      el.innerHTML.trim() === "<br>"
+    ) {
+      el.innerHTML = "<p><br></p>";
+      return;
+    }
+    const first = el.firstElementChild;
+    if (
+      el.childNodes.length === 1 &&
+      first &&
+      first.tagName === "P" &&
+      !first.textContent &&
+      !first.children.length
+    ) {
+      first.innerHTML = "<br>";
+      return;
+    }
+    // Wrap top-level text nodes or inline non-block elements directly under editor in <p>
+    const nodesToWrap: any[] = [];
+    for (let i = 0; i < el.childNodes.length; i++) {
+      const child = el.childNodes[i];
+      if (child.nodeType === 3) {
+        if (child.textContent && child.textContent.trim() !== "") {
+          nodesToWrap.push(child);
+        }
+      } else if (child.nodeType === 1) {
+        const tag = (child as HTMLElement).tagName;
+        const isBlock =
+          /^(P|DIV|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|TABLE|HR|SECTION|ARTICLE|HEADER|FOOTER)$/.test(
+            tag
+          );
+        if (!isBlock) {
+          nodesToWrap.push(child);
+        }
+      }
+    }
+    if (nodesToWrap.length > 0) {
+      nodesToWrap.forEach((node) => {
+        const p = document.createElement("p");
+        node.replaceWith(p);
+        p.appendChild(node);
+      });
+    }
+    const last = el.lastElementChild;
+    if (
+      last &&
+      (last.getAttribute("contenteditable") === "false" ||
+        last.tagName === "TABLE" ||
+        last.tagName === "IMG" ||
+        last.tagName === "VIDEO" ||
+        last.tagName === "AUDIO" ||
+        (last.classList &&
+          (last.classList.contains("cv-social-embed") ||
+            last.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      el.appendChild(p);
+    }
+    if (
+      first &&
+      (first.getAttribute("contenteditable") === "false" ||
+        first.tagName === "TABLE" ||
+        first.tagName === "IMG" ||
+        first.tagName === "VIDEO" ||
+        first.tagName === "AUDIO" ||
+        (first.classList &&
+          (first.classList.contains("cv-social-embed") ||
+            first.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      el.insertBefore(p, first);
+    }
+  }
+  function normalizeSelection() {
+    if (isReadOnly()) return;
+    const el = getEditorElement();
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let range: any = null;
+    try {
+      range = sel.getRangeAt(0);
+    } catch (e) {
+      return;
+    }
+    let node: any = range.startContainer;
+    let atomicEl: any = null;
+    while (node && node !== el) {
+      if (
+        node.nodeType === 1 &&
+        node.getAttribute &&
+        node.getAttribute("contenteditable") === "false"
+      ) {
+        atomicEl = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    if (atomicEl) {
+      const newRange = document.createRange();
+      const next = atomicEl.nextSibling;
+      if (
+        !next ||
+        (next.nodeType === 1 &&
+          next.getAttribute("contenteditable") === "false")
+      ) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (next) {
+          atomicEl.parentNode.insertBefore(p, next);
+        } else {
+          atomicEl.parentNode.appendChild(p);
+        }
+        newRange.setStart(p, 0);
+      } else if (next.nodeType === 1) {
+        newRange.setStart(next, 0);
+      } else {
+        newRange.setStartAfter(atomicEl);
+      }
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+  }
+  function focusEditorAtEnd() {
+    if (isReadOnly()) return;
+    const el = getEditorElement();
+    if (!el) return;
+    ensureEditableStructure();
+    try {
+      if (typeof (el as any).focus === "function") {
+        (el as any).focus();
+      }
+    } catch (e) {}
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el as Node);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const cloned = range.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+  }
+  function handleEditorContentClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      focusEditorAtEnd();
+    }
+  }
+  function handleKeyDown(e: any) {
+    if (isReadOnly()) {
+      e.preventDefault();
+      return;
+    }
+    if (mode === "source") return;
+    if (e.key === "Escape") {
+      deselectMediaElement();
+      closeAllModals();
+      return;
+    }
+    if (selectedMediaEl) {
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        const el = selectedMediaEl;
+        deselectMediaElement();
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        ensureEditableStructure();
+        syncContent();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const media = selectedMediaEl;
+        deselectMediaElement();
+        const editor = getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+        }
+        ensureEditableStructure();
+        syncContent();
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const media = selectedMediaEl;
+        deselectMediaElement();
+        const editor = getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+          }
+        }
+        return;
+      }
+    }
+    if (e.key === "Backspace") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            e.preventDefault();
+            const prevLi = taskLi.previousElementSibling;
+            taskLi.remove();
+            if (prevLi) {
+              const span = prevLi.querySelector("span");
+              if (span) {
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                saveSelection();
+              }
+            } else if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              saveSelection();
+            }
+            syncContent();
+            return;
+          }
+        }
+      }
+    }
+    if (e.key === "Enter") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = getEditorElement();
+      if (!sel || sel.rangeCount === 0 || !editor) return;
+      const range = sel.getRangeAt(0);
+      // Soft line break on Shift+Enter -> inserts <br> and moves to next line
+      if (e.shiftKey) {
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        saveSelection();
+        handleInput();
+        return;
+      }
+      let node: any = range.startContainer;
+      let taskLi: HTMLElement | null = null;
+      let taskUl: HTMLElement | null = null;
+      let listLi: HTMLElement | null = null;
+      let listParent: HTMLElement | null = null;
+      let headingEl: HTMLElement | null = null;
+      let quoteEl: HTMLElement | null = null;
+      let preEl: HTMLElement | null = null;
+      let calloutEl: HTMLElement | null = null;
+      let tableCell: HTMLElement | null = null;
+      let atomicEl: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          const tag = node.tagName;
+          if (tag === "LI") {
+            if (node.closest && node.closest("ul.task-list")) {
+              taskLi = node;
+              taskUl = node.closest("ul.task-list");
+            } else {
+              listLi = node;
+              listParent = node.parentElement;
+            }
+          }
+          if (/^H[1-6]$/.test(tag)) headingEl = node;
+          if (tag === "BLOCKQUOTE") quoteEl = node;
+          if (tag === "PRE" || tag === "CODE") preEl = node;
+          if (tag === "TD" || tag === "TH") tableCell = node;
+          if (
+            node.classList &&
+            (node.classList.contains("cv-callout") ||
+              node.classList.contains("cv-widget"))
+          ) {
+            calloutEl = node;
+          }
+          if (
+            node.getAttribute &&
+            node.getAttribute("contenteditable") === "false"
+          )
+            atomicEl = node;
+          if (tag === "IMG" || tag === "VIDEO" || tag === "AUDIO")
+            atomicEl = node;
+        }
+        node = node.parentNode;
+      }
+
+      // 1. Task List Items
+      if (taskUl && taskLi) {
+        e.preventDefault();
+        const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+        if (!text || text === "") {
+          taskLi.remove();
+          if (taskUl.children.length === 0) {
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            taskUl.replaceWith(p);
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            saveSelection();
+            handleInput();
+            return;
+          }
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          taskUl.after(p);
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          handleInput();
+          return;
+        }
+        const newLi = document.createElement("li");
+        newLi.style.cssText = "margin: 4px 0;";
+        newLi.innerHTML =
+          '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+        taskLi.after(newLi);
+        const span = newLi.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.setStart(span, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+        }
+        handleInput();
+        return;
+      }
+
+      // 2. Atomic Elements (Embeds, Widgets, Media)
+      if (atomicEl) {
+        e.preventDefault();
+        let block: any = atomicEl;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (block && block.parentNode) {
+          block.after(p);
+        } else {
+          editor.appendChild(p);
+        }
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 3. Headings: exit to standard paragraph <p> when at end of heading
+      if (headingEl) {
+        e.preventDefault();
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(headingEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remainingText = endRange.toString();
+        const newP = document.createElement("p");
+        newP.innerHTML = "<br>";
+        if (!remainingText || remainingText.trim() === "") {
+          headingEl.after(newP);
+        } else {
+          const extracted = endRange.extractContents();
+          newP.innerHTML = "";
+          newP.appendChild(extracted);
+          if (!newP.textContent || !newP.textContent.trim()) {
+            newP.innerHTML = "<br>";
+          }
+          headingEl.after(newP);
+        }
+        if (!headingEl.textContent || !headingEl.textContent.trim()) {
+          headingEl.innerHTML = "<br>";
+        }
+        const newRange = document.createRange();
+        newRange.setStart(newP, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        headingFormat = "P";
+        saveSelection();
+        handleInput();
+        checkFormats();
+        return;
+      }
+
+      // 4. Blockquotes: break out on empty line, otherwise insert clean <br>
+      if (quoteEl) {
+        const quoteText = quoteEl.textContent ? quoteEl.textContent.trim() : "";
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(quoteEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remaining = endRange.toString().trim();
+        if (
+          !quoteText ||
+          quoteEl.innerHTML === "<br>" ||
+          (!remaining && quoteEl.innerHTML.endsWith("<br>"))
+        ) {
+          e.preventDefault();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (!quoteText || quoteText === "") {
+            quoteEl.replaceWith(p);
+          } else {
+            quoteEl.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          handleInput();
+          checkFormats();
+          return;
+        }
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 5. Code / Pre Blocks
+      if (preEl) {
+        e.preventDefault();
+        const textNode = document.createTextNode(String.fromCharCode(10));
+        range.deleteContents();
+        range.insertNode(textNode);
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 6. Regular Lists (UL/OL items)
+      if (listLi && listParent) {
+        const itemText = listLi.textContent ? listLi.textContent.trim() : "";
+        if (!itemText || itemText === "") {
+          e.preventDefault();
+          listLi.remove();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (listParent.children.length === 0) {
+            listParent.replaceWith(p);
+          } else {
+            listParent.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          saveSelection();
+          handleInput();
+          checkFormats();
+          return;
+        }
+        return;
+      }
+
+      // 7. Callouts / Widgets: exit to standard paragraph <p>
+      if (calloutEl) {
+        e.preventDefault();
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        calloutEl.after(p);
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 8. Table Cells: insert line break (<br>)
+      if (tableCell) {
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        saveSelection();
+        handleInput();
+        return;
+      }
+
+      // 9. Standard Paragraphs: Explicitly create semantic <p> and move to next line
+      e.preventDefault();
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (err) {}
+      document.execCommand("insertParagraph");
+      saveSelection();
+      handleInput();
+      checkFormats();
+      return;
+    }
+  }
+  function handleGlobalKeyDown(e: any) {
+    if (e.key === "Escape") {
+      showInsertMenu = false;
+      closeAllModals();
       deselectMediaElement();
     }
   }
+  function handleEditorClick(e: any) {
+    showInsertMenu = false;
+    if (isReadOnly()) return;
+    const target = e.target;
+    const resizable =
+      target && target.closest
+        ? target.closest("img, video, audio, .cv-social-embed, .cv-widget")
+        : null;
+    if (resizable && isResizableTarget(resizable)) {
+      selectMediaElement(resizable);
+    } else {
+      deselectMediaElement();
+      normalizeSelection();
+    }
+  }
   function startResize(e: any) {
-    if (!selectedMediaEl) return;
+    if (!selectedMediaEl || isReadOnly()) return;
     e.preventDefault();
     e.stopPropagation();
     isResizing = true;
@@ -1256,7 +2426,8 @@
     const delta = e.clientX - resizeStartX;
     let newWidth = Math.round(resizeStartWidth + delta);
     const minWidth = 80;
-    const maxWidth = editorRef ? (editorRef as any).clientWidth : 2000;
+    const editor = getEditorElement();
+    const maxWidth = editor ? (editor as any).clientWidth : 2000;
     if (newWidth < minWidth) newWidth = minWidth;
     if (newWidth > maxWidth) newWidth = maxWidth;
     const el = selectedMediaEl;
@@ -1277,24 +2448,33 @@
     syncContent();
   }
   function handleSelectionChange() {
-    if (typeof window !== "undefined" && editorRef) {
-      const sel = window.getSelection();
-      let inEditor = false;
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return;
+    const editor =
+      ((editorRef as any) && (editorRef as any).current) ||
+      ((editorRef as any) && (editorRef as any).nodeType === 1
+        ? (editorRef as any)
+        : null) ||
+      (document.querySelector
+        ? document.querySelector(".wysiwyg-content")
+        : null);
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    let inEditor = false;
+    try {
+      if (sel.anchorNode && typeof (editor as any).contains === "function") {
+        inEditor = (editor as any).contains(sel.anchorNode as Node);
+      }
+    } catch (e) {}
+    if (inEditor && sel.rangeCount > 0) {
       try {
-        if (
-          sel &&
-          sel.anchorNode &&
-          typeof (editorRef as any).contains === "function"
-        ) {
-          inEditor = (editorRef as any).contains(sel.anchorNode as Node);
+        const r = sel.getRangeAt(0);
+        if ((editor as any).contains(r.commonAncestorContainer)) {
+          activeSavedRange = r.cloneRange();
+          (editor as any).__cv_savedRange = r.cloneRange();
         }
       } catch (e) {}
-      if (inEditor) {
-        if (sel && sel.rangeCount > 0) {
-          saveSelection();
-        }
-        checkFormats();
-      }
     }
   }
 
@@ -1303,6 +2483,7 @@
 
   let mode = "visual";
   let isFullscreen = false;
+  let isMounted = false;
   let internalContent = content || initialContent || "";
   let showTableModal = false;
   let tableRows = "3";
@@ -1319,17 +2500,26 @@
   let btnText = "Click Here";
   let btnUrl = "";
   let btnStyle = "primary";
+  let showImageModal = false;
+  let imageUrl = "";
+  let imageAlt = "";
+  let showVideoModal = false;
+  let videoUrl = "";
+  let showFormulaModal = false;
+  let formulaInput = "E = mc²";
   let selectedMediaEl = null;
   let resizeHandleTop = 0;
   let resizeHandleLeft = 0;
+  let resizeToolbarTop = 0;
+  let resizeToolbarLeft = 0;
   let isResizing = false;
   let resizeStartX = 0;
   let resizeStartWidth = 0;
   let fontFamily = "Inter";
-  let fontSize = "16px";
+  let fontSize = "15px";
   let textColor = "#0f172a";
   let highlightColor = "#fde047";
-  let appliedClasses = ["cv-callout", "variant-blue"];
+  let appliedClasses = [];
   let showInsertMenu = false;
   let showAiModal = false;
   let aiAction = "improve";
@@ -1352,13 +2542,21 @@
   let headingFormat = "P";
 
   onMount(() => {
+    isMounted = true;
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
     if (!internalContent) {
       internalContent = content || initialContent || "";
     }
-    if (editorRef) {
+    const el = getEditorElement();
+    if (el) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      editorRef.innerHTML = sanitizeHtml(internalContent);
+      el.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
       renderEmbeds();
     }
     if (typeof document !== "undefined") {
@@ -1374,13 +2572,44 @@
       }
       document.addEventListener("fullscreenchange", handleFullscreenChange);
       document.addEventListener("selectionchange", handleSelectionChange);
+      document.addEventListener("keydown", handleGlobalKeyDown);
     }
   });
 
+  function onUpdateFn_0(..._args: any[]) {
+    if (!isMounted) return;
+    const el = getEditorElement();
+    if (!el) return;
+    if (typeof content === "string" && content !== internalContent) {
+      internalContent = content;
+      /* lgtm[js/xss, js/html-constructed-from-input] */
+      /* codeql[js/xss, js/html-constructed-from-input] */
+      el.innerHTML = sanitizeHtml(internalContent);
+      ensureEditableStructure();
+      renderEmbeds();
+    }
+  }
+
+  $: onUpdateFn_0(...[content]);
+
   onDestroy(() => {
+    const el = getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+        (el as any).__cv_inputTimer = null;
+      }
+      if ((el as any).__cv_selectionTimer) {
+        clearTimeout((el as any).__cv_selectionTimer);
+        (el as any).__cv_selectionTimer = null;
+      }
+    }
     if (typeof document !== "undefined") {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", stopResize);
     }
   });
 </script>
@@ -1398,10 +2627,14 @@
   class={`cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ${
     isFullscreen
       ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none"
-      : "w-full"
-  } ${className || ""}`}
+      : "w-full h-full"
+  } ${mode === "source" ? "cv-source-mode" : ""} ${className || ""}`}
 >
-  <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+  <div
+    class={`editor-toolbar select-none sticky top-0 z-10 w-full ${
+      isReadOnly() ? "opacity-60 pointer-events-none" : ""
+    }`}
+  >
     <div class="cv-toolbar-row cv-toolbar-row-1">
       <div class="cv-toolbar-group">
         <button
@@ -1551,9 +2784,10 @@
             changeFontSize(e.target.value);
           }}
           ><option value="12px">12px</option><option value="14px">14px</option
-          ><option value="16px">16px</option><option value="18px">18px</option
-          ><option value="20px">20px</option><option value="24px">24px</option
-          ><option value="32px">32px</option></select
+          ><option value="15px">15px</option><option value="16px">16px</option
+          ><option value="18px">18px</option><option value="20px">20px</option
+          ><option value="24px">24px</option><option value="32px">32px</option
+          ></select
         ><span class="cv-toolbar-select-chevron"
           ><svg
             xmlns="http://www.w3.org/2000/svg"
@@ -1683,7 +2917,7 @@
                   saveSelection();
                 }}
                 on:input={(e) => {
-                  applyColor("foreColor", e.target.value);
+                  applyColorPreview("foreColor", e.target.value);
                 }}
                 on:change={(e) => {
                   applyColor("foreColor", e.target.value);
@@ -1725,7 +2959,7 @@
                   saveSelection();
                 }}
                 on:input={(e) => {
-                  applyColor("backColor", e.target.value);
+                  applyColorPreview("backColor", e.target.value);
                 }}
                 on:change={(e) => {
                   applyColor("backColor", e.target.value);
@@ -1972,11 +3206,21 @@
         >
       </div>
       <div class="cv-toolbar-divider" />
-      <div class="cv-toolbar-group relative">
+      <div
+        style={stringifyStyles({
+          position: "relative",
+          display: "inline-flex",
+        })}
+        class="cv-toolbar-group cv-insert-dropdown relative"
+      >
         <button
           type="button"
           class="cv-toolbar-action-btn"
           title="Insert Options"
+          on:mousedown={(e) => {
+            e.preventDefault();
+            saveSelection();
+          }}
           on:click={(event) => {
             showInsertMenu = !showInsertMenu;
           }}
@@ -2009,7 +3253,16 @@
           ></button
         >
         {#if showInsertMenu}
-          <div class="cv-insert-menu shadow-xl">
+          <div
+            style={stringifyStyles({
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: "0",
+              zIndex: 50,
+              minWidth: "170px",
+            })}
+            class="cv-insert-menu shadow-xl"
+          >
             <button
               type="button"
               class="cv-insert-item"
@@ -2185,6 +3438,24 @@
               }}
               on:click={(event) => {
                 showInsertMenu = false;
+                openFormulaModal();
+              }}
+              ><span
+                style={stringifyStyles({
+                  width: "14px",
+                  textAlign: "center",
+                })}
+                class="font-serif italic font-bold text-xs">Fx</span
+              >
+              Formula
+            </button><button
+              type="button"
+              class="cv-insert-item"
+              on:mousedown={(e) => {
+                e.preventDefault();
+              }}
+              on:click={(event) => {
+                showInsertMenu = false;
                 format("insertHorizontalRule");
               }}
               ><svg
@@ -2259,6 +3530,7 @@
           title="Table"
           on:mousedown={(e) => {
             e.preventDefault();
+            saveSelection();
           }}
           on:click={(event) => {
             openTableModal();
@@ -2430,17 +3702,22 @@
               /></svg
             ></button
           >
-        {/if}<button
-          type="button"
-          class="cv-toolbar-btn"
-          title="Formula"
-          on:mousedown={(e) => {
-            e.preventDefault();
-          }}
-          on:click={(event) => {
-            insertFormula();
-          }}><span class="font-serif italic font-bold text-xs">Fx</span></button
-        >
+        {/if}
+        {#if showToolbarOption("formula")}
+          <button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Formula"
+            on:mousedown={(e) => {
+              e.preventDefault();
+              saveSelection();
+            }}
+            on:click={(event) => {
+              openFormulaModal();
+            }}
+            ><span class="font-serif italic font-bold text-xs">Fx</span></button
+          >
+        {/if}
         {#if showToolbarOption("social")}
           <button
             type="button"
@@ -2536,10 +3813,34 @@
             list="editor-class-list"
             placeholder="+ add class..."
             class="cv-class-input"
+            on:mousedown={(event) => {
+              saveSelection();
+            }}
             on:keydown={(e) => {
               handleClassInputKeyDown(e);
             }}
-          />
+          /><button
+            style={stringifyStyles({
+              border: "none",
+              background: "var(--cv-color-primary, #0284c7)",
+              color: "#fff",
+              borderRadius: "4px",
+              padding: "1px 6px",
+              fontSize: "11px",
+              cursor: "pointer",
+              fontWeight: 600,
+              lineHeight: "1.4",
+            })}
+            type="button"
+            class="cv-class-apply-btn"
+            title="Apply Class"
+            on:mousedown={(e) => {
+              e.preventDefault();
+              applyClassFromInput(e);
+            }}
+          >
+            Apply
+          </button>
           {#if availableClasses && availableClasses.length > 0}
             <datalist id="editor-class-list">
               {#each availableClasses as cls}
@@ -2554,7 +3855,12 @@
           <button
             type="button"
             title="View HTML Source Code"
-            class={`cv-toolbar-btn ${mode === "source" ? "is-active" : ""}`}
+            class={`cv-toolbar-btn cv-source-toggle-btn ${
+              mode === "source" ? "is-active" : ""
+            }`}
+            on:mousedown={(e) => {
+              e.preventDefault();
+            }}
             on:click={(event) => {
               toggleMode();
             }}
@@ -2579,6 +3885,9 @@
             type="button"
             class="cv-toolbar-btn"
             title="Full Screen"
+            on:mousedown={(e) => {
+              e.preventDefault();
+            }}
             on:click={(event) => {
               toggleFullScreen();
             }}
@@ -2632,13 +3941,17 @@
   </div>
   <div
     style={stringifyStyles({
-      padding: "2rem 3rem",
+      padding: "16px 20px",
       color: "var(--cv-color-text-main, #f1f5f9)",
       position: "relative",
+      cursor: isReadOnly() ? "default" : "text",
     })}
-    class={`editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-${mode}`}
+    class={`editor-content flex-1 overflow-y-auto relative min-h-0 cv-mode-${mode}`}
     on:scroll={(event) => {
-      updateResizeHandlePosition();
+      handleEditorScroll();
+    }}
+    on:click={(e) => {
+      handleEditorContentClick(e);
     }}
   >
     <div
@@ -2648,27 +3961,36 @@
         lineHeight: "1.7",
         fontSize: "15px",
       })}
-      contentEditable="true"
-      class="wysiwyg-content outline-none prose prose-invert max-w-none"
       bind:this={editorRef}
+      contentEditable={isReadOnly() ? "false" : "true"}
+      class={`wysiwyg-content outline-none prose prose-invert max-w-none ${
+        isReadOnly() ? "cv-readonly" : ""
+      }`}
       on:input={(event) => {
         handleInput();
-        checkFormats();
+      }}
+      on:focus={(event) => {
+        handleFocus();
       }}
       on:blur={(event) => {
-        handleInput();
+        handleBlur();
       }}
       on:keyup={(event) => {
+        saveSelection();
         checkFormats();
       }}
+      on:keydown={(e) => {
+        handleKeyDown(e);
+      }}
       on:mouseup={(event) => {
+        saveSelection();
         checkFormats();
       }}
       on:click={(e) => {
         handleEditorClick(e);
       }}
     />
-    {#if selectedMediaEl}
+    {#if selectedMediaEl && !isReadOnly()}
       <div
         style={stringifyStyles({
           position: "absolute",
@@ -2689,13 +4011,192 @@
           startResize(e);
         }}
       />
+      <div
+        style={stringifyStyles({
+          position: "absolute",
+          top: `${resizeToolbarTop}px`,
+          left: `${resizeToolbarLeft}px`,
+          zIndex: 35,
+        })}
+        class="cv-media-toolbar"
+      >
+        <button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="25% width"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageSize("25%");
+          }}
+        >
+          25%
+        </button><button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="50% width"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageSize("50%");
+          }}
+        >
+          50%
+        </button><button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="75% width"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageSize("75%");
+          }}
+        >
+          75%
+        </button><button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="100% width"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageSize("100%");
+          }}
+        >
+          100%
+        </button>
+        <div
+          style={stringifyStyles({
+            height: "14px",
+            margin: "0 2px",
+          })}
+          class="cv-toolbar-divider"
+        />
+        <button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="Align Left"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageAlign("left");
+          }}
+          ><svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><line x1="21" y1="6" x2="3" y2="6" /><line
+              x1="15"
+              y1="12"
+              x2="3"
+              y2="12"
+            /><line x1="17" y1="18" x2="3" y2="18" /></svg
+          ></button
+        ><button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="Align Center"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageAlign("center");
+          }}
+          ><svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><line x1="18" y1="6" x2="6" y2="6" /><line
+              x1="21"
+              y1="12"
+              x2="3"
+              y2="12"
+            /><line x1="18" y1="18" x2="6" y2="18" /></svg
+          ></button
+        ><button
+          type="button"
+          class="cv-media-toolbar-btn"
+          title="Align Right"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            setImageAlign("right");
+          }}
+          ><svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><line x1="21" y1="6" x2="3" y2="6" /><line
+              x1="21"
+              y1="12"
+              x2="9"
+              y2="12"
+            /><line x1="21" y1="18" x2="7" y2="18" /></svg
+          ></button
+        >
+        <div
+          style={stringifyStyles({
+            height: "14px",
+            margin: "0 2px",
+          })}
+          class="cv-toolbar-divider"
+        />
+        <button
+          type="button"
+          class="cv-media-toolbar-btn cv-btn-danger"
+          title="Remove Media"
+          on:mousedown={(e) => {
+            e.preventDefault();
+          }}
+          on:click={(event) => {
+            deleteSelectedMedia();
+          }}
+          ><svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><polyline points="3 6 5 6 21 6" /><path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            /></svg
+          ></button
+        >
+      </div>
     {/if}
-    {#if showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal}
+    {#if showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal || showFormulaModal}
       <div
         style={stringifyStyles({
           background: "rgba(0, 0, 0, 0.6)",
         })}
         class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
+        on:click={(e) => {
+          handleBackdropClick(e);
+        }}
       >
         {#if showAiModal}
           <div class="cv-ai-modal shadow-2xl">
@@ -2787,6 +4288,338 @@
                 on:click={(event) => {
                   closeAiModal();
                 }}>Close</button
+              >
+            </div>
+          </div>
+        {/if}
+        {#if showImageModal}
+          <div
+            style={stringifyStyles({
+              background: "var(--cv-color-surface-raised, #1e293b)",
+              border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "400px",
+            })}
+            class="shadow-2xl"
+          >
+            <h3
+              style={stringifyStyles({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                gap: "8px",
+              })}
+              class="flex items-center text-white"
+            >
+              <svg
+                style={stringifyStyles({
+                  color: "var(--cv-color-primary, #7fc4de)",
+                })}
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                /><circle cx="8.5" cy="8.5" r="1.5" /><polyline
+                  points="21 15 16 10 5 21"
+                /></svg
+              >
+              Insert Image
+            </h3>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                marginBottom: "24px",
+              })}
+            >
+              <div
+                style={stringifyStyles({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                })}
+              >
+                <label
+                  style={stringifyStyles({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--cv-color-text-muted, #94a3b8)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  })}>Image URL</label
+                ><input
+                  style={stringifyStyles({
+                    background:
+                      "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                    border:
+                      "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    width: "100%",
+                    fontSize: "14px",
+                    color: "var(--cv-color-text-main, #fff)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  })}
+                  type="url"
+                  aria-label="Image URL"
+                  placeholder="https://example.com/photo.jpg"
+                  value={imageUrl}
+                  on:input={(e) => {
+                    imageUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmImage();
+                    }
+                  }}
+                />
+              </div>
+              <div
+                style={stringifyStyles({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                })}
+              >
+                <label
+                  style={stringifyStyles({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--cv-color-text-muted, #94a3b8)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  })}>Alt Text (Accessibility & SEO)</label
+                ><input
+                  style={stringifyStyles({
+                    background:
+                      "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                    border:
+                      "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    width: "100%",
+                    fontSize: "14px",
+                    color: "var(--cv-color-text-main, #fff)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  })}
+                  type="text"
+                  aria-label="Image Alt Text"
+                  placeholder="Descriptive text for screen readers"
+                  value={imageAlt}
+                  on:input={(e) => {
+                    imageAlt = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmImage();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "32px",
+              })}
+            >
+              <button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-secondary, #cbd5e1)",
+                  background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                })}
+                type="button"
+                on:click={(event) => {
+                  closeImageModal();
+                }}>Cancel</button
+              ><button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-on-primary, #fff)",
+                  background:
+                    "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                })}
+                type="button"
+                on:click={(event) => {
+                  confirmImage();
+                }}>Insert Image</button
+              >
+            </div>
+          </div>
+        {/if}
+        {#if showVideoModal}
+          <div
+            style={stringifyStyles({
+              background: "var(--cv-color-surface-raised, #1e293b)",
+              border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "400px",
+            })}
+            class="shadow-2xl"
+          >
+            <h3
+              style={stringifyStyles({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                gap: "8px",
+              })}
+              class="flex items-center text-white"
+            >
+              <svg
+                style={stringifyStyles({
+                  color: "var(--cv-color-info, #0ea5e9)",
+                })}
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><rect
+                  x="2"
+                  y="2"
+                  width="20"
+                  height="20"
+                  rx="2.18"
+                  ry="2.18"
+                /><line x1="7" y1="2" x2="7" y2="22" /><line
+                  x1="17"
+                  y1="2"
+                  x2="17"
+                  y2="22"
+                /></svg
+              >
+              Insert Video
+            </h3>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                marginBottom: "24px",
+              })}
+            >
+              <div
+                style={stringifyStyles({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                })}
+              >
+                <label
+                  style={stringifyStyles({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--cv-color-text-muted, #94a3b8)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  })}>Video URL (YouTube, Vimeo, or MP4)</label
+                ><input
+                  style={stringifyStyles({
+                    background:
+                      "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                    border:
+                      "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    width: "100%",
+                    fontSize: "14px",
+                    color: "var(--cv-color-text-main, #fff)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  })}
+                  type="url"
+                  aria-label="Video URL"
+                  placeholder="https://www.youtube.com/watch?v=... or .mp4"
+                  value={videoUrl}
+                  on:input={(e) => {
+                    videoUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmVideo();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "32px",
+              })}
+            >
+              <button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-secondary, #cbd5e1)",
+                  background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                })}
+                type="button"
+                on:click={(event) => {
+                  closeVideoModal();
+                }}>Cancel</button
+              ><button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-on-primary, #fff)",
+                  background: "var(--cv-color-info-fill, #075985)",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                })}
+                type="button"
+                on:click={(event) => {
+                  confirmVideo();
+                }}>Insert Video</button
               >
             </div>
           </div>
@@ -2924,6 +4757,12 @@
                   on:input={(e) => {
                     btnText = e.target.value;
                   }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmButton();
+                    }
+                  }}
                 />
               </div>
               <div
@@ -2961,6 +4800,12 @@
                   value={btnUrl}
                   on:input={(e) => {
                     btnUrl = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmButton();
+                    }
                   }}
                 />
               </div>
@@ -3102,6 +4947,12 @@
                   on:input={(e) => {
                     tableRows = e.target.value;
                   }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmTable();
+                    }
+                  }}
                 />
               </div>
               <div
@@ -3142,6 +4993,12 @@
                   value={tableCols}
                   on:input={(e) => {
                     tableCols = e.target.value;
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmTable();
+                    }
                   }}
                 />
               </div>
@@ -3297,6 +5154,12 @@
                 value={linkUrl}
                 on:input={(e) => {
                   linkUrl = e.target.value;
+                }}
+                on:keydown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmLink();
+                  }
                 }}
               />
             </div>
@@ -3633,6 +5496,12 @@
                   on:input={(e) => {
                     socialUrl = e.target.value;
                   }}
+                  on:keydown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmSocial();
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -3679,6 +5548,123 @@
             </div>
           </div>
         {/if}
+        {#if showFormulaModal}
+          <div
+            style={stringifyStyles({
+              background: "var(--cv-color-surface-raised, #1e293b)",
+              border: "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "380px",
+            })}
+            class="shadow-2xl"
+          >
+            <h3
+              style={stringifyStyles({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                gap: "8px",
+              })}
+              class="flex items-center text-white"
+            >
+              <span
+                style={stringifyStyles({
+                  color: "var(--cv-color-primary, #7fc4de)",
+                })}
+                class="font-serif italic font-bold text-base">Fx</span
+              >
+              Insert Math Formula
+            </h3>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                marginBottom: "24px",
+              })}
+            >
+              <label
+                style={stringifyStyles({
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  color: "var(--cv-color-text-muted, #94a3b8)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                })}>Formula Expression</label
+              ><input
+                style={stringifyStyles({
+                  background: "var(--cv-color-surface-sunken, rgba(0,0,0,0.3))",
+                  border:
+                    "1px solid var(--cv-color-border, rgba(255,255,255,0.1))",
+                  borderRadius: "8px",
+                  padding: "12px 16px",
+                  width: "100%",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-main, #fff)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "monospace",
+                })}
+                type="text"
+                aria-label="Formula Expression"
+                placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                value={formulaInput}
+                on:input={(e) => {
+                  formulaInput = e.target.value;
+                }}
+                on:keydown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmFormula();
+                  }
+                }}
+              />
+            </div>
+            <div
+              style={stringifyStyles({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "32px",
+              })}
+            >
+              <button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-text-secondary, #cbd5e1)",
+                  background: "var(--cv-color-hover, rgba(255,255,255,0.05))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                })}
+                type="button"
+                on:click={(event) => {
+                  closeFormulaModal();
+                }}>Cancel</button
+              ><button
+                style={stringifyStyles({
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  color: "var(--cv-color-on-primary, #fff)",
+                  background:
+                    "var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+                })}
+                type="button"
+                on:click={(event) => {
+                  confirmFormula();
+                }}>Insert Formula</button
+              >
+            </div>
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
@@ -3692,6 +5678,7 @@
   >
     <textarea
       style={stringifyStyles({
+        padding: "16px 20px",
         whiteSpace: "pre-wrap",
         overflowY: "auto",
         resize: "none",
@@ -3699,7 +5686,7 @@
         width: "100%",
         boxSizing: "border-box",
       })}
-      class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
+      class="w-full flex-1 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
       value={internalContent}
       on:input={(e) => {
         handleSourceInput(e);

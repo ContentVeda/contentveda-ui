@@ -18,7 +18,7 @@ if (fs.existsSync(utilsSrcDir)) {
       const res = ts.transpileModule(srcCode, {
         compilerOptions: {
           target: ts.ScriptTarget.ES2020,
-          module: ts.ModuleKind.CommonJS,
+          module: ts.ModuleKind.ESNext,
           esModuleInterop: true
         }
       });

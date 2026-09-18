@@ -43,17 +43,26 @@
 
 /* Layout Polyfills & Resets */
 .cv-rich-text-editor, .cv-rich-text-editor * { box-sizing: border-box; }
+.cv-rich-text-editor {
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  height: 100%;
+}
 .cv-rich-text-editor.flex, .cv-rich-text-editor .flex { display: flex; }
 .cv-rich-text-editor.flex-col, .cv-rich-text-editor .flex-col { flex-direction: column; }
 .cv-rich-text-editor .flex-wrap { flex-wrap: wrap; }
 .cv-rich-text-editor .items-center { align-items: center; }
 .cv-rich-text-editor .justify-center { justify-content: center; }
 .cv-rich-text-editor .w-full { width: 100%; }
+.cv-rich-text-editor .h-full { height: 100%; }
 
 /* Redesigned Modern Toolbar */
 .cv-rich-text-editor .editor-toolbar {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0 !important;
   background: var(--cv-color-surface, #ffffff);
   border-bottom: 1px solid var(--cv-color-border, #e2e8f0);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -418,10 +427,15 @@
 }
 
 /* Insert Dropdown Menu */
+.cv-rich-text-editor .cv-insert-dropdown {
+  position: relative !important;
+  display: inline-flex !important;
+}
+
 .cv-rich-text-editor .cv-insert-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  position: absolute !important;
+  top: calc(100% + 4px) !important;
+  left: 0 !important;
   background: var(--cv-color-surface-raised, #ffffff);
   border: 1px solid var(--cv-color-border, #e2e8f0);
   border-radius: 8px;
@@ -430,8 +444,8 @@
   flex-direction: column;
   gap: 2px;
   z-index: 50;
-  min-width: 160px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  min-width: 170px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08);
 }
 
 .cv-rich-text-editor .cv-insert-item {
@@ -515,14 +529,63 @@
 .z-\[9999\] { z-index: 9999 !important; }
 .backdrop-blur-md { backdrop-filter: blur(12px) !important; }
 
+/* Editor Content Area */
+.cv-rich-text-editor .editor-content {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 16px 20px !important;
+  box-sizing: border-box !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+/* Custom Sleek Scrollbar for Editor Content Area and Source Mode */
+.cv-rich-text-editor .editor-content::-webkit-scrollbar,
+.cv-rich-text-editor .editor-source textarea::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cv-rich-text-editor .editor-content::-webkit-scrollbar-track,
+.cv-rich-text-editor .editor-source textarea::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+  margin: 4px 0;
+}
+
+.cv-rich-text-editor .editor-content::-webkit-scrollbar-thumb,
+.cv-rich-text-editor .editor-source textarea::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+.cv-rich-text-editor .editor-content::-webkit-scrollbar-thumb:hover,
+.cv-rich-text-editor .editor-source textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.75);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.cv-rich-text-editor .editor-content::-webkit-scrollbar-thumb:active,
+.cv-rich-text-editor .editor-source textarea::-webkit-scrollbar-thumb:active {
+  background: var(--cv-color-primary, #7fc4de);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 /* Source Code Editor Area */
 .cv-rich-text-editor .editor-source {
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 0% !important;
+  min-height: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  min-height: 350px !important;
   background: var(--cv-color-surface-sunken, #090d16) !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
@@ -532,8 +595,8 @@
   flex: 1 1 0% !important;
   width: 100% !important;
   height: 100% !important;
-  min-height: 350px !important;
-  padding: 24px 28px !important;
+  min-height: 0 !important;
+  padding: 16px 20px !important;
   background: transparent !important;
   color: var(--cv-color-code-text, #38bdf8) !important;
   font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
@@ -546,6 +609,8 @@
   box-sizing: border-box !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
 /* Editor Mode Toggles */
@@ -559,11 +624,86 @@
 .cv-rich-text-editor .editor-source.cv-mode-src-visual { display: none !important; }
 .cv-rich-text-editor .editor-source.cv-mode-src-source { display: flex !important; }
 
+/* Disabled toolbar state in source code mode */
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-1,
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-2 > *:not(.ml-auto),
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-2 .ml-auto > *:not(.cv-source-toggle-btn) {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.5);
+  cursor: not-allowed !important;
+}
+
+.cv-rich-text-editor.cv-source-mode .cv-toolbar-row-2 .ml-auto {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+.cv-rich-text-editor.cv-source-mode .cv-source-toggle-btn {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  filter: none !important;
+}
+
 /* Resizable media selection (image/video/audio/social-embed/widget) */
 .cv-rich-text-editor .cv-resizing-selected {
   outline: 2px solid var(--cv-color-primary, #245066) !important;
   outline-offset: 2px !important;
 }
-.cv-rich-text-editor .cv-resize-handle:hover {
-  transform: scale(1.15);
+.cv-rich-text-editor .cv-resize-handle {
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  user-select: none;
 }
+.cv-rich-text-editor .cv-resize-handle:hover {
+  transform: scale(1.25);
+  background: var(--cv-color-primary-hover, #0284c7) !important;
+}
+
+/* Quick Media Action Toolbar */
+.cv-rich-text-editor .cv-media-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  background: var(--cv-color-surface-raised, #1e293b);
+  border: 1px solid var(--cv-color-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+  z-index: 35;
+  user-select: none;
+  animation: cvMediaFadeIn 0.15s ease-out;
+}
+
+@keyframes cvMediaFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cv-rich-text-editor .cv-media-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--cv-color-text-main, #e2e8f0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.cv-rich-text-editor .cv-media-toolbar-btn:hover {
+  background: var(--cv-color-surface-hover, rgba(255, 255, 255, 0.1));
+  color: #fff;
+}
+
+.cv-rich-text-editor .cv-media-toolbar-btn.cv-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+

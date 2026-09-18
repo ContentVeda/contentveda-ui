@@ -119,9 +119,7 @@ function fixAngularFile(filePath) {
   // Add ngAfterViewInit to run lifecycle initializations once DOM elements are bound.
   if (code.includes('@ViewChild') && code.includes('ngOnInit(') && !code.includes('ngAfterViewInit(')) {
     code = code.replace(/ngOnInit\(\)\s*\{/, `ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {`);

@@ -18,8 +18,8 @@ const MIME = {
   '.woff2': 'font/woff2'
 };
 
-const DEFAULT_CONTENT = `<h2>🚀 The Next-Gen Rich Text Editor</h2>
-<p>This is a live multi-framework demonstration of the newly redesigned <strong>ContentVeda Rich Text Editor Toolbar</strong>.</p>
+const DEFAULT_CONTENT = `<h2>🚀 Rich Text Editor Toolbar Redesign</h2>
+<p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p>
 <p>It is currently rendered natively inside the selected JavaScript framework with <em>zero functional regressions</em> and full feature fidelity!</p>
 <blockquote>Crafted with modern 2-row ergonomics, custom typography pickers, instant widgets, and integrated ContentVeda AI.</blockquote>
 <p>Try testing the features in the toolbar above:</p>
@@ -321,7 +321,7 @@ function getIndexHtml() {
     }
     #mount-frame {
       width: 100%;
-      height: 520px;
+      height: 600px;
       border: none;
       border-radius: 12px;
     }
@@ -539,12 +539,30 @@ function getHarnessHtml(framework) {
   <link rel="stylesheet" href="/dist/styles/theme.css" />
   <link rel="stylesheet" href="/dist/styles/components/RichTextEditor.css" />
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       background: transparent;
       font-family: 'Inter', system-ui, sans-serif;
       color: #f1f5f9;
+    }
+    #mount {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    cv-rich-text-editor {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
   </style>
   <script type="module" src="${bundleUrl}"></script>
@@ -569,12 +587,23 @@ function getHarnessHtml(framework) {
   <link rel="stylesheet" href="/dist/styles/theme.css" />
   <link rel="stylesheet" href="/dist/styles/components/RichTextEditor.css" />
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       background: transparent;
       font-family: 'Inter', system-ui, sans-serif;
       color: #f1f5f9;
+    }
+    #mount {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-sizing: border-box;
     }
   </style>
   <script type="module" src="${bundleUrl}"></script>

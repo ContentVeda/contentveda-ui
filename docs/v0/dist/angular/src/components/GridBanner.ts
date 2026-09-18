@@ -196,9 +196,7 @@ export default class GridBanner {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {

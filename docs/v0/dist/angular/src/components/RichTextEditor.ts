@@ -8,6 +8,7 @@ import {
   ViewChild,
   ElementRef,
   Input,
+  SimpleChanges,
 } from "@angular/core";
 
 export interface RichTextEditorConfig {
@@ -21,6 +22,8 @@ export interface RichTextEditorProps {
   availableClasses?: string[];
   onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
   config?: RichTextEditorConfig;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
 import DOMPurify from "isomorphic-dompurify";
@@ -31,7 +34,7 @@ let activeSavedRange: any = null;
   template: `
     <div
       #rootRef
-      [class]="'cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ' + (isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full') + ' ' + (className || '')"
+      [class]="'cv-rich-text-editor flex flex-col rounded-xl overflow-hidden relative ' + (isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none' : 'w-full h-full') + ' ' + (mode === 'source' ? 'cv-source-mode' : '') + ' ' + (className || '')"
       [ngStyle]="{
           boxSizing: 'border-box',
           background: 'var(--cv-color-surface-sunken, #0f172a)',
@@ -39,7 +42,9 @@ let activeSavedRange: any = null;
           boxShadow: 'var(--cv-shadow-overlay, 0 8px 32px rgba(0,0,0,0.4))'
         }"
     >
-      <div class="editor-toolbar select-none sticky top-0 z-10 w-full">
+      <div
+        [class]="'editor-toolbar select-none sticky top-0 z-10 w-full ' + (isReadOnly() ? 'opacity-60 pointer-events-none' : '')"
+      >
         <div class="cv-toolbar-row cv-toolbar-row-1">
           <div class="cv-toolbar-group">
             <button
@@ -180,6 +185,7 @@ let activeSavedRange: any = null;
             >
               <option value="12px">12px</option>
               <option value="14px">14px</option>
+              <option value="15px">15px</option>
               <option value="16px">16px</option>
               <option value="18px">18px</option>
               <option value="20px">20px</option>
@@ -299,7 +305,7 @@ let activeSavedRange: any = null;
                     class="cv-color-input"
                     [attr.value]="textColor"
                     (mousedown)="saveSelection()"
-                    (input)="applyColor('foreColor', $event.target.value)"
+                    (input)="applyColorPreview('foreColor', $event.target.value)"
                     (change)="applyColor('foreColor', $event.target.value)" /></label
               ></ng-container>
               <ng-container *ngIf="showToolbarOption('backColor')"
@@ -334,7 +340,7 @@ let activeSavedRange: any = null;
                     class="cv-color-input"
                     [attr.value]="highlightColor"
                     (mousedown)="saveSelection()"
-                    (input)="applyColor('backColor', $event.target.value)"
+                    (input)="applyColorPreview('backColor', $event.target.value)"
                     (change)="applyColor('backColor', $event.target.value)" /></label
               ></ng-container></div
           ></ng-container>
@@ -521,11 +527,21 @@ let activeSavedRange: any = null;
             </button>
           </div>
           <div class="cv-toolbar-divider"></div>
-          <div class="cv-toolbar-group relative">
+          <div
+            class="cv-toolbar-group cv-insert-dropdown relative"
+            [ngStyle]="{
+          position: 'relative',
+          display: 'inline-flex'
+        }"
+          >
             <button
               type="button"
               class="cv-toolbar-action-btn"
               title="Insert Options"
+              (mousedown)="
+          $event.preventDefault();
+          saveSelection();
+        "
               (click)="showInsertMenu = !showInsertMenu"
             >
               <svg
@@ -558,7 +574,16 @@ let activeSavedRange: any = null;
               </svg>
             </button>
             <ng-container *ngIf="showInsertMenu"
-              ><div class="cv-insert-menu shadow-xl">
+              ><div
+                class="cv-insert-menu shadow-xl"
+                [ngStyle]="{
+          position: 'absolute',
+          top: 'calc(100% + 4px)',
+          left: '0',
+          zIndex: 50,
+          minWidth: '170px'
+        }"
+              >
                 <button
                   type="button"
                   class="cv-insert-item"
@@ -750,6 +775,26 @@ let activeSavedRange: any = null;
                   (mousedown)="$event.preventDefault()"
                   (click)="
           showInsertMenu = false;
+          openFormulaModal();
+        "
+                >
+                  <span
+                    class="font-serif italic font-bold text-xs"
+                    [ngStyle]="{
+          width: '14px',
+          textAlign: 'center'
+        }"
+                    >Fx</span
+                  >
+
+                  Formula
+                </button>
+                <button
+                  type="button"
+                  class="cv-insert-item"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="
+          showInsertMenu = false;
           format('insertHorizontalRule');
         "
                 >
@@ -826,7 +871,10 @@ let activeSavedRange: any = null;
               type="button"
               class="cv-toolbar-action-btn"
               title="Table"
-              (mousedown)="$event.preventDefault()"
+              (mousedown)="
+          $event.preventDefault();
+          saveSelection();
+        "
               (click)="openTableModal()"
             >
               <svg
@@ -989,15 +1037,20 @@ let activeSavedRange: any = null;
                   ></path>
                 </svg></button
             ></ng-container>
-            <button
-              type="button"
-              class="cv-toolbar-btn"
-              title="Formula"
-              (mousedown)="$event.preventDefault()"
-              (click)="insertFormula()"
+            <ng-container *ngIf="showToolbarOption('formula')"
+              ><button
+                type="button"
+                class="cv-toolbar-btn"
+                title="Formula"
+                (mousedown)="
+          $event.preventDefault();
+          saveSelection();
+        "
+                (click)="openFormulaModal()"
+              >
+                <span class="font-serif italic font-bold text-xs">Fx</span>
+              </button></ng-container
             >
-              <span class="font-serif italic font-bold text-xs">Fx</span>
-            </button>
             <ng-container *ngIf="showToolbarOption('social')"
               ><button
                 type="button"
@@ -1087,8 +1140,31 @@ let activeSavedRange: any = null;
                 list="editor-class-list"
                 placeholder="+ add class..."
                 class="cv-class-input"
+                (mousedown)="saveSelection()"
                 (keydown)="handleClassInputKeyDown($event)"
               />
+              <button
+                type="button"
+                class="cv-class-apply-btn"
+                title="Apply Class"
+                (mousedown)="
+          $event.preventDefault();
+          applyClassFromInput($event);
+        "
+                [ngStyle]="{
+          border: 'none',
+          background: 'var(--cv-color-primary, #0284c7)',
+          color: '#fff',
+          borderRadius: '4px',
+          padding: '1px 6px',
+          fontSize: '11px',
+          cursor: 'pointer',
+          fontWeight: 600,
+          lineHeight: '1.4'
+        }"
+              >
+                Apply
+              </button>
               <ng-container
                 *ngIf="availableClasses && availableClasses.length > 0"
                 ><datalist id="editor-class-list">
@@ -1104,7 +1180,8 @@ let activeSavedRange: any = null;
               ><button
                 type="button"
                 title="View HTML Source Code"
-                [class]="'cv-toolbar-btn ' + (mode === 'source' ? 'is-active' : '')"
+                [class]="'cv-toolbar-btn cv-source-toggle-btn ' + (mode === 'source' ? 'is-active' : '')"
+                (mousedown)="$event.preventDefault()"
                 (click)="toggleMode()"
               >
                 <svg
@@ -1127,6 +1204,7 @@ let activeSavedRange: any = null;
                 type="button"
                 class="cv-toolbar-btn"
                 title="Full Screen"
+                (mousedown)="$event.preventDefault()"
                 (click)="toggleFullScreen()"
               >
                 <svg
@@ -1175,25 +1253,32 @@ let activeSavedRange: any = null;
         </div>
       </div>
       <div
-        [class]="'editor-content flex-1 overflow-y-auto relative min-h-[350px] cv-mode-' + (mode)"
-        (scroll)="updateResizeHandlePosition()"
+        [class]="'editor-content flex-1 overflow-y-auto relative min-h-0 cv-mode-' + (mode)"
+        (scroll)="handleEditorScroll()"
+        (click)="handleEditorContentClick($event)"
         [ngStyle]="{
-          padding: '2rem 3rem',
+          padding: '16px 20px',
           color: 'var(--cv-color-text-main, #f1f5f9)',
-          position: 'relative'
+          position: 'relative',
+          cursor: isReadOnly() ? 'default' : 'text'
         }"
       >
         <div
-          contenteditable="true"
-          class="wysiwyg-content outline-none prose prose-invert max-w-none"
           #editorRef
-          (input)="
-          handleInput();
+          [attr.contentEditable]='isReadOnly() ? "false" : "true"'
+          [class]="'wysiwyg-content outline-none prose prose-invert max-w-none ' + (isReadOnly() ? 'cv-readonly' : '')"
+          (input)="handleInput()"
+          (focus)="handleFocus()"
+          (blur)="handleBlur()"
+          (keyup)="
+          saveSelection();
           checkFormats();
         "
-          (blur)="handleInput()"
-          (keyup)="checkFormats()"
-          (mouseup)="checkFormats()"
+          (keydown)="handleKeyDown($event)"
+          (mouseup)="
+          saveSelection();
+          checkFormats();
+        "
           (click)="handleEditorClick($event)"
           [ngStyle]="{
           minHeight: '350px',
@@ -1202,7 +1287,7 @@ let activeSavedRange: any = null;
           fontSize: '15px'
         }"
         ></div>
-        <ng-container *ngIf="selectedMediaEl"
+        <ng-container *ngIf="selectedMediaEl && !isReadOnly()"
           ><div
             class="cv-resize-handle"
             title="Drag to resize"
@@ -1220,15 +1305,164 @@ let activeSavedRange: any = null;
           boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
         }"
             (mousedown)="startResize($event)"
-          ></div
+          ></div>
+          <div
+            class="cv-media-toolbar"
+            [ngStyle]="{
+          position: 'absolute',
+          top: (resizeToolbarTop) + 'px',
+          left: (resizeToolbarLeft) + 'px',
+          zIndex: 35
+        }"
+          >
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="25% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('25%')"
+            >
+              25%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="50% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('50%')"
+            >
+              50%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="75% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('75%')"
+            >
+              75%
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="100% width"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageSize('100%')"
+            >
+              100%
+            </button>
+            <div
+              class="cv-toolbar-divider"
+              [ngStyle]="{
+          height: '14px',
+          margin: '0 2px'
+        }"
+            ></div>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Left"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageAlign('left')"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+                <line x1="17" y1="18" x2="3" y2="18"></line>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Center"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageAlign('center')"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="6"></line>
+                <line x1="21" y1="12" x2="3" y2="12"></line>
+                <line x1="18" y1="18" x2="6" y2="18"></line>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn"
+              title="Align Right"
+              (mousedown)="$event.preventDefault()"
+              (click)="setImageAlign('right')"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+                <line x1="21" y1="18" x2="7" y2="18"></line>
+              </svg>
+            </button>
+            <div
+              class="cv-toolbar-divider"
+              [ngStyle]="{
+          height: '14px',
+          margin: '0 2px'
+        }"
+            ></div>
+            <button
+              type="button"
+              class="cv-media-toolbar-btn cv-btn-danger"
+              title="Remove Media"
+              (mousedown)="$event.preventDefault()"
+              (click)="deleteSelectedMedia()"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                ></path>
+              </svg>
+            </button></div
         ></ng-container>
         <ng-container
-          *ngIf="showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal"
+          *ngIf="showTableModal || showLinkModal || showWidgetModal || showSocialModal || showButtonModal || showAiModal || showImageModal || showVideoModal || showFormulaModal"
           ><div
             class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
             [ngStyle]="{
           background: 'rgba(0, 0, 0, 0.6)'
         }"
+            (click)="handleBackdropClick($event)"
           >
             <ng-container *ngIf="showAiModal"
               ><div class="cv-ai-modal shadow-2xl">
@@ -1317,6 +1551,319 @@ let activeSavedRange: any = null;
                     (click)="closeAiModal()"
                   >
                     Close
+                  </button>
+                </div>
+              </div></ng-container
+            >
+            <ng-container *ngIf="showImageModal"
+              ><div
+                class="shadow-2xl"
+                [ngStyle]="{
+          background: 'var(--cv-color-surface-raised, #1e293b)',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '16px',
+          padding: '24px',
+          width: '400px'
+        }"
+              >
+                <h3
+                  class="flex items-center text-white"
+                  [ngStyle]="{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          marginBottom: '20px',
+          gap: '8px'
+        }"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    [ngStyle]="{
+          color: 'var(--cv-color-primary, #7fc4de)'
+        }"
+                  >
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+
+                  Insert Image
+                </h3>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          marginBottom: '24px'
+        }"
+                >
+                  <div
+                    [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }"
+                  >
+                    <label
+                      [ngStyle]="{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: 'var(--cv-color-text-muted, #94a3b8)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }"
+                      >Image URL</label
+                    >
+                    <input
+                      type="url"
+                      aria-label="Image URL"
+                      placeholder="https://example.com/photo.jpg"
+                      [ngStyle]="{
+          background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          width: '100%',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-main, #fff)',
+          outline: 'none',
+          boxSizing: 'border-box'
+        }"
+                      [attr.value]="imageUrl"
+                      (input)="imageUrl = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
+                    />
+                  </div>
+                  <div
+                    [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }"
+                  >
+                    <label
+                      [ngStyle]="{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: 'var(--cv-color-text-muted, #94a3b8)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }"
+                      >Alt Text (Accessibility & SEO)</label
+                    >
+                    <input
+                      type="text"
+                      aria-label="Image Alt Text"
+                      placeholder="Descriptive text for screen readers"
+                      [ngStyle]="{
+          background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          width: '100%',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-main, #fff)',
+          outline: 'none',
+          boxSizing: 'border-box'
+        }"
+                      [attr.value]="imageAlt"
+                      (input)="imageAlt = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
+                    />
+                  </div>
+                </div>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          marginTop: '32px'
+        }"
+                >
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-secondary, #cbd5e1)',
+          background: 'var(--cv-color-hover, rgba(255,255,255,0.05))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '500',
+          cursor: 'pointer'
+        }"
+                    (click)="closeImageModal()"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-on-primary, #fff)',
+          background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+        }"
+                    (click)="confirmImage()"
+                  >
+                    Insert Image
+                  </button>
+                </div>
+              </div></ng-container
+            >
+            <ng-container *ngIf="showVideoModal"
+              ><div
+                class="shadow-2xl"
+                [ngStyle]="{
+          background: 'var(--cv-color-surface-raised, #1e293b)',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '16px',
+          padding: '24px',
+          width: '400px'
+        }"
+              >
+                <h3
+                  class="flex items-center text-white"
+                  [ngStyle]="{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          marginBottom: '20px',
+          gap: '8px'
+        }"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    [ngStyle]="{
+          color: 'var(--cv-color-info, #0ea5e9)'
+        }"
+                  >
+                    <rect
+                      x="2"
+                      y="2"
+                      width="20"
+                      height="20"
+                      rx="2.18"
+                      ry="2.18"
+                    ></rect>
+                    <line x1="7" y1="2" x2="7" y2="22"></line>
+                    <line x1="17" y1="2" x2="17" y2="22"></line>
+                  </svg>
+
+                  Insert Video
+                </h3>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          marginBottom: '24px'
+        }"
+                >
+                  <div
+                    [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }"
+                  >
+                    <label
+                      [ngStyle]="{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: 'var(--cv-color-text-muted, #94a3b8)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }"
+                      >Video URL (YouTube, Vimeo, or MP4)</label
+                    >
+                    <input
+                      type="url"
+                      aria-label="Video URL"
+                      placeholder="https://www.youtube.com/watch?v=... or .mp4"
+                      [ngStyle]="{
+          background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          width: '100%',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-main, #fff)',
+          outline: 'none',
+          boxSizing: 'border-box'
+        }"
+                      [attr.value]="videoUrl"
+                      (input)="videoUrl = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
+                    />
+                  </div>
+                </div>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          marginTop: '32px'
+        }"
+                >
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-secondary, #cbd5e1)',
+          background: 'var(--cv-color-hover, rgba(255,255,255,0.05))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '500',
+          cursor: 'pointer'
+        }"
+                    (click)="closeVideoModal()"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-on-primary, #fff)',
+          background: 'var(--cv-color-info-fill, #075985)',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+        }"
+                    (click)="confirmVideo()"
+                  >
+                    Insert Video
                   </button>
                 </div>
               </div></ng-container
@@ -1468,6 +2015,7 @@ let activeSavedRange: any = null;
         }"
                       [attr.value]="btnText"
                       (input)="btnText = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
                     />
                   </div>
                   <div
@@ -1504,6 +2052,7 @@ let activeSavedRange: any = null;
         }"
                       [attr.value]="btnUrl"
                       (input)="btnUrl = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
                     />
                   </div>
                 </div>
@@ -1644,6 +2193,7 @@ let activeSavedRange: any = null;
         }"
                       [attr.value]="tableRows"
                       (input)="tableRows = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
                     />
                   </div>
                   <div
@@ -1683,6 +2233,7 @@ let activeSavedRange: any = null;
         }"
                       [attr.value]="tableCols"
                       (input)="tableCols = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
                     />
                   </div>
                 </div>
@@ -1840,6 +2391,7 @@ let activeSavedRange: any = null;
         }"
                     [attr.value]="linkUrl"
                     (input)="linkUrl = $event.target.value"
+                    (keydown)="onClassInputKeydown($event)"
                   />
                 </div>
                 <div
@@ -2204,6 +2756,7 @@ let activeSavedRange: any = null;
         }"
                       [attr.value]="socialUrl"
                       (input)="socialUrl = $event.target.value"
+                      (keydown)="onClassInputKeydown($event)"
                     />
                   </div>
                 </div>
@@ -2251,6 +2804,119 @@ let activeSavedRange: any = null;
                 </div>
               </div></ng-container
             >
+            <ng-container *ngIf="showFormulaModal"
+              ><div
+                class="shadow-2xl"
+                [ngStyle]="{
+          background: 'var(--cv-color-surface-raised, #1e293b)',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '16px',
+          padding: '24px',
+          width: '380px'
+        }"
+              >
+                <h3
+                  class="flex items-center text-white"
+                  [ngStyle]="{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          marginBottom: '20px',
+          gap: '8px'
+        }"
+                >
+                  <span
+                    class="font-serif italic font-bold text-base"
+                    [ngStyle]="{
+          color: 'var(--cv-color-primary, #7fc4de)'
+        }"
+                    >Fx</span
+                  >
+
+                  Insert Math Formula
+                </h3>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          marginBottom: '24px'
+        }"
+                >
+                  <label
+                    [ngStyle]="{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: 'var(--cv-color-text-muted, #94a3b8)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }"
+                    >Formula Expression</label
+                  >
+                  <input
+                    type="text"
+                    aria-label="Formula Expression"
+                    placeholder="e.g. E = mc² or f(x) = ax² + bx + c"
+                    [ngStyle]="{
+          background: 'var(--cv-color-surface-sunken, rgba(0,0,0,0.3))',
+          border: '1px solid var(--cv-color-border, rgba(255,255,255,0.1))',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          width: '100%',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-main, #fff)',
+          outline: 'none',
+          boxSizing: 'border-box',
+          fontFamily: 'monospace'
+        }"
+                    [attr.value]="formulaInput"
+                    (input)="formulaInput = $event.target.value"
+                    (keydown)="onClassInputKeydown($event)"
+                  />
+                </div>
+                <div
+                  [ngStyle]="{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          marginTop: '32px'
+        }"
+                >
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-text-secondary, #cbd5e1)',
+          background: 'var(--cv-color-hover, rgba(255,255,255,0.05))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '500',
+          cursor: 'pointer'
+        }"
+                    (click)="closeFormulaModal()"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    [ngStyle]="{
+          padding: '10px 20px',
+          fontSize: '14px',
+          color: 'var(--cv-color-on-primary, #fff)',
+          background: 'var(--cv-gradient-primary, linear-gradient(135deg, #245066, #2c6480))',
+          border: 'none',
+          borderRadius: '8px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+        }"
+                    (click)="confirmFormula()"
+                  >
+                    Insert Formula
+                  </button>
+                </div>
+              </div></ng-container
+            >
           </div></ng-container
         >
       </div>
@@ -2263,10 +2929,11 @@ let activeSavedRange: any = null;
         }"
       >
         <textarea
-          class="w-full flex-1 p-6 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
+          class="w-full flex-1 bg-transparent cv-rte-ok font-mono text-[14px] leading-loose outline-none"
           [value]="internalContent"
           (input)="handleSourceInput($event)"
           [ngStyle]="{
+          padding: '16px 20px',
           whiteSpace: 'pre-wrap',
           overflowY: 'auto',
           resize: 'none',
@@ -2288,9 +2955,18 @@ let activeSavedRange: any = null;
   ],
 })
 export default class RichTextEditor {
+  onClassInputKeydown($event: any) {
+    if ($event.key === 'Enter') {
+      $event.preventDefault();
+      this.applyClass($event.target.value);
+      $event.target.value = '';
+    }
+  }
   @Input() content!: RichTextEditorProps["content"];
   @Input() initialContent!: RichTextEditorProps["initialContent"];
   @Input() config!: RichTextEditorProps["config"];
+  @Input() readOnly!: RichTextEditorProps["readOnly"];
+  @Input() disabled!: RichTextEditorProps["disabled"];
   @Input() className!: RichTextEditorProps["className"];
   @Input() availableClasses!: RichTextEditorProps["availableClasses"];
   @Output() onMediaRequest = new EventEmitter<any>();
@@ -2301,7 +2977,28 @@ export default class RichTextEditor {
 
   mode = "visual";
   isFullscreen = false;
+  isMounted = false;
   internalContent = null;
+  getEditorElement() {
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return null;
+    if (this.editorRef?.nativeElement) {
+      if ((this.editorRef?.nativeElement as any).current)
+        return (this.editorRef?.nativeElement as any).current;
+      if ((this.editorRef?.nativeElement as any).nodeType === 1)
+        return this.editorRef?.nativeElement as any;
+    }
+    if (this.rootRef?.nativeElement) {
+      const root =
+        (this.rootRef?.nativeElement as any).current ||
+        this.rootRef?.nativeElement;
+      if (root && typeof (root as any).querySelector === "function") {
+        const found = (root as any).querySelector(".wysiwyg-content");
+        if (found) return found as HTMLDivElement;
+      }
+    }
+    return document.querySelector(".wysiwyg-content") as HTMLDivElement;
+  }
   getTrustedHttpUrl(rawUrl: string) {
     try {
       const parsed = new URL(
@@ -2335,7 +3032,18 @@ export default class RichTextEditor {
     return host === domain || host.endsWith("." + domain);
   }
   escapeHtml(value: string) {
-    return String(value == null ? "" : value)
+    if (value == null) return "";
+    const str = String(value);
+    if (
+      str.indexOf("&") === -1 &&
+      str.indexOf("<") === -1 &&
+      str.indexOf(">") === -1 &&
+      str.indexOf('"') === -1 &&
+      str.indexOf("'") === -1
+    ) {
+      return str;
+    }
+    return str
       .split("&")
       .join("&amp;")
       .split("<")
@@ -2384,17 +3092,26 @@ export default class RichTextEditor {
   btnText = "Click Here";
   btnUrl = "";
   btnStyle = "primary";
+  showImageModal = false;
+  imageUrl = "";
+  imageAlt = "";
+  showVideoModal = false;
+  videoUrl = "";
+  showFormulaModal = false;
+  formulaInput = "E = mc²";
   selectedMediaEl = null;
   resizeHandleTop = 0;
   resizeHandleLeft = 0;
+  resizeToolbarTop = 0;
+  resizeToolbarLeft = 0;
   isResizing = false;
   resizeStartX = 0;
   resizeStartWidth = 0;
   fontFamily = "Inter";
-  fontSize = "16px";
+  fontSize = "15px";
   textColor = "#0f172a";
   highlightColor = "#fde047";
-  appliedClasses = ["cv-callout", "variant-blue"];
+  appliedClasses = [];
   showInsertMenu = false;
   showAiModal = false;
   aiAction = "improve";
@@ -2420,6 +3137,9 @@ export default class RichTextEditor {
       let isQuote = false;
       let isCode = false;
       let inTable = false;
+      let nextFontSize = this.fontSize;
+      let nextFontFamily = this.fontFamily;
+      let nextAppliedClasses = this.appliedClasses;
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).startContainer as any;
@@ -2429,7 +3149,8 @@ export default class RichTextEditor {
           try {
             const computed = window.getComputedStyle(currentEl);
             if (computed && computed.fontSize) {
-              this.fontSize = computed.fontSize;
+              const pxVal = Math.round(parseFloat(computed.fontSize));
+              nextFontSize = `${pxVal}px`;
             }
             if (computed && computed.fontFamily) {
               const primaryFont = computed.fontFamily
@@ -2440,13 +3161,14 @@ export default class RichTextEditor {
                 .join("")
                 .trim();
               if (primaryFont) {
-                this.fontFamily = primaryFont;
+                nextFontFamily = primaryFont;
               }
             }
           } catch (err) {}
           const classSet: string[] = [];
           let searchNode = currentEl;
-          while (searchNode && searchNode !== this.editorRef?.nativeElement) {
+          const editorEl = this.getEditorElement();
+          while (searchNode && searchNode !== editorEl) {
             if (
               searchNode.className &&
               typeof searchNode.className === "string"
@@ -2459,8 +3181,13 @@ export default class RichTextEditor {
                 const p = parts[pi];
                 if (
                   p &&
-                  p.indexOf("prose") !== 0 &&
+                  !p.startsWith("prose") &&
                   p !== "task-list" &&
+                  p !== "cv-pending-selection" &&
+                  p !== "cv-resizing-selected" &&
+                  p !== "outline-none" &&
+                  p !== "max-w-none" &&
+                  p !== "wysiwyg-content" &&
                   !classSet.includes(p)
                 ) {
                   classSet.push(p);
@@ -2469,7 +3196,7 @@ export default class RichTextEditor {
             }
             searchNode = searchNode.parentElement;
           }
-          this.appliedClasses = classSet;
+          nextAppliedClasses = classSet;
         }
         while (
           node &&
@@ -2483,7 +3210,23 @@ export default class RichTextEditor {
           node = node.parentNode;
         }
       }
-      this.activeFormats = {
+      let nextHeadingFormat = "P";
+      const formatBlock = document.queryCommandValue("formatBlock");
+      if (formatBlock) {
+        if (formatBlock.includes("1")) nextHeadingFormat = "H1";
+        else if (formatBlock.includes("2")) nextHeadingFormat = "H2";
+        else if (formatBlock.includes("3")) nextHeadingFormat = "H3";
+        else if (formatBlock.includes("4")) nextHeadingFormat = "H4";
+        else if (formatBlock.toLowerCase().includes("blockquote")) {
+          isQuote = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.toLowerCase().includes("pre")) {
+          isCode = true;
+          nextHeadingFormat = "P";
+        } else if (formatBlock.includes("p")) nextHeadingFormat = "P";
+        else if (formatBlock.includes("div")) nextHeadingFormat = "P";
+      }
+      const nextActiveFormats = {
         bold: document.queryCommandState("bold"),
         italic: document.queryCommandState("italic"),
         underline: document.queryCommandState("underline"),
@@ -2498,20 +3241,25 @@ export default class RichTextEditor {
         code: isCode,
         inTable: inTable,
       };
-      const formatBlock = document.queryCommandValue("formatBlock");
-      if (formatBlock) {
-        if (formatBlock.includes("1")) this.headingFormat = "H1";
-        else if (formatBlock.includes("2")) this.headingFormat = "H2";
-        else if (formatBlock.includes("3")) this.headingFormat = "H3";
-        else if (formatBlock.includes("4")) this.headingFormat = "H4";
-        else if (formatBlock.toLowerCase().includes("blockquote")) {
-          this.activeFormats.quote = true;
-          this.headingFormat = "P";
-        } else if (formatBlock.toLowerCase().includes("pre")) {
-          this.activeFormats.code = true;
-          this.headingFormat = "P";
-        } else if (formatBlock.includes("p")) this.headingFormat = "P";
-        else if (formatBlock.includes("div")) this.headingFormat = "P";
+      if (this.fontSize !== nextFontSize) this.fontSize = nextFontSize;
+      if (this.fontFamily !== nextFontFamily) this.fontFamily = nextFontFamily;
+      if (this.headingFormat !== nextHeadingFormat)
+        this.headingFormat = nextHeadingFormat;
+      if (
+        this.appliedClasses.length !== nextAppliedClasses.length ||
+        this.appliedClasses.some((c, i) => c !== nextAppliedClasses[i])
+      ) {
+        this.appliedClasses = nextAppliedClasses;
+      }
+      let formatsChanged = false;
+      for (const k in nextActiveFormats) {
+        if ((this.activeFormats as any)[k] !== (nextActiveFormats as any)[k]) {
+          formatsChanged = true;
+          break;
+        }
+      }
+      if (formatsChanged) {
+        this.activeFormats = nextActiveFormats;
       }
     }
   }
@@ -2520,49 +3268,49 @@ export default class RichTextEditor {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
-        if (this.editorRef?.nativeElement) {
+        const el = this.getEditorElement();
+        if (el) {
           try {
-            if (
-              (this.editorRef?.nativeElement as any).contains(
-                r.commonAncestorContainer
-              )
-            ) {
-              activeSavedRange = this.escapeAtomicRange(r.cloneRange());
+            if ((el as any).contains(r.commonAncestorContainer)) {
+              const escaped = this.escapeAtomicRange(r.cloneRange());
+              activeSavedRange = escaped;
+              (el as any).__cv_savedRange = escaped;
             }
-          } catch (e) {
-            activeSavedRange = r.cloneRange();
-          }
-        } else {
-          activeSavedRange = r.cloneRange();
+          } catch (e) {}
         }
       }
     }
   }
   restoreSelection() {
     if (typeof window !== "undefined") {
-      if (this.editorRef?.nativeElement) {
+      const el = this.getEditorElement();
+      if (el) {
         try {
-          if (
-            typeof (this.editorRef?.nativeElement as any).focus === "function"
-          ) {
-            (this.editorRef?.nativeElement as any).focus();
+          if (typeof (el as any).focus === "function") {
+            (el as any).focus();
           }
         } catch (e) {}
-        if (activeSavedRange) {
-          const sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(activeSavedRange.cloneRange());
-          }
+        const target = (el as any).__cv_savedRange || activeSavedRange;
+        if (target) {
+          try {
+            if ((el as any).contains(target.commonAncestorContainer)) {
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(target.cloneRange());
+              }
+            }
+          } catch (e) {}
         }
       }
     }
   }
   escapeAtomicRange(range: any) {
-    if (!range || !this.editorRef?.nativeElement) return range;
+    const el = this.getEditorElement();
+    if (!range || !el) return range;
     let node: any = range.startContainer;
     let atomicEl: any = null;
-    while (node && node !== this.editorRef?.nativeElement) {
+    while (node && node !== el) {
       if (
         node.nodeType === 1 &&
         node.getAttribute &&
@@ -2580,12 +3328,12 @@ export default class RichTextEditor {
   }
   insertHtmlAtCursor(html: string) {
     if (typeof window === "undefined") return;
-    if (this.editorRef?.nativeElement) {
+    if (this.mode === "source") return;
+    const el = this.getEditorElement();
+    if (el) {
       try {
-        if (
-          typeof (this.editorRef?.nativeElement as any).focus === "function"
-        ) {
-          (this.editorRef?.nativeElement as any).focus();
+        if (typeof (el as any).focus === "function") {
+          (el as any).focus();
         }
       } catch (e) {}
     }
@@ -2595,64 +3343,106 @@ export default class RichTextEditor {
     if (sel && sel.rangeCount > 0) {
       const cur = sel.getRangeAt(0);
       try {
-        if (
-          this.editorRef?.nativeElement &&
-          (this.editorRef?.nativeElement as any).contains(
-            cur.commonAncestorContainer
-          )
-        ) {
+        if (el && (el as any).contains(cur.commonAncestorContainer)) {
           targetRange = cur;
         }
       } catch (e) {}
     }
-    if (!targetRange && activeSavedRange) {
+    const targetSaved = el
+      ? (el as any).__cv_savedRange || activeSavedRange
+      : activeSavedRange;
+    if (!targetRange && targetSaved) {
       try {
-        if (
-          this.editorRef?.nativeElement &&
-          (this.editorRef?.nativeElement as any).contains(
-            activeSavedRange.commonAncestorContainer
-          )
-        ) {
-          targetRange = activeSavedRange;
+        if (el && (el as any).contains(targetSaved.commonAncestorContainer)) {
+          targetRange = targetSaved;
         }
       } catch (e) {}
     }
     targetRange = this.escapeAtomicRange(targetRange);
-    if (targetRange && targetRange.insertNode) {
-      targetRange.deleteContents();
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      const frag = template.content;
-      const lastNode = frag.lastChild;
-      targetRange.insertNode(frag);
-      if (lastNode && sel) {
-        const newRange = document.createRange();
-        newRange.setStartAfter(lastNode);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
-      }
-    } else if (this.editorRef?.nativeElement) {
-      const template = document.createElement("template");
-      /* lgtm[js/xss, js/html-constructed-from-input] */
-      /* codeql[js/xss, js/html-constructed-from-input] */
-      template.innerHTML = html.trim();
-      this.editorRef?.nativeElement.appendChild(template.content);
-      const newRange = document.createRange();
-      newRange.selectNodeContents(this.editorRef?.nativeElement as Node);
-      newRange.collapse(false);
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        activeSavedRange = newRange.cloneRange();
+    const isBlockHtml = /<(div|p|ul|ol|table|blockquote|img|video|audio)/i.test(
+      html
+    );
+    let blockParent: HTMLElement | null = null;
+    if (targetRange && el) {
+      let n: any = targetRange.startContainer;
+      while (n && n !== el) {
+        if (
+          n.nodeType === 1 &&
+          /^(P|H[1-6]|DIV|BLOCKQUOTE|LI)$/i.test(n.tagName)
+        ) {
+          blockParent = n;
+          break;
+        }
+        n = n.parentNode;
       }
     }
+    const template = document.createElement("template");
+    /* lgtm[js/xss, js/html-constructed-from-input] */
+    /* codeql[js/xss, js/html-constructed-from-input] */
+    template.innerHTML = html.trim();
+    const frag = template.content;
+
+    // Ensure block content ends with a clean paragraph so user can type/press enter immediately
+    let lastP: HTMLElement | null = frag.querySelector("p:last-child");
+    if (isBlockHtml && !lastP) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      frag.appendChild(p);
+      lastP = p;
+    }
+    let insertedP: HTMLElement | null = null;
+    if (
+      isBlockHtml &&
+      blockParent &&
+      blockParent !== el &&
+      blockParent.parentNode
+    ) {
+      const isEmptyBlock =
+        !blockParent.textContent?.trim() || blockParent.innerHTML === "<br>";
+      if (isEmptyBlock) {
+        const parent = blockParent.parentNode;
+        insertedP = lastP;
+        parent.insertBefore(frag, blockParent);
+        blockParent.remove();
+      } else {
+        insertedP = lastP;
+        blockParent.after(frag);
+      }
+    } else if (targetRange && targetRange.insertNode) {
+      targetRange.deleteContents();
+      insertedP = lastP;
+      targetRange.insertNode(frag);
+    } else if (el) {
+      insertedP = lastP;
+      el.appendChild(frag);
+    }
+
+    // Position caret inside the trailing paragraph so author can type / press Enter immediately
+    const targetP = insertedP || (el ? el.querySelector("p:last-child") : null);
+    if (el && typeof (el as any).focus === "function") {
+      try {
+        (el as any).focus();
+      } catch (e) {}
+    }
+    if (targetP && sel) {
+      const newRange = document.createRange();
+      newRange.setStart(targetP, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+    this.ensureEditableStructure();
     this.syncContent();
     this.checkFormats();
-    this.renderEmbeds();
+    if (
+      html.indexOf("cv-social-embed") !== -1 ||
+      html.indexOf("cv-math-formula") !== -1
+    ) {
+      this.renderEmbeds();
+    }
   }
   formatHTML(html: string) {
     if (!html) return "";
@@ -2680,6 +3470,7 @@ export default class RichTextEditor {
     return html;
   }
   format(cmd: string, val?: string) {
+    if (this.mode === "source") return;
     this.restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -2688,26 +3479,52 @@ export default class RichTextEditor {
     this.syncContent();
     this.checkFormats();
   }
-  applyColor(cmd: string, color: string) {
+  applyColorPreview(cmd: string, color: string) {
     if (!color) return;
-    if (cmd === "foreColor") {
-      this.textColor = color;
-    } else {
-      this.highlightColor = color;
+    if (this.mode === "source") return;
+    const previewEl = this.getEditorElement();
+    if (previewEl) {
+      try {
+        (previewEl as any).focus();
+      } catch (focusErr) {}
     }
     this.restoreSelection();
     if (cmd === "foreColor") {
       document.execCommand("foreColor", false, color);
     } else {
-      if (!document.execCommand("hiliteColor", false, color)) {
+      const applied = document.execCommand("hiliteColor", false, color);
+      if (!applied) {
         document.execCommand("backColor", false, color);
       }
+    }
+    this.saveSelection();
+  }
+  applyColor(cmd: string, color: string) {
+    if (!color) return;
+    if (this.mode === "source") return;
+    const colorEl = this.getEditorElement();
+    if (colorEl) {
+      try {
+        (colorEl as any).focus();
+      } catch (focusErr2) {}
+    }
+    this.restoreSelection();
+    if (cmd === "foreColor") {
+      document.execCommand("foreColor", false, color);
+      this.textColor = color;
+    } else {
+      const colorApplied = document.execCommand("hiliteColor", false, color);
+      if (!colorApplied) {
+        document.execCommand("backColor", false, color);
+      }
+      this.highlightColor = color;
     }
     this.saveSelection();
     this.syncContent();
     this.checkFormats();
   }
   formatHeading(level: string) {
+    if (this.mode === "source") return;
     this.restoreSelection();
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
@@ -2715,11 +3532,15 @@ export default class RichTextEditor {
     this.headingFormat = level;
     this.syncContent();
     this.checkFormats();
-    if (this.editorRef?.nativeElement) {
-      this.editorRef?.nativeElement.focus();
+    const el = this.getEditorElement();
+    if (el) {
+      try {
+        (el as any).focus();
+      } catch (e) {}
     }
   }
   insertMedia(type: "image" | "video" | "audio") {
+    if (this.mode === "source") return;
     this.saveSelection();
     const insertContent = (url: string, altText?: string) => {
       if (!url) return;
@@ -2738,7 +3559,7 @@ export default class RichTextEditor {
         const alt = (altText || "").trim() || filenameGuess || "Image";
         const escapedAlt = this.escapeHtml(alt);
         const escapedUrl = this.escapeHtml(url);
-        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+        html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
       } else if (type === "video") {
         const ytMatch = url.match(
           /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
@@ -2768,20 +3589,18 @@ export default class RichTextEditor {
         .catch((err) => {
           console.error("Media request failed", err);
         });
+    } else if (type === "image") {
+      this.openImageModal();
+    } else if (type === "video") {
+      this.openVideoModal();
     } else {
-      const url = window.prompt(`Enter ${type} URL:`);
-      if (url && type === "image") {
-        const altText = window.prompt(
-          "Describe this image for screen readers and search engines (alt text):",
-          ""
-        );
-        insertContent(url, altText || undefined);
-      } else if (url) {
-        insertContent(url);
-      }
+      const escaped = this.escapeHtml(type);
+      const html = `<div class="cv-media-placeholder" data-type="${escaped}">[${escaped}]</div><p><br></p>`;
+      this.insertHtmlAtCursor(html);
     }
   }
   clearAllFormatting() {
+    if (this.mode === "source") return;
     /* lgtm[js/xss, js/html-constructed-from-input] */
     /* codeql[js/xss, js/html-constructed-from-input] */
     document.execCommand("removeFormat", false, undefined);
@@ -2795,6 +3614,7 @@ export default class RichTextEditor {
     this.checkFormats();
   }
   toggleBlock(type: string) {
+    if (this.mode === "source") return;
     this.checkFormats();
     const isActive =
       type === "PRE" ? this.activeFormats.code : this.activeFormats.quote;
@@ -2812,17 +3632,86 @@ export default class RichTextEditor {
   }
   applyClass(className: string) {
     if (!className) return;
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      const span = document.createElement("span");
-      span.className = className;
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
+    if (this.mode === "source") return;
+    const editor = this.getEditorElement();
+    if (!editor) return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    if (rawClasses.length === 0) return;
+
+    // 1. If media element selected:
+    if (this.selectedMediaEl && this.selectedMediaEl.classList) {
+      rawClasses.forEach((c) => this.selectedMediaEl.classList.add(c));
       this.syncContent();
+      this.checkFormats();
+      return;
     }
+
+    // 2. Get target range from active selection or saved selection
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    let targetRange: any = null;
+    if (sel && sel.rangeCount > 0) {
+      const cur = sel.getRangeAt(0);
+      if (editor.contains(cur.commonAncestorContainer)) {
+        targetRange = cur;
+      }
+    }
+    if (!targetRange) {
+      const saved = (editor as any).__cv_savedRange || activeSavedRange;
+      if (saved && editor.contains(saved.commonAncestorContainer)) {
+        targetRange = saved;
+      }
+    }
+    if (
+      targetRange &&
+      !targetRange.collapsed &&
+      targetRange.toString().length > 0
+    ) {
+      // Highlighted text selection -> wrap in a span with the class
+      const span = document.createElement("span");
+      rawClasses.forEach((c) => span.classList.add(c));
+      span.appendChild(targetRange.extractContents());
+      targetRange.insertNode(span);
+
+      // Re-select the newly styled span
+      if (sel) {
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        activeSavedRange = r.cloneRange();
+        (editor as any).__cv_savedRange = r.cloneRange();
+      }
+    } else if (targetRange) {
+      // Caret inside a block element
+      let node: any = targetRange.startContainer;
+      let block: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (
+          node.nodeType === 1 &&
+          /^(P|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH|DIV|FIGURE|TABLE)$/i.test(
+            node.tagName
+          )
+        ) {
+          block = node;
+          break;
+        }
+        node = node.parentNode;
+      }
+      if (!block && editor.firstElementChild) {
+        block = editor.firstElementChild as HTMLElement;
+      }
+      if (block && block !== editor) {
+        rawClasses.forEach((c) => block!.classList.add(c));
+      }
+    }
+    this.syncContent();
+    this.checkFormats();
+    try {
+      (editor as any).focus();
+    } catch (e) {}
   }
   openButtonModal() {
+    if (this.mode === "source") return;
     this.saveSelection();
     this.showButtonModal = true;
     this.btnText = "Click Here";
@@ -2855,8 +3744,9 @@ export default class RichTextEditor {
     }
   }
   getCanonicalHtml() {
-    if (!this.editorRef?.nativeElement) return "";
-    const clone = this.editorRef?.nativeElement.cloneNode(true) as HTMLElement;
+    const editor = this.getEditorElement();
+    if (!editor) return "";
+    const clone = editor.cloneNode(true) as HTMLElement;
     const selected = clone.querySelectorAll(".cv-resizing-selected");
     selected.forEach((el: any) => {
       el.classList.remove("cv-resizing-selected");
@@ -2878,8 +3768,10 @@ export default class RichTextEditor {
     return clone.innerHTML;
   }
   renderEmbeds() {
-    if (!this.editorRef?.nativeElement || typeof window === "undefined") return;
-    const socialEmbeds = this.editorRef?.nativeElement.querySelectorAll(
+    if (typeof window === "undefined") return;
+    const editor = this.getEditorElement();
+    if (!editor) return;
+    const socialEmbeds = editor.querySelectorAll(
       '.cv-social-embed:not([data-cv-rendered="true"])'
     );
     socialEmbeds.forEach((el: any) => {
@@ -3021,7 +3913,7 @@ export default class RichTextEditor {
         markRendered();
       }
     });
-    const formulas = this.editorRef?.nativeElement.querySelectorAll(
+    const formulas = editor.querySelectorAll(
       '.cv-math-formula:not([data-cv-rendered="true"])'
     );
     if (formulas.length > 0) {
@@ -3088,7 +3980,8 @@ export default class RichTextEditor {
     }
   }
   syncContent() {
-    if (this.editorRef?.nativeElement) {
+    const editor = this.getEditorElement();
+    if (editor) {
       this.internalContent = this.getCanonicalHtml();
       if (this.onChange) {
         this.onChange.emit(this.internalContent);
@@ -3096,23 +3989,49 @@ export default class RichTextEditor {
     }
   }
   handleInput() {
-    this.syncContent();
+    const el = this.getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+      }
+      (el as any).__cv_inputTimer = setTimeout(() => {
+        (el as any).__cv_inputTimer = null;
+        this.syncContent();
+      }, 250);
+    } else {
+      this.syncContent();
+    }
+  }
+  handleFocus() {
+    if (typeof document !== "undefined") {
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {}
+    }
+  }
+  handleBlur() {
+    const el = this.getEditorElement();
+    if (el && (el as any).__cv_inputTimer) {
+      clearTimeout((el as any).__cv_inputTimer);
+      (el as any).__cv_inputTimer = null;
+      this.syncContent();
+    }
   }
   handleSourceInput(e: any) {
     this.internalContent = e.target.value;
     if (this.onChange) {
       this.onChange.emit(this.internalContent);
     }
-    if (this.editorRef?.nativeElement) {
+    const editor = this.getEditorElement();
+    if (editor) {
       /* lgtm[js/xss, js/html-constructed-from-input] */
       /* codeql[js/xss, js/html-constructed-from-input] */
-      this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
-        this.internalContent
-      );
+      editor.innerHTML = this.sanitizeHtml(this.internalContent);
       this.renderEmbeds();
     }
   }
   openTableModal() {
+    if (this.mode === "source") return;
     this.saveSelection();
     this.showTableModal = true;
     this.tableRows = "3";
@@ -3152,6 +4071,7 @@ export default class RichTextEditor {
     this.showTableModal = false;
   }
   modifyTable(action: "addRow" | "removeRow" | "addCol" | "removeCol") {
+    if (this.mode === "source") return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     let node = sel.getRangeAt(0).startContainer as any;
@@ -3223,6 +4143,7 @@ export default class RichTextEditor {
     this.syncContent();
   }
   openLinkModal() {
+    if (this.mode === "source") return;
     this.saveSelection();
     this.showLinkModal = true;
     this.linkUrl = "";
@@ -3241,6 +4162,7 @@ export default class RichTextEditor {
     this.showLinkModal = false;
   }
   openWidgetModal() {
+    if (this.mode === "source") return;
     this.saveSelection();
     this.showWidgetModal = true;
   }
@@ -3256,6 +4178,7 @@ export default class RichTextEditor {
     this.showWidgetModal = false;
   }
   openSocialModal() {
+    if (this.mode === "source") return;
     this.saveSelection();
     this.showSocialModal = true;
     this.socialUrl = "";
@@ -3284,6 +4207,61 @@ export default class RichTextEditor {
   closeSocialModal() {
     this.showSocialModal = false;
   }
+  openImageModal() {
+    if (this.mode === "source") return;
+    this.saveSelection();
+    this.showImageModal = true;
+    this.imageUrl = "";
+    this.imageAlt = "";
+  }
+  closeImageModal() {
+    this.showImageModal = false;
+  }
+  confirmImage() {
+    this.showImageModal = false;
+    if (this.imageUrl) {
+      const url = this.imageUrl.trim();
+      const filenameGuess = (url.split("/").pop() || "image")
+        .split("?")[0]
+        .split(".")[0]
+        .replace(/[-_]+/g, " ")
+        .trim();
+      const alt = (this.imageAlt || "").trim() || filenameGuess || "Image";
+      const escapedAlt = this.escapeHtml(alt);
+      const escapedUrl = this.escapeHtml(url);
+      const html = `<img src="${escapedUrl}" alt="${escapedAlt}" loading="lazy" decoding="async" draggable="false" style="max-width: 100%; border-radius: 8px; margin: 16px 0;" /><p><br></p>`;
+      this.insertHtmlAtCursor(html);
+    }
+  }
+  openVideoModal() {
+    if (this.mode === "source") return;
+    this.saveSelection();
+    this.showVideoModal = true;
+    this.videoUrl = "";
+  }
+  closeVideoModal() {
+    this.showVideoModal = false;
+  }
+  confirmVideo() {
+    this.showVideoModal = false;
+    if (this.videoUrl) {
+      const url = this.videoUrl.trim();
+      const ytMatch = url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\/]+)/
+      );
+      const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+      const escapedUrl = this.escapeHtml(url);
+      let html = "";
+      if (ytMatch) {
+        html = `<div class="cv-social-embed" data-platform="youtube" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded YOUTUBE Video: ${escapedUrl}]</div><p><br></p>`;
+      } else if (vimeoMatch) {
+        html = `<div class="cv-social-embed" data-platform="vimeo" data-url="${escapedUrl}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-info, #0ea5e9); background: var(--cv-color-info-tint, rgba(14, 165, 233, 0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-code-text, #38bdf8); font-weight: 600;">[Embedded VIMEO Video: ${escapedUrl}]</div><p><br></p>`;
+      } else {
+        html = `<video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; margin: 16px 0;"></video><p><br></p>`;
+      }
+      this.insertHtmlAtCursor(html);
+    }
+  }
   toggleMode() {
     if (this.mode === "visual") {
       this.syncContent();
@@ -3291,12 +4269,11 @@ export default class RichTextEditor {
       this.mode = "source";
     } else {
       this.mode = "visual";
-      if (this.editorRef?.nativeElement) {
+      const editor = this.getEditorElement();
+      if (editor) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
-          this.internalContent
-        );
+        editor.innerHTML = this.sanitizeHtml(this.internalContent);
         this.renderEmbeds();
       }
     }
@@ -3320,6 +4297,7 @@ export default class RichTextEditor {
     }
   }
   changeFontFamily(font: string) {
+    if (this.mode === "source") return;
     this.fontFamily = font;
     this.restoreSelection();
     document.execCommand("fontName", false, font);
@@ -3327,6 +4305,7 @@ export default class RichTextEditor {
     this.checkFormats();
   }
   changeFontSize(size: string) {
+    if (this.mode === "source") return;
     this.fontSize = size;
     this.restoreSelection();
     const sel = window.getSelection();
@@ -3345,6 +4324,7 @@ export default class RichTextEditor {
       const sizeMap: any = {
         "12px": "1",
         "14px": "2",
+        "15px": "2",
         "16px": "3",
         "18px": "4",
         "20px": "5",
@@ -3357,57 +4337,186 @@ export default class RichTextEditor {
     this.checkFormats();
   }
   insertChecklist() {
-    // The checkbox and its text must share one <label> (implicit
-    // association, no id needed) -- as separate sibling elements a screen
-    // reader announces an unlabelled checkbox with no indication of what
-    // it controls, and clicking the text would not toggle it either.
-    const html =
-      '<ul class="task-list" style="list-style: none; padding-left: 0.25rem;"><li style="margin: 4px 0;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label></li></ul><p><br></p>';
-    this.insertHtmlAtCursor(html);
+    if (this.mode === "source") return;
+    this.restoreSelection();
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const editor = this.getEditorElement();
+    if (!sel || !editor) return;
+    let node: any =
+      sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+    let currentLi: HTMLElement | null = null;
+    let currentUl: HTMLElement | null = null;
+    let currentP: HTMLElement | null = null;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        if (node.tagName === "LI") currentLi = node;
+        if (node.tagName === "UL" && node.classList.contains("task-list"))
+          currentUl = node;
+        if (node.tagName === "P" || node.tagName === "DIV") currentP = node;
+      }
+      node = node.parentNode;
+    }
+
+    // 1. If currently inside a task list: append a new <li> to the existing <ul>
+    if (currentUl) {
+      const li = document.createElement("li");
+      li.style.cssText = "margin: 4px 0;";
+      li.innerHTML =
+        '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+      if (currentLi && currentLi.parentNode === currentUl) {
+        currentLi.after(li);
+      } else {
+        currentUl.appendChild(li);
+      }
+      const span = li.querySelector("span");
+      if (span) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        this.saveSelection();
+      }
+      this.syncContent();
+      this.checkFormats();
+      return;
+    }
+
+    // 2. If directly inside or after an adjacent paragraph right next to a task list: append to that same task list
+    if (currentP) {
+      const prev = currentP.previousElementSibling;
+      if (
+        prev &&
+        prev.tagName === "UL" &&
+        prev.classList.contains("task-list")
+      ) {
+        const text = currentP.textContent ? currentP.textContent.trim() : "";
+        const li = document.createElement("li");
+        li.style.cssText = "margin: 4px 0;";
+        const itemText =
+          text && text !== "" ? this.escapeHtml(text) : "Task item";
+        li.innerHTML = `<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>${itemText}</span></label>`;
+        prev.appendChild(li);
+        currentP.remove();
+        const span = li.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          this.saveSelection();
+        }
+        this.syncContent();
+        this.checkFormats();
+        return;
+      }
+    }
+
+    // 3. New task list: create a single <ul class="task-list"> and focus its <li> text
+    const ul = document.createElement("ul");
+    ul.className = "task-list";
+    ul.style.cssText = "list-style: none; padding-left: 0.25rem;";
+    const li = document.createElement("li");
+    li.style.cssText = "margin: 4px 0;";
+    li.innerHTML =
+      '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span>Task item</span></label>';
+    ul.appendChild(li);
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(ul);
+    } else {
+      editor.appendChild(ul);
+    }
+    const span = li.querySelector("span");
+    if (span) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      this.saveSelection();
+    }
+    this.syncContent();
+    this.checkFormats();
   }
-  insertFormula() {
+  openFormulaModal() {
+    if (this.mode === "source") return;
     this.saveSelection();
-    const formula = window.prompt(
-      "Enter math formula or expression:",
-      "E = mc²"
-    );
+    this.showFormulaModal = true;
+    this.formulaInput = "E = mc²";
+  }
+  closeFormulaModal() {
+    this.showFormulaModal = false;
+    const el = this.getEditorElement();
+    if (el) el.focus();
+  }
+  confirmFormula() {
+    this.showFormulaModal = false;
+    const formula = (this.formulaInput || "").trim();
     if (formula) {
-      const escaped = formula
-        .split("&")
-        .join("&amp;")
-        .split("<")
-        .join("&lt;")
-        .split(">")
-        .join("&gt;")
-        .split('"')
-        .join("&quot;");
+      const escaped = this.escapeHtml(formula);
       const html = `<code class="cv-math-formula" data-formula="${escaped}" contenteditable="false" style="background: rgba(127,196,222,0.15); color: #0284c7; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9em; border: 1px solid rgba(127,196,222,0.3);">${escaped}</code>&nbsp;`;
       this.insertHtmlAtCursor(html);
     }
+    const el = this.getEditorElement();
+    if (el) el.focus();
+  }
+  insertFormula() {
+    this.openFormulaModal();
   }
   addClass(className: string) {
     if (!className) return;
-    if (!this.appliedClasses.includes(className)) {
-      this.appliedClasses = [...this.appliedClasses, className];
-    }
+    if (this.mode === "source") return;
+    const rawClasses = className.trim().split(/\s+/).filter(Boolean);
+    let updated = [...this.appliedClasses];
+    rawClasses.forEach((c) => {
+      if (!updated.includes(c)) updated.push(c);
+    });
+    this.appliedClasses = updated;
   }
   removeClass(className: string) {
+    if (this.mode === "source") return;
     this.appliedClasses = this.appliedClasses.filter(
       (c: string) => c !== className
     );
-    if (this.editorRef?.nativeElement) {
-      const elements = this.editorRef?.nativeElement.querySelectorAll(
-        `.${className}`
-      );
+    const editor = this.getEditorElement();
+    if (editor) {
+      if (this.selectedMediaEl && this.selectedMediaEl.classList) {
+        this.selectedMediaEl.classList.remove(className);
+      }
+      const elements = editor.querySelectorAll(`.${className}`);
       elements.forEach((el: any) => {
         el.classList.remove(className);
-        if (el.classList.length === 0 && el.tagName === "SPAN") {
+        if (
+          el.classList.length === 0 &&
+          el.tagName === "SPAN" &&
+          !el.getAttribute("style") &&
+          !el.getAttribute("data-platform") &&
+          !el.getAttribute("data-widget")
+        ) {
           const parent = el.parentNode;
-          while (el.firstChild) parent.insertBefore(el.firstChild, el);
-          parent.removeChild(el);
+          if (parent) {
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+          }
         }
       });
       this.syncContent();
+      this.checkFormats();
+    }
+  }
+  applyClassFromInput(e: any) {
+    const container =
+      e && e.target && e.target.closest
+        ? e.target.closest(".cv-toolbar-classes-group")
+        : null;
+    const input = container ? container.querySelector(".cv-class-input") : null;
+    if (input && input.value) {
+      const val = input.value.trim();
+      if (val) {
+        this.applyClass(val);
+        this.addClass(val);
+        input.value = "";
+      }
     }
   }
   handleClassInputKeyDown(e: any) {
@@ -3419,6 +4528,16 @@ export default class RichTextEditor {
         this.applyClass(val);
         this.addClass(val);
         target.value = "";
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      if (target) target.value = "";
+      const editor = this.getEditorElement();
+      if (editor) {
+        try {
+          editor.focus();
+        } catch (err) {}
       }
     }
   }
@@ -3505,6 +4624,7 @@ export default class RichTextEditor {
       [
         "image",
         "link",
+        "formula",
         "table",
         "unorderedList",
         "orderedList",
@@ -3543,12 +4663,9 @@ export default class RichTextEditor {
     return false;
   }
   updateResizeHandlePosition() {
-    if (!this.selectedMediaEl || !this.editorRef?.nativeElement) return;
-    // The handle is rendered as a sibling of this.editorRef inside the
-    // scrollable .editor-content wrapper (the nearest `position:
-    // relative` ancestor), not inside this.editorRef itself -- position and
-    // scroll offsets must be measured against that wrapper, not this.editorRef.
-    const container = (this.editorRef?.nativeElement as any).parentElement;
+    const editor = this.getEditorElement();
+    if (!this.selectedMediaEl || !editor) return;
+    const container = (editor as any).parentElement;
     if (!container) return;
     const elRect = this.selectedMediaEl.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -3556,6 +4673,24 @@ export default class RichTextEditor {
       elRect.bottom - containerRect.top + container.scrollTop - 7;
     this.resizeHandleLeft =
       elRect.right - containerRect.left + container.scrollLeft - 7;
+    let tbTop = elRect.top - containerRect.top + container.scrollTop - 40;
+    if (tbTop < 8) {
+      tbTop = elRect.bottom - containerRect.top + container.scrollTop + 8;
+    }
+    let tbLeft = elRect.left - containerRect.left + container.scrollLeft;
+    if (tbLeft < 8) tbLeft = 8;
+    this.resizeToolbarTop = tbTop;
+    this.resizeToolbarLeft = tbLeft;
+  }
+  handleEditorScroll() {
+    if (!this.selectedMediaEl) return;
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        this.updateResizeHandlePosition();
+      });
+    } else {
+      this.updateResizeHandlePosition();
+    }
   }
   selectMediaElement(el: any) {
     if (this.selectedMediaEl && this.selectedMediaEl !== el) {
@@ -3564,6 +4699,58 @@ export default class RichTextEditor {
     this.selectedMediaEl = el;
     el.classList.add("cv-resizing-selected");
     this.updateResizeHandlePosition();
+    if (el.tagName === "IMG" && !el.complete) {
+      el.addEventListener(
+        "load",
+        () => {
+          if (this.selectedMediaEl === el) {
+            this.updateResizeHandlePosition();
+          }
+        },
+        {
+          once: true,
+        }
+      );
+    }
+  }
+  deleteSelectedMedia() {
+    if (this.selectedMediaEl) {
+      const el = this.selectedMediaEl;
+      this.deselectMediaElement();
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      this.ensureEditableStructure();
+      this.syncContent();
+    }
+  }
+  setImageSize(size: string) {
+    if (!this.selectedMediaEl) return;
+    const el = this.selectedMediaEl;
+    el.style.width = size;
+    el.style.maxWidth = "100%";
+    el.style.height = "auto";
+    this.updateResizeHandlePosition();
+    this.syncContent();
+  }
+  setImageAlign(align: string) {
+    if (!this.selectedMediaEl) return;
+    const el = this.selectedMediaEl;
+    if (align === "center") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "auto";
+    } else if (align === "left") {
+      el.style.display = "block";
+      el.style.marginLeft = "0";
+      el.style.marginRight = "auto";
+    } else if (align === "right") {
+      el.style.display = "block";
+      el.style.marginLeft = "auto";
+      el.style.marginRight = "0";
+    }
+    this.updateResizeHandlePosition();
+    this.syncContent();
   }
   deselectMediaElement() {
     if (this.selectedMediaEl) {
@@ -3571,16 +4758,668 @@ export default class RichTextEditor {
     }
     this.selectedMediaEl = null;
   }
-  handleEditorClick(e: any) {
-    const target = e.target;
-    if (this.isResizableTarget(target)) {
-      this.selectMediaElement(target);
-    } else {
+  isReadOnly() {
+    return !!(this.readOnly || this.disabled);
+  }
+  closeAllModals() {
+    this.showInsertMenu = false;
+    this.showTableModal = false;
+    this.showLinkModal = false;
+    this.showWidgetModal = false;
+    this.showSocialModal = false;
+    this.showButtonModal = false;
+    this.showAiModal = false;
+    this.showImageModal = false;
+    this.showVideoModal = false;
+    this.showFormulaModal = false;
+  }
+  handleBackdropClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      this.closeAllModals();
+    }
+  }
+  ensureEditableStructure() {
+    const el = this.getEditorElement();
+    if (!el) return;
+    if (
+      !el.hasChildNodes() ||
+      !el.innerHTML ||
+      el.innerHTML.trim() === "" ||
+      el.innerHTML.trim() === "<br>"
+    ) {
+      el.innerHTML = "<p><br></p>";
+      return;
+    }
+    const first = el.firstElementChild;
+    if (
+      el.childNodes.length === 1 &&
+      first &&
+      first.tagName === "P" &&
+      !first.textContent &&
+      !first.children.length
+    ) {
+      first.innerHTML = "<br>";
+      return;
+    }
+    // Wrap top-level text nodes or inline non-block elements directly under editor in <p>
+    const nodesToWrap: any[] = [];
+    for (let i = 0; i < el.childNodes.length; i++) {
+      const child = el.childNodes[i];
+      if (child.nodeType === 3) {
+        if (child.textContent && child.textContent.trim() !== "") {
+          nodesToWrap.push(child);
+        }
+      } else if (child.nodeType === 1) {
+        const tag = (child as HTMLElement).tagName;
+        const isBlock =
+          /^(P|DIV|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|TABLE|HR|SECTION|ARTICLE|HEADER|FOOTER)$/.test(
+            tag
+          );
+        if (!isBlock) {
+          nodesToWrap.push(child);
+        }
+      }
+    }
+    if (nodesToWrap.length > 0) {
+      nodesToWrap.forEach((node) => {
+        const p = document.createElement("p");
+        node.replaceWith(p);
+        p.appendChild(node);
+      });
+    }
+    const last = el.lastElementChild;
+    if (
+      last &&
+      (last.getAttribute("contenteditable") === "false" ||
+        last.tagName === "TABLE" ||
+        last.tagName === "IMG" ||
+        last.tagName === "VIDEO" ||
+        last.tagName === "AUDIO" ||
+        (last.classList &&
+          (last.classList.contains("cv-social-embed") ||
+            last.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      el.appendChild(p);
+    }
+    if (
+      first &&
+      (first.getAttribute("contenteditable") === "false" ||
+        first.tagName === "TABLE" ||
+        first.tagName === "IMG" ||
+        first.tagName === "VIDEO" ||
+        first.tagName === "AUDIO" ||
+        (first.classList &&
+          (first.classList.contains("cv-social-embed") ||
+            first.classList.contains("cv-widget"))))
+    ) {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      el.insertBefore(p, first);
+    }
+  }
+  normalizeSelection() {
+    if (this.isReadOnly()) return;
+    const el = this.getEditorElement();
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let range: any = null;
+    try {
+      range = sel.getRangeAt(0);
+    } catch (e) {
+      return;
+    }
+    let node: any = range.startContainer;
+    let atomicEl: any = null;
+    while (node && node !== el) {
+      if (
+        node.nodeType === 1 &&
+        node.getAttribute &&
+        node.getAttribute("contenteditable") === "false"
+      ) {
+        atomicEl = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    if (atomicEl) {
+      const newRange = document.createRange();
+      const next = atomicEl.nextSibling;
+      if (
+        !next ||
+        (next.nodeType === 1 &&
+          next.getAttribute("contenteditable") === "false")
+      ) {
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (next) {
+          atomicEl.parentNode.insertBefore(p, next);
+        } else {
+          atomicEl.parentNode.appendChild(p);
+        }
+        newRange.setStart(p, 0);
+      } else if (next.nodeType === 1) {
+        newRange.setStart(next, 0);
+      } else {
+        newRange.setStartAfter(atomicEl);
+      }
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      const cloned = newRange.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+  }
+  focusEditorAtEnd() {
+    if (this.isReadOnly()) return;
+    const el = this.getEditorElement();
+    if (!el) return;
+    this.ensureEditableStructure();
+    try {
+      if (typeof (el as any).focus === "function") {
+        (el as any).focus();
+      }
+    } catch (e) {}
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el as Node);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const cloned = range.cloneRange();
+      activeSavedRange = cloned;
+      if (el) (el as any).__cv_savedRange = cloned;
+    }
+  }
+  handleEditorContentClick(e: any) {
+    if (e && e.target === e.currentTarget) {
+      this.focusEditorAtEnd();
+    }
+  }
+  handleKeyDown(e: any) {
+    if (this.isReadOnly()) {
+      e.preventDefault();
+      return;
+    }
+    if (this.mode === "source") return;
+    if (e.key === "Escape") {
+      this.deselectMediaElement();
+      this.closeAllModals();
+      return;
+    }
+    if (this.selectedMediaEl) {
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        const el = this.selectedMediaEl;
+        this.deselectMediaElement();
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        this.ensureEditableStructure();
+        this.syncContent();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const media = this.selectedMediaEl;
+        this.deselectMediaElement();
+        const editor = this.getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            this.saveSelection();
+          }
+        }
+        this.ensureEditableStructure();
+        this.syncContent();
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const media = this.selectedMediaEl;
+        this.deselectMediaElement();
+        const editor = this.getEditorElement();
+        let block: any = media;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        let targetP: HTMLElement | null = null;
+        if (
+          block &&
+          block.nextElementSibling &&
+          block.nextElementSibling.tagName === "P"
+        ) {
+          targetP = block.nextElementSibling as HTMLElement;
+        } else if (block && block.parentNode) {
+          targetP = document.createElement("p");
+          targetP.innerHTML = "<br>";
+          block.after(targetP);
+        }
+        if (targetP) {
+          const sel = window.getSelection();
+          if (sel) {
+            const newRange = document.createRange();
+            newRange.setStart(targetP, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            this.saveSelection();
+          }
+        }
+        return;
+      }
+    }
+    if (e.key === "Backspace") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = this.getEditorElement();
+      if (sel && sel.rangeCount > 0 && editor) {
+        let node: any = sel.getRangeAt(0).startContainer;
+        let taskLi: HTMLElement | null = null;
+        let taskUl: HTMLElement | null = null;
+        while (node && node !== editor) {
+          if (node.nodeType === 1) {
+            if (node.tagName === "LI") taskLi = node;
+            if (node.tagName === "UL" && node.classList.contains("task-list"))
+              taskUl = node;
+          }
+          node = node.parentNode;
+        }
+        if (taskUl && taskLi) {
+          const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+          if (!text || text === "") {
+            e.preventDefault();
+            const prevLi = taskLi.previousElementSibling;
+            taskLi.remove();
+            if (prevLi) {
+              const span = prevLi.querySelector("span");
+              if (span) {
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                this.saveSelection();
+              }
+            } else if (taskUl.children.length === 0) {
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              taskUl.replaceWith(p);
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              this.saveSelection();
+            }
+            this.syncContent();
+            return;
+          }
+        }
+      }
+    }
+    if (e.key === "Enter") {
+      const sel = typeof window !== "undefined" ? window.getSelection() : null;
+      const editor = this.getEditorElement();
+      if (!sel || sel.rangeCount === 0 || !editor) return;
+      const range = sel.getRangeAt(0);
+      // Soft line break on Shift+Enter -> inserts <br> and moves to next line
+      if (e.shiftKey) {
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        this.saveSelection();
+        this.handleInput();
+        return;
+      }
+      let node: any = range.startContainer;
+      let taskLi: HTMLElement | null = null;
+      let taskUl: HTMLElement | null = null;
+      let listLi: HTMLElement | null = null;
+      let listParent: HTMLElement | null = null;
+      let headingEl: HTMLElement | null = null;
+      let quoteEl: HTMLElement | null = null;
+      let preEl: HTMLElement | null = null;
+      let calloutEl: HTMLElement | null = null;
+      let tableCell: HTMLElement | null = null;
+      let atomicEl: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          const tag = node.tagName;
+          if (tag === "LI") {
+            if (node.closest && node.closest("ul.task-list")) {
+              taskLi = node;
+              taskUl = node.closest("ul.task-list");
+            } else {
+              listLi = node;
+              listParent = node.parentElement;
+            }
+          }
+          if (/^H[1-6]$/.test(tag)) headingEl = node;
+          if (tag === "BLOCKQUOTE") quoteEl = node;
+          if (tag === "PRE" || tag === "CODE") preEl = node;
+          if (tag === "TD" || tag === "TH") tableCell = node;
+          if (
+            node.classList &&
+            (node.classList.contains("cv-callout") ||
+              node.classList.contains("cv-widget"))
+          ) {
+            calloutEl = node;
+          }
+          if (
+            node.getAttribute &&
+            node.getAttribute("contenteditable") === "false"
+          )
+            atomicEl = node;
+          if (tag === "IMG" || tag === "VIDEO" || tag === "AUDIO")
+            atomicEl = node;
+        }
+        node = node.parentNode;
+      }
+
+      // 1. Task List Items
+      if (taskUl && taskLi) {
+        e.preventDefault();
+        const text = taskLi.textContent ? taskLi.textContent.trim() : "";
+        if (!text || text === "") {
+          taskLi.remove();
+          if (taskUl.children.length === 0) {
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            taskUl.replaceWith(p);
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            this.saveSelection();
+            this.handleInput();
+            return;
+          }
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          taskUl.after(p);
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          this.saveSelection();
+          this.handleInput();
+          return;
+        }
+        const newLi = document.createElement("li");
+        newLi.style.cssText = "margin: 4px 0;";
+        newLi.innerHTML =
+          '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" style="width: 15px; height: 15px; cursor: pointer;" /> <span><br></span></label>';
+        taskLi.after(newLi);
+        const span = newLi.querySelector("span");
+        if (span) {
+          const newRange = document.createRange();
+          newRange.setStart(span, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          this.saveSelection();
+        }
+        this.handleInput();
+        return;
+      }
+
+      // 2. Atomic Elements (Embeds, Widgets, Media)
+      if (atomicEl) {
+        e.preventDefault();
+        let block: any = atomicEl;
+        while (block && block.parentNode && block.parentNode !== editor) {
+          block = block.parentNode;
+        }
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        if (block && block.parentNode) {
+          block.after(p);
+        } else {
+          editor.appendChild(p);
+        }
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        this.saveSelection();
+        this.handleInput();
+        return;
+      }
+
+      // 3. Headings: exit to standard paragraph <p> when at end of heading
+      if (headingEl) {
+        e.preventDefault();
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(headingEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remainingText = endRange.toString();
+        const newP = document.createElement("p");
+        newP.innerHTML = "<br>";
+        if (!remainingText || remainingText.trim() === "") {
+          headingEl.after(newP);
+        } else {
+          const extracted = endRange.extractContents();
+          newP.innerHTML = "";
+          newP.appendChild(extracted);
+          if (!newP.textContent || !newP.textContent.trim()) {
+            newP.innerHTML = "<br>";
+          }
+          headingEl.after(newP);
+        }
+        if (!headingEl.textContent || !headingEl.textContent.trim()) {
+          headingEl.innerHTML = "<br>";
+        }
+        const newRange = document.createRange();
+        newRange.setStart(newP, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        this.headingFormat = "P";
+        this.saveSelection();
+        this.handleInput();
+        this.checkFormats();
+        return;
+      }
+
+      // 4. Blockquotes: break out on empty line, otherwise insert clean <br>
+      if (quoteEl) {
+        const quoteText = quoteEl.textContent ? quoteEl.textContent.trim() : "";
+        const endRange = range.cloneRange();
+        endRange.selectNodeContents(quoteEl);
+        endRange.setStart(range.endContainer, range.endOffset);
+        const remaining = endRange.toString().trim();
+        if (
+          !quoteText ||
+          quoteEl.innerHTML === "<br>" ||
+          (!remaining && quoteEl.innerHTML.endsWith("<br>"))
+        ) {
+          e.preventDefault();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (!quoteText || quoteText === "") {
+            quoteEl.replaceWith(p);
+          } else {
+            quoteEl.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          this.saveSelection();
+          this.handleInput();
+          this.checkFormats();
+          return;
+        }
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        this.saveSelection();
+        this.handleInput();
+        return;
+      }
+
+      // 5. Code / Pre Blocks
+      if (preEl) {
+        e.preventDefault();
+        const textNode = document.createTextNode(String.fromCharCode(10));
+        range.deleteContents();
+        range.insertNode(textNode);
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        this.saveSelection();
+        this.handleInput();
+        return;
+      }
+
+      // 6. Regular Lists (UL/OL items)
+      if (listLi && listParent) {
+        const itemText = listLi.textContent ? listLi.textContent.trim() : "";
+        if (!itemText || itemText === "") {
+          e.preventDefault();
+          listLi.remove();
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          if (listParent.children.length === 0) {
+            listParent.replaceWith(p);
+          } else {
+            listParent.after(p);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          this.saveSelection();
+          this.handleInput();
+          this.checkFormats();
+          return;
+        }
+        return;
+      }
+
+      // 7. Callouts / Widgets: exit to standard paragraph <p>
+      if (calloutEl) {
+        e.preventDefault();
+        const p = document.createElement("p");
+        p.innerHTML = "<br>";
+        calloutEl.after(p);
+        const newRange = document.createRange();
+        newRange.setStart(p, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        this.saveSelection();
+        this.handleInput();
+        return;
+      }
+
+      // 8. Table Cells: insert line break (<br>)
+      if (tableCell) {
+        e.preventDefault();
+        try {
+          document.execCommand("insertLineBreak");
+        } catch (err) {
+          const br = document.createElement("br");
+          range.deleteContents();
+          range.insertNode(br);
+          const newRange = document.createRange();
+          newRange.setStartAfter(br);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        this.saveSelection();
+        this.handleInput();
+        return;
+      }
+
+      // 9. Standard Paragraphs: Explicitly create semantic <p> and move to next line
+      e.preventDefault();
+      try {
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (err) {}
+      document.execCommand("insertParagraph");
+      this.saveSelection();
+      this.handleInput();
+      this.checkFormats();
+      return;
+    }
+  }
+  handleGlobalKeyDown(e: any) {
+    if (e.key === "Escape") {
+      this.showInsertMenu = false;
+      this.closeAllModals();
       this.deselectMediaElement();
     }
   }
+  handleEditorClick(e: any) {
+    this.showInsertMenu = false;
+    if (this.isReadOnly()) return;
+    const target = e.target;
+    const resizable =
+      target && target.closest
+        ? target.closest("img, video, audio, .cv-social-embed, .cv-widget")
+        : null;
+    if (resizable && this.isResizableTarget(resizable)) {
+      this.selectMediaElement(resizable);
+    } else {
+      this.deselectMediaElement();
+      this.normalizeSelection();
+    }
+  }
   startResize(e: any) {
-    if (!this.selectedMediaEl) return;
+    if (!this.selectedMediaEl || this.isReadOnly()) return;
     e.preventDefault();
     e.stopPropagation();
     this.isResizing = true;
@@ -3596,9 +5435,8 @@ export default class RichTextEditor {
     const delta = e.clientX - this.resizeStartX;
     let newWidth = Math.round(this.resizeStartWidth + delta);
     const minWidth = 80;
-    const maxWidth = this.editorRef?.nativeElement
-      ? (this.editorRef?.nativeElement as any).clientWidth
-      : 2000;
+    const editor = this.getEditorElement();
+    const maxWidth = editor ? (editor as any).clientWidth : 2000;
     if (newWidth < minWidth) newWidth = minWidth;
     if (newWidth > maxWidth) newWidth = maxWidth;
     const el = this.selectedMediaEl;
@@ -3619,26 +5457,35 @@ export default class RichTextEditor {
     this.syncContent();
   }
   handleSelectionChange() {
-    if (typeof window !== "undefined" && this.editorRef?.nativeElement) {
-      const sel = window.getSelection();
-      let inEditor = false;
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return;
+    const editor =
+      ((this.editorRef?.nativeElement as any) &&
+        (this.editorRef?.nativeElement as any).current) ||
+      ((this.editorRef?.nativeElement as any) &&
+      (this.editorRef?.nativeElement as any).nodeType === 1
+        ? (this.editorRef?.nativeElement as any)
+        : null) ||
+      (document.querySelector
+        ? document.querySelector(".wysiwyg-content")
+        : null);
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    let inEditor = false;
+    try {
+      if (sel.anchorNode && typeof (editor as any).contains === "function") {
+        inEditor = (editor as any).contains(sel.anchorNode as Node);
+      }
+    } catch (e) {}
+    if (inEditor && sel.rangeCount > 0) {
       try {
-        if (
-          sel &&
-          sel.anchorNode &&
-          typeof (this.editorRef?.nativeElement as any).contains === "function"
-        ) {
-          inEditor = (this.editorRef?.nativeElement as any).contains(
-            sel.anchorNode as Node
-          );
+        const r = sel.getRangeAt(0);
+        if ((editor as any).contains(r.commonAncestorContainer)) {
+          activeSavedRange = r.cloneRange();
+          (editor as any).__cv_savedRange = r.cloneRange();
         }
       } catch (e) {}
-      if (inEditor) {
-        if (sel && sel.rangeCount > 0) {
-          this.saveSelection();
-        }
-        this.checkFormats();
-      }
     }
   }
   trackByCls0(_, cls) {
@@ -3646,24 +5493,28 @@ export default class RichTextEditor {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {
     this.internalContent = this.content || this.initialContent || "";
 
     if (typeof window !== "undefined") {
+      this.isMounted = true;
+      if (typeof document !== "undefined") {
+        try {
+          document.execCommand("defaultParagraphSeparator", false, "p");
+        } catch (e) {}
+      }
       if (!this.internalContent) {
         this.internalContent = this.content || this.initialContent || "";
       }
-      if (this.editorRef?.nativeElement) {
+      const el = this.getEditorElement();
+      if (el) {
         /* lgtm[js/xss, js/html-constructed-from-input] */
         /* codeql[js/xss, js/html-constructed-from-input] */
-        this.editorRef!.nativeElement.innerHTML = this.sanitizeHtml(
-          this.internalContent
-        );
+        el.innerHTML = this.sanitizeHtml(this.internalContent);
+        this.ensureEditableStructure();
         this.renderEmbeds();
       }
       if (typeof document !== "undefined") {
@@ -3685,11 +5536,42 @@ export default class RichTextEditor {
           "selectionchange",
           this.handleSelectionChange
         );
+        document.addEventListener("keydown", this.handleGlobalKeyDown);
+      }
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (typeof window !== "undefined") {
+      if (!this.isMounted) return;
+      const el = this.getEditorElement();
+      if (!el) return;
+      if (
+        typeof this.content === "string" &&
+        this.content !== this.internalContent
+      ) {
+        this.internalContent = this.content;
+        /* lgtm[js/xss, js/html-constructed-from-input] */
+        /* codeql[js/xss, js/html-constructed-from-input] */
+        el.innerHTML = this.sanitizeHtml(this.internalContent);
+        this.ensureEditableStructure();
+        this.renderEmbeds();
       }
     }
   }
 
   ngOnDestroy() {
+    const el = this.getEditorElement();
+    if (el) {
+      if ((el as any).__cv_inputTimer) {
+        clearTimeout((el as any).__cv_inputTimer);
+        (el as any).__cv_inputTimer = null;
+      }
+      if ((el as any).__cv_selectionTimer) {
+        clearTimeout((el as any).__cv_selectionTimer);
+        (el as any).__cv_selectionTimer = null;
+      }
+    }
     if (typeof document !== "undefined") {
       document.removeEventListener(
         "fullscreenchange",
@@ -3699,6 +5581,9 @@ export default class RichTextEditor {
         "selectionchange",
         this.handleSelectionChange
       );
+      document.removeEventListener("keydown", this.handleGlobalKeyDown);
+      document.removeEventListener("mousemove", this.handleResizeMove);
+      document.removeEventListener("mouseup", this.stopResize);
     }
   }
 }

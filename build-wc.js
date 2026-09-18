@@ -199,6 +199,7 @@ for (const file of allFiles) {
   // of focus -- so any programmatic `value={state.x}` update (e.g. toggling into
   // source-code view) gets immediately reverted to whatever the field held before.
   // Only the element that actually had focus should be hydrated.
+  // Additionally, protect against InvalidStateError when el.type does not support selectionStart (e.g. color, checkbox, radio).
   const hydrateDomRegex = /hydrateDom\(preValues,\s*stateful\)\s*\{[\s\S]*?return stateful\.map\(\(el,\s*index\)\s*=>\s*\{[\s\S]*?\}\);\s*\}/;
   finalCode = finalCode.replace(hydrateDomRegex, `hydrateDom(preValues, stateful) {
         const self = this;
@@ -206,11 +207,53 @@ for (const file of allFiles) {
             const prev = preValues.find((prev) => el.dataset.domState === prev.id);
             if (prev && prev.active) {
                 el.value = prev.value;
-                el.focus();
-                el.selectionStart = prev.selectionStart;
+                try { el.focus(); } catch (e) {}
+                try {
+                    const unsupportedTypes = ['color', 'checkbox', 'radio', 'button', 'file', 'range', 'submit', 'reset', 'image'];
+                    if (!unsupportedTypes.includes(el.type) && prev.selectionStart !== null && prev.selectionStart !== undefined) {
+                        el.selectionStart = prev.selectionStart;
+                    }
+                } catch (e) {}
             }
         });
     }`);
+
+  // Protect prepareHydrate against InvalidStateError on non-text inputs
+  const prepareHydrateRegex = /prepareHydrate\(stateful\)\s*\{[\s\S]*?return stateful\.map\(\(el\)\s*=>\s*\{[\s\S]*?\}\);\s*\}/;
+  finalCode = finalCode.replace(prepareHydrateRegex, `prepareHydrate(stateful) {
+        return stateful.map((el) => {
+            let selStart = null;
+            try {
+                const unsupportedTypes = ['color', 'checkbox', 'radio', 'button', 'file', 'range', 'submit', 'reset', 'image'];
+                if (!unsupportedTypes.includes(el.type)) {
+                    selStart = el.selectionStart;
+                }
+            } catch (e) {}
+            return {
+                id: el.dataset.domState,
+                value: el.value,
+                active: document.activeElement === el,
+                selectionStart: selStart
+            };
+        });
+    }`);
+
+  // Make update() resilient so pendingUpdate can never get stuck on true if render throws
+  finalCode = finalCode.replace(
+    /update\(\)\s*\{\s*if\s*\(this\.pendingUpdate\s*===\s*true\)\s*\{\s*return;\s*\}\s*this\.pendingUpdate\s*=\s*true;\s*this\.render\(\);\s*this\.onUpdate\(\);\s*this\.pendingUpdate\s*=\s*false;\s*\}/g,
+    `update() {
+        if (this.pendingUpdate === true) {
+            return;
+        }
+        this.pendingUpdate = true;
+        try {
+            this.render();
+            this.onUpdate();
+        } finally {
+            this.pendingUpdate = false;
+        }
+    }`
+  );
 
   // Rewrite destroyAnyNodes to preserve elements marked with __persistent
   const destroyRegex = /destroyAnyNodes\(\)\s*\{[\s\S]*?this\.nodesToDestroy\s*=\s*\[\];\s*\}/g;

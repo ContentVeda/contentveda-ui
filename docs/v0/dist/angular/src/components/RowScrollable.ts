@@ -196,9 +196,7 @@ export default class RowScrollable {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.ngOnInit();
-    });
+    this.ngOnInit();
   }
 
   ngOnInit() {
