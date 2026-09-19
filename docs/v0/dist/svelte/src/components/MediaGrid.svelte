@@ -36,6 +36,16 @@
   export let className: MediaGridProps["className"];
   export let primaryMedia: MediaGridProps["primaryMedia"];
   export let secondaryMedia: MediaGridProps["secondaryMedia"];
+  function stringifyStyles(stylesObj) {
+    let styles = "";
+    for (let key in stylesObj) {
+      const dashedKey = key.replace(/[A-Z]/g, function (match) {
+        return "-" + match.toLowerCase();
+      });
+      styles += dashedKey + ":" + stylesObj[key] + ";";
+    }
+    return styles;
+  }
 
   $: shouldMount = () => {
     return lazyLoad === false || isVisible;
@@ -75,71 +85,82 @@
 
 <div bind:this={rootRef} class={`cv-media-grid ${className || ""}`}>
   {#if showSkeleton()}
-    <div class="cv-media-primary cv-image-shimmer" />
-    <div class="cv-media-secondary-col">
-      <div class="cv-media-secondary-item cv-image-shimmer" />
-      <div class="cv-media-secondary-item cv-image-shimmer" />
+    <div
+      style={stringifyStyles({
+        display: "contents",
+      })}
+    >
+      <div class="cv-media-primary cv-image-shimmer" />
+      <div class="cv-media-secondary-col">
+        <div class="cv-media-secondary-item cv-image-shimmer" />
+        <div class="cv-media-secondary-item cv-image-shimmer" />
+      </div>
     </div>
   {/if}
   {#if !showSkeleton()}
-    {#if primaryMedia}
-      <a
-        class="cv-media-primary"
-        href={primaryMedia.mapLinks?.[0]?.url || undefined}
-        aria-label={primaryMedia.mapLinks?.[0]?.url
-          ? primaryMedia.altText || primaryMedia.title || "Media content"
-          : undefined}
-      >
-        {#if primaryMedia.media?.type === "video"}
-          <video
-            class="cv-media-asset"
-            src={primaryMedia.media?.url}
-            autoPlay={true}
-            loop={true}
-            muted={true}
-            playsInline={true}
-          />
-        {/if}
-        {#if primaryMedia.media?.type !== "video"}
-          <img
-            class="cv-media-asset"
-            src={primaryMedia.media?.url}
-            alt={primaryMedia.altText || primaryMedia.title || ""}
-          />
-        {/if}</a
-      >
-    {/if}
-
-    {#if secondaryMedia && secondaryMedia.length > 0}
-      <div class="cv-media-secondary-col">
-        {#each secondaryMedia as item (item.id)}
-          <a
-            class="cv-media-secondary-item"
-            href={item.mapLinks?.[0]?.url || undefined}
-            aria-label={item.mapLinks?.[0]?.url
-              ? item.altText || item.title || "Media content"
-              : undefined}
-          >
-            {#if item.media?.type === "video"}
-              <video
-                class="cv-media-asset"
-                src={item.media?.url}
-                autoPlay={true}
-                loop={true}
-                muted={true}
-                playsInline={true}
-              />
-            {/if}
-            {#if item.media?.type !== "video"}
-              <img
-                class="cv-media-asset"
-                src={item.media?.url}
-                alt={item.altText || item.title || ""}
-              />
-            {/if}</a
-          >
-        {/each}
-      </div>
-    {/if}
+    <div
+      style={stringifyStyles({
+        display: "contents",
+      })}
+    >
+      {#if primaryMedia}
+        <a
+          class="cv-media-primary"
+          href={primaryMedia.mapLinks?.[0]?.url || undefined}
+          aria-label={primaryMedia.mapLinks?.[0]?.url
+            ? primaryMedia.altText || primaryMedia.title || "Media content"
+            : undefined}
+        >
+          {#if primaryMedia.media?.type === "video"}
+            <video
+              class="cv-media-asset"
+              src={primaryMedia.media?.url}
+              autoPlay={true}
+              loop={true}
+              muted={true}
+              playsInline={true}
+            />
+          {/if}
+          {#if primaryMedia.media?.type !== "video"}
+            <img
+              class="cv-media-asset"
+              src={primaryMedia.media?.url}
+              alt={primaryMedia.altText || primaryMedia.title || ""}
+            />
+          {/if}</a
+        >
+      {/if}
+      {#if secondaryMedia && secondaryMedia.length > 0}
+        <div class="cv-media-secondary-col">
+          {#each secondaryMedia as item (item.id)}
+            <a
+              class="cv-media-secondary-item"
+              href={item.mapLinks?.[0]?.url || undefined}
+              aria-label={item.mapLinks?.[0]?.url
+                ? item.altText || item.title || "Media content"
+                : undefined}
+            >
+              {#if item.media?.type === "video"}
+                <video
+                  class="cv-media-asset"
+                  src={item.media?.url}
+                  autoPlay={true}
+                  loop={true}
+                  muted={true}
+                  playsInline={true}
+                />
+              {/if}
+              {#if item.media?.type !== "video"}
+                <img
+                  class="cv-media-asset"
+                  src={item.media?.url}
+                  alt={item.altText || item.title || ""}
+                />
+              {/if}</a
+            >
+          {/each}
+        </div>
+      {/if}
+    </div>
   {/if}
 </div>

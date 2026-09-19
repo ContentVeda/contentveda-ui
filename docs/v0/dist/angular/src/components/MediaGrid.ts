@@ -32,57 +32,69 @@ import { observeLazyMount } from "../utils/lazyObserver";
   template: `
     <div #rootRef [class]="'cv-media-grid ' + (className || '')">
       <ng-container *ngIf="showSkeleton"
-        ><div class="cv-media-primary cv-image-shimmer"></div>
-        <div class="cv-media-secondary-col">
-          <div class="cv-media-secondary-item cv-image-shimmer"></div>
-          <div class="cv-media-secondary-item cv-image-shimmer"></div></div
+        ><div
+          [ngStyle]="{
+          display: 'contents'
+        }"
+        >
+          <div class="cv-media-primary cv-image-shimmer"></div>
+          <div class="cv-media-secondary-col">
+            <div class="cv-media-secondary-item cv-image-shimmer"></div>
+            <div class="cv-media-secondary-item cv-image-shimmer"></div>
+          </div></div
       ></ng-container>
       <ng-container *ngIf="!showSkeleton"
-        ><ng-container *ngIf="primaryMedia"
-          ><a
-            class="cv-media-primary"
-            [attr.href]="(primaryMedia.mapLinks ? primaryMedia.mapLinks[0] : null)?.url || undefined"
-            [attr.aria-label]='(primaryMedia.mapLinks ? primaryMedia.mapLinks[0] : null)?.url ? primaryMedia.altText || primaryMedia.title || "Media content" : undefined'
-            ><ng-container *ngIf="primaryMedia.media?.type === 'video'"
-              ><video
-                class="cv-media-asset"
-                [attr.src]="primaryMedia.media?.url"
-                [attr.autoPlay]="true"
-                [attr.loop]="true"
-                [attr.muted]="true"
-                [attr.playsInline]="true"
-              ></video
-            ></ng-container>
-            <ng-container *ngIf="primaryMedia.media?.type !== 'video'"
-              ><img
-                class="cv-media-asset"
-                [attr.src]="primaryMedia.media?.url"
-                [attr.alt]="primaryMedia.altText || primaryMedia.title || ''" /></ng-container></a
-        ></ng-container>
-        <ng-container *ngIf="secondaryMedia && secondaryMedia.length > 0"
-          ><div class="cv-media-secondary-col">
-            <ng-container
-              *ngFor="let item of secondaryMedia; trackBy: trackByItem0"
-              ><a
-                class="cv-media-secondary-item"
-                [attr.href]="ite(m.mapLinks ? m.mapLinks[0] : null)?.url || undefined"
-                [attr.aria-label]='ite(m.mapLinks ? m.mapLinks[0] : null)?.url ? item.altText || item.title || "Media content" : undefined'
-                ><ng-container *ngIf="item.media?.type === 'video'"
-                  ><video
-                    class="cv-media-asset"
-                    [attr.src]="item.media?.url"
-                    [attr.autoPlay]="true"
-                    [attr.loop]="true"
-                    [attr.muted]="true"
-                    [attr.playsInline]="true"
-                  ></video
-                ></ng-container>
-                <ng-container *ngIf="item.media?.type !== 'video'"
-                  ><img
-                    class="cv-media-asset"
-                    [attr.src]="item.media?.url"
-                    [attr.alt]="item.altText || item.title || ''" /></ng-container></a
-            ></ng-container></div></ng-container
+        ><div
+          [ngStyle]="{
+          display: 'contents'
+        }"
+        >
+          <ng-container *ngIf="primaryMedia"
+            ><a
+              class="cv-media-primary"
+              [attr.href]="(primaryMedia.mapLinks ? primaryMedia.mapLinks[0] : null)?.url || undefined"
+              [attr.aria-label]='(primaryMedia.mapLinks ? primaryMedia.mapLinks[0] : null)?.url ? primaryMedia.altText || primaryMedia.title || "Media content" : undefined'
+              ><ng-container *ngIf="primaryMedia.media?.type === 'video'"
+                ><video
+                  class="cv-media-asset"
+                  [attr.src]="primaryMedia.media?.url"
+                  [attr.autoPlay]="true"
+                  [attr.loop]="true"
+                  [attr.muted]="true"
+                  [attr.playsInline]="true"
+                ></video
+              ></ng-container>
+              <ng-container *ngIf="primaryMedia.media?.type !== 'video'"
+                ><img
+                  class="cv-media-asset"
+                  [attr.src]="primaryMedia.media?.url"
+                  [attr.alt]="primaryMedia.altText || primaryMedia.title || ''" /></ng-container></a
+          ></ng-container>
+          <ng-container *ngIf="secondaryMedia && secondaryMedia.length > 0"
+            ><div class="cv-media-secondary-col">
+              <ng-container
+                *ngFor="let item of secondaryMedia; trackBy: trackByItem0"
+                ><a
+                  class="cv-media-secondary-item"
+                  [attr.href]="ite(m.mapLinks ? m.mapLinks[0] : null)?.url || undefined"
+                  [attr.aria-label]='ite(m.mapLinks ? m.mapLinks[0] : null)?.url ? item.altText || item.title || "Media content" : undefined'
+                  ><ng-container *ngIf="item.media?.type === 'video'"
+                    ><video
+                      class="cv-media-asset"
+                      [attr.src]="item.media?.url"
+                      [attr.autoPlay]="true"
+                      [attr.loop]="true"
+                      [attr.muted]="true"
+                      [attr.playsInline]="true"
+                    ></video
+                  ></ng-container>
+                  <ng-container *ngIf="item.media?.type !== 'video'"
+                    ><img
+                      class="cv-media-asset"
+                      [attr.src]="item.media?.url"
+                      [attr.alt]="item.altText || item.title || ''" /></ng-container></a
+              ></ng-container></div
+          ></ng-container></div
       ></ng-container>
     </div>
   `,
