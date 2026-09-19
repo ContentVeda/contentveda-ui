@@ -72,17 +72,29 @@ module.exports = {
     // messages since the last release tag.
     ['@semantic-release/commit-analyzer', {
       preset: 'conventionalcommits',
+      parserOpts: {
+        headerPattern: /^(\w+)(?:\(([^)]+)\))?(?::|\/)[\s]*(.+)$/,
+        headerCorrespondence: ['type', 'scope', 'subject']
+      },
       releaseRules: [
         { type: 'feat', release: 'minor' },
+        { type: 'Feat', release: 'minor' },
         { type: 'fix', release: 'patch' },
+        { type: 'Fix', release: 'patch' },
         { type: 'perf', release: 'patch' },
-        { type: 'refactor', release: 'patch' }
+        { type: 'Perf', release: 'patch' },
+        { type: 'refactor', release: 'patch' },
+        { type: 'Refactor', release: 'patch' }
       ]
     }],
     // Build the release notes body from all commits, including all commit types
     // (docs, chore, refactor, ci, test) and Pull Request summaries / sub-commits.
     ['@semantic-release/release-notes-generator', {
       preset: 'conventionalcommits',
+      parserOpts: {
+        headerPattern: /^(\w+)(?:\(([^)]+)\))?(?::|\/)[\s]*(.+)$/,
+        headerCorrespondence: ['type', 'scope', 'subject']
+      },
       presetConfig: {
         types: [
           { type: 'feat', section: '🚀 Features' },
