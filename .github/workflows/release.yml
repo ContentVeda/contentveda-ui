@@ -286,11 +286,12 @@ jobs:
           git remote set-url origin \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
-          # [skip ci] because this commit cannot produce a release: a chore is
-          # not a releasable type, so re-triggering would spend a full run --
-          # including the CodeQL wait -- to publish nothing.
+          # Do not use [skip ci] here: this commit opens a Pull Request to
+          # record the published version, and branch protection requires the
+          # `test` status check to pass before it can be merged. [skip ci] would
+          # cause GitHub to skip Playwright tests, leaving the PR blocked forever.
           git add package.json package-lock.json docs/
-          git commit -m "chore(release): record the published ${tag#v} [skip ci]"
+          git commit -m "chore(release): record the published ${tag#v}"
 
           # A pull request rather than a push: main requires one, and requires
           # CodeQL results that a just-created commit cannot have. That is the
