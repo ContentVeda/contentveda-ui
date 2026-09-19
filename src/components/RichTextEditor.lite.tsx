@@ -2732,7 +2732,7 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   Social Post
                 </button>
-                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.openFormulaModal(); }}>
+                <button type="button" class="cv-insert-item" onMouseDown={(e) => e.preventDefault()} onClick={() => { state.showInsertMenu = false; state.insertFormula(); }}>
                   <span class="font-serif italic font-bold text-xs" style={{ width: '14px', textAlign: 'center' }}>Fx</span>
                   Formula
                 </button>
@@ -2813,17 +2813,15 @@ export default function RichTextEditor(props: RichTextEditorProps) {
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               </button>
             </Show>
-            <Show when={state.showToolbarOption('formula')}>
-              <button
-                type="button"
-                class="cv-toolbar-btn"
-                onMouseDown={(e) => { e.preventDefault(); state.saveSelection(); }}
-                onClick={() => state.openFormulaModal()}
-                title="Formula"
-              >
-                <span class="font-serif italic font-bold text-xs">Fx</span>
-              </button>
-            </Show>
+            <button
+              type="button"
+              class="cv-toolbar-btn"
+              onMouseDown={(e) => { e.preventDefault(); state.saveSelection(); }}
+              onClick={() => state.insertFormula()}
+              title="Formula"
+            >
+              <span class="font-serif italic font-bold text-xs">Fx</span>
+            </button>
             <Show when={state.showToolbarOption('social')}>
               <button
                 type="button"
