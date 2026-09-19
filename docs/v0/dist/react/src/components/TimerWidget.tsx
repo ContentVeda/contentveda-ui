@@ -31,16 +31,6 @@ import type {
 function TimerWidget(props: TimerWidgetProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animContext = useRef<BackgroundEffectContext>({
-    animationFrameId: null,
-    resizeHandler: null,
-    resizeObserver: null,
-  });
-  const observerBox = useRef<{
-    disconnect: (() => void) | null;
-  }>({
-    disconnect: null,
-  });
   const [timeLeft, setTimeLeft] = useState(() => ({
     days: 0,
     hours: 0,
@@ -88,7 +78,7 @@ function TimerWidget(props: TimerWidgetProps) {
   }
 
   function widthValue() {
-    return props.width || "auto";
+    return props.width || "100%";
   }
 
   function heightMode() {
@@ -115,6 +105,16 @@ function TimerWidget(props: TimerWidgetProps) {
     return props.backgroundEffectPlugin || defaultBackgroundEffectPlugin;
   }
 
+  const [animContext, setAnimContext] = useState(() => ({
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  }));
+
+  const [observerBox, setObserverBox] = useState(() => ({
+    disconnect: null as (() => void) | null,
+  }));
+
   useEffect(() => {
     if (props.lazyLoad === false) {
       startTicking();
@@ -122,12 +122,12 @@ function TimerWidget(props: TimerWidgetProps) {
         plugin().start(
           canvasRef.current,
           backgroundEffectClass() as BackgroundEffectName,
-          animContext.current
+          animContext
         );
       return;
     }
     if (rootRef.current) {
-      observerBox.current.disconnect = observeLazyMount(
+      observerBox.disconnect = observeLazyMount(
         rootRef.current,
         () => {
           startTicking();
@@ -135,7 +135,7 @@ function TimerWidget(props: TimerWidgetProps) {
             plugin().start(
               canvasRef.current,
               backgroundEffectClass() as BackgroundEffectName,
-              animContext.current
+              animContext
             );
         },
         props.lazyThreshold ?? 0.1,
@@ -148,14 +148,14 @@ function TimerWidget(props: TimerWidgetProps) {
       plugin().start(
         canvasRef.current,
         backgroundEffectClass() as BackgroundEffectName,
-        animContext.current
+        animContext
       );
   }, [backgroundEffectClass(), canvasRef.current]);
   useEffect(() => {
     return () => {
       if (timerId) clearInterval(timerId);
-      if (observerBox.current.disconnect) observerBox.current.disconnect();
-      plugin().stop(animContext.current);
+      if (observerBox.disconnect) observerBox.disconnect();
+      plugin().stop(animContext);
     };
   }, []);
 

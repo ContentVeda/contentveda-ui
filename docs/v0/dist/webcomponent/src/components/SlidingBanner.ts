@@ -162,20 +162,20 @@ class SlidingBanner extends HTMLElement {
         }
       },
       startAutoPlay() {
-        if (self._animContext.intervalId) return;
+        if (self.state.animContext.intervalId) return;
         if (
           self.props.config?.autoStart !== false &&
           self.props.items?.length > 1
         ) {
-          self._animContext.intervalId = setInterval(() => {
-            self._latestNext.fn();
+          self.state.animContext.intervalId = setInterval(() => {
+            self.state.latestNext.fn();
           }, self.props.config?.delayMs || 5000);
         }
       },
       stopAutoPlay() {
-        if (self._animContext.intervalId) {
-          clearInterval(self._animContext.intervalId);
-          self._animContext.intervalId = null;
+        if (self.state.animContext.intervalId) {
+          clearInterval(self.state.animContext.intervalId);
+          self.state.animContext.intervalId = null;
         }
       },
       setupDimensions() {
@@ -186,16 +186,35 @@ class SlidingBanner extends HTMLElement {
           );
         }
       },
+      animContext: {
+        intervalId: null as any,
+        dimResizeHandler: null as any,
+      },
+      bgEffectContext: {
+        animationFrameId: null,
+        resizeHandler: null,
+        resizeObserver: null,
+      },
+      observerBox: {
+        disconnect: null as (() => void) | null,
+      },
+      latestNext: {
+        fn: () => {},
+      },
       mountHeavyContent: function mountHeavyContent() {
         self.state.startAutoPlay();
         self.state.setupDimensions();
-        self._animContext.dimResizeHandler = () => self.state.setupDimensions();
-        window.addEventListener("resize", self._animContext.dimResizeHandler);
+        self.state.animContext.dimResizeHandler = () =>
+          self.state.setupDimensions();
+        window.addEventListener(
+          "resize",
+          self.state.animContext.dimResizeHandler
+        );
         if (self._canvasRef) {
           self.state.plugin.start(
             self._canvasRef,
             self.state.backgroundClass as BackgroundEffectName,
-            self._bgEffectContext
+            self.state.bgEffectContext
           );
         }
       },
@@ -251,22 +270,6 @@ class SlidingBanner extends HTMLElement {
       this.state.goTo(index);
     };
 
-    this._animContext = {
-      intervalId: null as any,
-      dimResizeHandler: null as any,
-    };
-    this._bgEffectContext = {
-      animationFrameId: null,
-      resizeHandler: null,
-      resizeObserver: null,
-    };
-    this._observerBox = {
-      disconnect: null,
-    };
-    this._latestNext = {
-      fn: () => {},
-    };
-
     if (undefined) {
       this.attachShadow({ mode: "open" });
     }
@@ -275,15 +278,21 @@ class SlidingBanner extends HTMLElement {
   disconnectedCallback() {
     // onUnMount
     this.state.stopAutoPlay();
-    this.state.plugin.stop(self._bgEffectContext);
+    this.state.plugin.stop(this.state.bgEffectContext);
     // Same guard as RowScrollable: onDestroy also runs on the server. The
     // handler is only assigned in onMount so this branch is normally skipped
     // there, but the typeof check makes that safe by construction rather than
     // by coincidence.
-    if (typeof window !== "undefined" && self._animContext.dimResizeHandler) {
-      window.removeEventListener("resize", self._animContext.dimResizeHandler);
+    if (
+      typeof window !== "undefined" &&
+      this.state.animContext.dimResizeHandler
+    ) {
+      window.removeEventListener(
+        "resize",
+        this.state.animContext.dimResizeHandler
+      );
     }
-    if (self._observerBox.disconnect) self._observerBox.disconnect();
+    if (this.state.observerBox.disconnect) this.state.observerBox.disconnect();
     this.destroyAnyNodes(); // clean up nodes when component is destroyed
   }
 
@@ -296,7 +305,7 @@ class SlidingBanner extends HTMLElement {
   connectedCallback() {
     this.getAttributeNames().forEach((attr) => {
       const jsVar = attr.replace(/-/g, "");
-      const regexp = new RegExp(jsVar, "i");
+      const regexp = new RegExp("^" + jsVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
       this.componentProps.forEach((prop) => {
         if (regexp.test(prop)) {
           let attrValue: any = this.getAttribute(attr);
@@ -472,7 +481,7 @@ class SlidingBanner extends HTMLElement {
       return;
     }
     if (self._rootRef) {
-      self._observerBox.disconnect = observeLazyMount(
+      this.state.observerBox.disconnect = observeLazyMount(
         self._rootRef,
         () => {
           this.state.isVisible = true;
@@ -488,7 +497,7 @@ class SlidingBanner extends HTMLElement {
   onUpdate() {
     const self = this;
 
-    self._latestNext.fn = self.state.next;
+    self.state.latestNext.fn = self.state.next;
     (function (__prev, __next) {
       const __hasChange = __prev.find((val, index) => val !== __next[index]);
       if (__hasChange !== undefined) {
@@ -510,7 +519,7 @@ class SlidingBanner extends HTMLElement {
           self.state.plugin.start(
             self._canvasRef,
             self.state.backgroundClass as BackgroundEffectName,
-            self._bgEffectContext
+            self.state.bgEffectContext
           );
         }
         self.updateDeps[2] = __next;
@@ -544,7 +553,7 @@ class SlidingBanner extends HTMLElement {
           this.state.animationClass
         } bg-effect-${this.state.backgroundClass} quality-${
           this.state.qualityClass
-        }`;
+        } ${this.props.config?.showDots ? "has-dots" : ""}`;
         el.removeEventListener(
           "mouseenter",
           this.onDivSlidingBanner1Mouseenter
@@ -555,7 +564,7 @@ class SlidingBanner extends HTMLElement {
           this.onDivSlidingBanner1Mouseleave
         );
         el.addEventListener("mouseleave", this.onDivSlidingBanner1Mouseleave);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           height: this.props.config?.height || "",
           minHeight:
             this.props.config?.height === "auto"
@@ -588,7 +597,7 @@ class SlidingBanner extends HTMLElement {
       .querySelectorAll("[data-el='img-sliding-banner-1']")
       .forEach((el) => {
         el.setAttribute("src", this.props.items[0].media.url);
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "100%",
           height: "auto",
           display: "block",
@@ -603,7 +612,7 @@ class SlidingBanner extends HTMLElement {
         el.className = `cv-sliding-banner-track dir-${this.state.direction} ${
           this.state.wrapping ? "no-transition" : ""
         }`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           transform: `translateX(-${this.state.currentIndex * 100}%)`,
           position:
             this.props.config?.height === "auto" ? "absolute" : "relative",
@@ -660,7 +669,7 @@ class SlidingBanner extends HTMLElement {
         el.className = `cv-sliding-bg-video ${
           this.state.showSkeleton ? "cv-image-shimmer" : ""
         }`;
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           position: "absolute",
           top: 0,
           left: 0,
@@ -688,7 +697,7 @@ class SlidingBanner extends HTMLElement {
           this.state.showSkeleton ? "cv-image-shimmer" : ""
         }`;
         const item = this.getScope(el, "item");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           backgroundImage: item.media?.url ? `url(${item.media.url})` : "none",
           backgroundPosition: this.props.config?.bgPosition || "center",
         });
@@ -710,7 +719,7 @@ class SlidingBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-sliding-banner-5']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           backgroundImage: item.media?.url ? `url(${item.media.url})` : "none",
           backgroundPosition: this.props.config?.bgPosition || "center",
         });
@@ -720,7 +729,7 @@ class SlidingBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-sliding-banner-6']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           backgroundImage: item.media?.url ? `url(${item.media.url})` : "none",
           backgroundPosition: this.props.config?.bgPosition || "center",
         });
@@ -739,7 +748,7 @@ class SlidingBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-sliding-banner-7']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           textAlign: item.textAlignment || this.props.config?.align || "center",
           display: "flex",
           flexDirection: "column",
@@ -766,7 +775,7 @@ class SlidingBanner extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-sliding-banner-8']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "50%",
           height: "32px",
           marginBottom: "16px",
@@ -776,7 +785,7 @@ class SlidingBanner extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-sliding-banner-9']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "70%",
           height: "16px",
           marginBottom: "10px",
@@ -786,7 +795,7 @@ class SlidingBanner extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-sliding-banner-10']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "40%",
           height: "16px",
           marginBottom: "24px",
@@ -796,7 +805,7 @@ class SlidingBanner extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='div-sliding-banner-11']")
       .forEach((el) => {
-        Object.assign(el.style, {
+        __cvAssignStyle(el.style, {
           width: "130px",
           height: "40px",
         });
@@ -983,3 +992,28 @@ class SlidingBanner extends HTMLElement {
 }
 
 customElements.define("sliding-banner", SlidingBanner);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

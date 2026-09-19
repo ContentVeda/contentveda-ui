@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rich Text Editor — ContentVeda UI</title>
-  <meta name="description" content="Advanced headless WYSIWYG editor with custom inline styles, table builder, media embedding, and dark premium aesthetics." />
+  <meta name="description" content="Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant." />
   <link rel="canonical" href="https://docs.contentveda.com/ui/v0/components/rich-text-editor.html" />
   <link rel="icon" href="../assets/brand/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="../assets/brand/favicon-32.png" sizes="32x32" type="image/png" />
@@ -29,7 +29,15 @@
 
     <header class="cv-nav">
       <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
-      <a class="cv-brand" href="../index.html">
+      <!--
+        Points at the marketing site, not at ../index.html. This tree is
+        served under /ui/, and the docs site's own brand link leaves for
+        contentveda.com the same way — a lockup that only ever returns you to
+        the page you are already on gives a reader no way back out of /ui/.
+        The sidebar's "Home" link is what returns you to this tree's landing
+        page.
+      -->
+      <a class="cv-brand" href="https://contentveda.com" title="ContentVeda (contentveda.com)">
         <svg class="cv-brand-mark" width="49" height="30" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="148 218 722 440">
 <path fill="var(--m-v)" opacity="1.000000" stroke="none" 
 	d="
@@ -156,10 +164,16 @@ z"/>
           <button type="button" id="font-dec" aria-label="Decrease text size" title="Decrease text size">A−</button>
           <button type="button" id="font-inc" aria-label="Increase text size" title="Increase text size">A+</button>
         </div>
-        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+        <!--
+          Same SVG moon this repaints to on load if the resolved theme is
+          light (see docs.js's label()) — an inert starting point rather than
+          the ☀/☾ glyphs this rendered before, which came from the visitor's
+          OS font and didn't match the sun/moon icon pair every other button
+          on this bar, and the admin console's own toggle, already use.
+        -->
+        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
         <a href="https://github.com/ContentVeda/contentveda-ui/blob/main/src/components/RichTextEditor.lite.tsx"
            target="_blank" rel="noopener" class="btn-github">View Source</a>
-        <a class="cv-signin" href="https://app.contentveda.com">Sign in</a>
       </div>
     </header>
 <div class="docs-shell">
@@ -185,10 +199,25 @@ z"/>
       <a href="wysiwyg-renderer.html" class="sidebar-link"><span class="sidebar-link-icon">✍</span> WYSIWYG Renderer</a>
       <a href="rich-text-editor.html" class="sidebar-link active"><span class="sidebar-link-icon">📝</span> Rich Text Editor</a>
         <div class="sidebar-section-label" style="margin-top:1rem">Resources</div>
+        <!--
+          The cross-product links (Content API, GraphQL, Components, Main site)
+          are NOT repeated here. docs.js injects them at the top of this nav as
+          .sidebar-mobile-main-nav, because that row is what replaces .cv-links
+          when the header drops them on mobile. Adding them here as well would
+          list every one of them twice in the same drawer.
+        -->
         <a href="https://github.com/ContentVeda/contentveda-ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">⭐</span> GitHub</a>
         <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">📦</span> npm</a>
         <a href="https://github.com/ContentVeda/contentveda-ui/tree/main/examples" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">🧩</span> Example Apps</a>
-        <a href="../dist/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">📁</span> Compiled Dist</a>
+        <!--
+          "Compiled Dist" used to link to ../dist/ — a bare directory,
+          not a page. That depends on the host serving a directory listing for
+          it, which none of this site's hosts do (Hostinger, or any plain
+          static server, disables that by default), so the link went nowhere
+          useful. The actual compiled output people want is already reachable
+          per-component: the Web Component tab's own <script src> and the npm
+          link above both point at real, working files.
+        -->
         <a href="../allure-report/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">✅</span> Test Report</a>
       </nav>
     </aside>
@@ -199,7 +228,7 @@ z"/>
       <div class="page-header">
         <div class="page-badge">📝 Component</div>
         <h1 class="page-title">Rich Text Editor</h1>
-        <p class="page-description">Advanced headless WYSIWYG editor with custom inline styles, table builder, media embedding, and dark premium aesthetics.</p>
+        <p class="page-description">Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p>
       </div>
 
       <!-- Install -->
@@ -208,7 +237,7 @@ z"/>
         <button class="copy-btn install-copy" style="position:static;flex-shrink:0">⎘ Copy</button>
       </div>
 
-      
+      <div class="demo-feature-banner" style="background: linear-gradient(135deg, rgba(36,80,102,0.25) 0%, rgba(15,23,42,0.6) 100%); border: 1px solid rgba(127,196,222,0.3); border-radius: 14px; padding: 20px 24px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.25);"><div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;"><h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px;"><span>✨</span> Rich Text Editor Toolbar Redesign</h3><span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 9999px; background: rgba(14,165,233,0.15); color: #38bdf8; border: 1px solid rgba(14,165,233,0.3); letter-spacing: 0.05em; text-transform: uppercase;">Two-Row Layout</span></div><p style="margin: 0 0 14px 0; color: #94a3b8; font-size: 0.95rem; line-height: 1.6;">Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;"><div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 14px;"><div style="font-size: 0.8rem; font-weight: 600; color: #7fc4de; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">🎨 Row 1: Typography</div><div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">Headings, font family (Inter, Outfit, Fira Code), font size scale, inline colors, & alignment.</div></div><div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 14px;"><div style="font-size: 0.8rem; font-weight: 600; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">⚡ Row 2: Media & Controls</div><div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">Direct media insertion, formula Fx, dynamic CSS class chips, and contextual table tools.</div></div></div></div>
 
       <!-- Interactive Playground -->
       <h2 class="section-heading">Interactive Demo Playground</h2>
@@ -222,7 +251,7 @@ z"/>
               <span class="preview-url">&lt;cv-rich-text-editor&gt; Playground</span>
             </div>
             <div class="preview-body" id="preview-container">
-              <cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>
+              <cv-rich-text-editor id="interactive-preview" initial-content="<h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>
             </div>
           </div>
         </div>
@@ -236,21 +265,21 @@ z"/>
             <div class="controls-body">
               <form id="playground-form" onsubmit="event.preventDefault();">
                 
-        <div class="control-group">
-          <label class="control-label">Initial HTML Content</label>
-          <textarea name="initialContent" class="control-input" style="height:80px;"><p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p></textarea>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Available Classes (JSON Array)</label>
-          <textarea name="availableClasses" class="control-input json-textarea" style="height:60px;">["text-pink-500", "font-bold", "tracking-wider"]</textarea>
-          <span class="json-error-msg">❌ Invalid JSON Array</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Toolbar Config (JSON Object)</label>
-          <textarea name="config" class="control-input json-textarea" style="height:120px;">{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}</textarea>
-          <span class="json-error-msg">❌ Invalid JSON Object</span>
-        </div>
-      
+      <div class="control-group">
+        <label class="control-label">Initial HTML Content</label>
+        <textarea name="initialContent" class="control-input" style="height:100px;"><h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul></textarea>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Available Classes (JSON Array)</label>
+        <textarea name="availableClasses" class="control-input json-textarea" style="height:60px;">["text-pink-500", "font-bold", "tracking-wider"]</textarea>
+        <span class="json-error-msg">❌ Invalid JSON Array</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Toolbar Config (JSON Object)</label>
+        <textarea name="config" class="control-input json-textarea" style="height:120px;">{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}</textarea>
+        <span class="json-error-msg">❌ Invalid JSON Object</span>
+      </div>
+    
               </form>
             </div>
           </div>
@@ -259,9 +288,19 @@ z"/>
 
 
       <!-- Code Tabs -->
-      <h2 class="section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+      <h2 class="section-heading" style="margin-bottom: 1rem;">
         Usage Code Generator
-        <span style="display:flex; gap:8px;">
+      </h2>
+      <div class="tab-group">
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="react">React</button>
+          <button class="tab-btn" data-tab="vue">Vue</button>
+          <button class="tab-btn" data-tab="svelte">Svelte</button>
+          <button class="tab-btn" data-tab="solid">Solid</button>
+          <button class="tab-btn" data-tab="angular">Angular</button>
+          <button class="tab-btn" data-tab="wc">Web Component</button>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px;">
           <button class="jsfiddle-btn" id="jsfiddle-btn" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
             Play in JSFiddle
@@ -270,13 +309,6 @@ z"/>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             Open in CodeSandbox
           </button>
-        </span>
-      </h2>
-      <div class="tab-group">
-        <div class="tabs-bar">
-          <button class="tab-btn active" data-tab="react">React</button>
-          <button class="tab-btn" data-tab="svelte">Svelte</button>
-          <button class="tab-btn" data-tab="wc">Web Component</button>
         </div>
         <div class="tab-panel active" data-panel="react">
           
@@ -293,12 +325,43 @@ z"/>
   <span class="str">'video'</span>, <span class="str">'social'</span>, <span class="str">'insertButton'</span>, <span class="str">'addWidget'</span>, <span class="str">'save'</span>, <span class="str">'classInput'</span>,
 ];
 
-&lt;<span class="tag">RichTextEditor</span> 
-  content=<span class="str">"&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"</span>
-  availableClasses={[<span class="str">'text-pink-500'</span>, <span class="str">'font-bold'</span>]}
-  config={{ toolbar }}
-  onChange={(html) =&gt; console.log(html)}
-/&gt;</code></pre>
+<span class="kw">export</span> <span class="kw">default</span> <span class="kw">function</span> Example() {
+  <span class="kw">return</span> (
+    &lt;<span class="tag">RichTextEditor</span> 
+      content=<span class="str">"&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"</span>
+      availableClasses={[<span class="str">'text-pink-500'</span>, <span class="str">'font-bold'</span>]}
+      config={{ toolbar }}
+      onChange={(html) =&gt; console.log(html)}
+    /&gt;
+  );
+}</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="vue">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code>&lt;<span class="tag">script</span> setup&gt;
+<span class="kw">import</span> RichTextEditor <span class="kw">from</span> <span class="str">'@contentveda/ui/vue/RichTextEditor.vue'</span>;
+<span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
+
+<span class="kw">const</span> toolbar = [
+  <span class="str">'fullscreen'</span>, <span class="str">'source'</span>, <span class="str">'bold'</span>, <span class="str">'italic'</span>, <span class="str">'underline'</span>, <span class="str">'strikeThrough'</span>,
+  <span class="str">'code'</span>, <span class="str">'quote'</span>, <span class="str">'clear'</span>, <span class="str">'headings'</span>, <span class="str">'foreColor'</span>, <span class="str">'backColor'</span>,
+  <span class="str">'justifyLeft'</span>, <span class="str">'justifyCenter'</span>, <span class="str">'justifyRight'</span>,
+  <span class="str">'image'</span>, <span class="str">'link'</span>, <span class="str">'table'</span>, <span class="str">'unorderedList'</span>, <span class="str">'orderedList'</span>, <span class="str">'horizontalRule'</span>,
+  <span class="str">'video'</span>, <span class="str">'social'</span>, <span class="str">'insertButton'</span>, <span class="str">'addWidget'</span>, <span class="str">'save'</span>, <span class="str">'classInput'</span>,
+];
+&lt;/<span class="tag">script</span>&gt;
+
+&lt;<span class="tag">template</span>&gt;
+  &lt;<span class="tag">RichTextEditor</span>
+    content=<span class="str">"&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"</span>
+    :availableClasses=<span class="str">"['text-pink-500', 'font-bold']"</span>
+    :config=<span class="str">"{ toolbar }"</span>
+    @change=<span class="str">"(html) =&gt; console.log(html)"</span>
+  /&gt;
+&lt;/<span class="tag">template</span>&gt;</code></pre>
     </div>
         </div>
         <div class="tab-panel" data-panel="svelte">
@@ -321,6 +384,65 @@ z"/>
   content=<span class="str">"&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"</span>
   config={{ toolbar }}
 /&gt;</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="solid">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code><span class="kw">import</span> RichTextEditor <span class="kw">from</span> <span class="str">'@contentveda/ui/solid/RichTextEditor'</span>;
+<span class="kw">import</span> <span class="str">'@contentveda/ui/theme.css'</span>;
+
+<span class="kw">const</span> toolbar = [
+  <span class="str">'fullscreen'</span>, <span class="str">'source'</span>, <span class="str">'bold'</span>, <span class="str">'italic'</span>, <span class="str">'underline'</span>, <span class="str">'strikeThrough'</span>,
+  <span class="str">'code'</span>, <span class="str">'quote'</span>, <span class="str">'clear'</span>, <span class="str">'headings'</span>, <span class="str">'foreColor'</span>, <span class="str">'backColor'</span>,
+  <span class="str">'justifyLeft'</span>, <span class="str">'justifyCenter'</span>, <span class="str">'justifyRight'</span>,
+  <span class="str">'image'</span>, <span class="str">'link'</span>, <span class="str">'table'</span>, <span class="str">'unorderedList'</span>, <span class="str">'orderedList'</span>, <span class="str">'horizontalRule'</span>,
+  <span class="str">'video'</span>, <span class="str">'social'</span>, <span class="str">'insertButton'</span>, <span class="str">'addWidget'</span>, <span class="str">'save'</span>, <span class="str">'classInput'</span>,
+];
+
+<span class="kw">export</span> <span class="kw">default</span> <span class="kw">function</span> Example() {
+  <span class="kw">return</span> (
+    &lt;<span class="tag">RichTextEditor</span>
+      content=<span class="str">"&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"</span>
+      availableClasses={[<span class="str">'text-pink-500'</span>, <span class="str">'font-bold'</span>]}
+      config={{ toolbar }}
+      onChange={(html) =&gt; console.log(html)}
+    /&gt;
+  );
+}</code></pre>
+    </div>
+        </div>
+        <div class="tab-panel" data-panel="angular">
+          
+    <div class="code-block">
+      <button class="copy-btn">Copy</button>
+      <pre><code><span class="kw">import</span> { Component } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { RichTextEditorModule } <span class="kw">from</span> <span class="str">'@contentveda/ui/angular/RichTextEditor'</span>;
+
+@Component({
+  selector: <span class="str">'app-example'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [RichTextEditorModule],
+  template: <span class="str">`
+    &lt;<span class="tag">rich-text-editor</span>
+      content="&lt;<span class="tag">p</span>&gt;Hello World!&lt;/<span class="tag">p</span>&gt;"
+      [availableClasses]="['text-pink-500', 'font-bold']"
+      [config]="config"
+    &gt;&lt;/<span class="tag">rich-text-editor</span>&gt;
+  `</span>
+})
+<span class="kw">export</span> class ExampleComponent {
+  config = {
+    toolbar: [
+      <span class="str">'fullscreen'</span>, <span class="str">'source'</span>, <span class="str">'bold'</span>, <span class="str">'italic'</span>, <span class="str">'underline'</span>, <span class="str">'strikeThrough'</span>,
+      <span class="str">'code'</span>, <span class="str">'quote'</span>, <span class="str">'clear'</span>, <span class="str">'headings'</span>, <span class="str">'foreColor'</span>, <span class="str">'backColor'</span>,
+      <span class="str">'justifyLeft'</span>, <span class="str">'justifyCenter'</span>, <span class="str">'justifyRight'</span>,
+      <span class="str">'image'</span>, <span class="str">'link'</span>, <span class="str">'table'</span>, <span class="str">'unorderedList'</span>, <span class="str">'orderedList'</span>, <span class="str">'horizontalRule'</span>,
+      <span class="str">'video'</span>, <span class="str">'social'</span>, <span class="str">'insertButton'</span>, <span class="str">'addWidget'</span>, <span class="str">'save'</span>, <span class="str">'classInput'</span>,
+    ]
+  };
+}</code></pre>
     </div>
         </div>
         <div class="tab-panel" data-panel="wc">
@@ -394,6 +516,18 @@ z"/>
 
       <!-- Notes -->
       <div class="alert alert-tip">The editor natively supports adding inline styles or classes dynamically to selected ranges.</div>
+      
+      <footer class="docs-footer">
+        <div class="docs-footer-copy">
+          <span>© 2026 ContentVeda. All rights reserved.</span>
+        </div>
+        <nav class="docs-footer-links">
+          <a href="https://docs.contentveda.com/cms/api/">Content API</a>
+          <a href="https://docs.contentveda.com/cms/graphql/">GraphQL</a>
+          <a href="https://github.com/ContentVeda/contentveda-ui" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener">npm</a>
+        </nav>
+      </footer>
     </div>
   </main>
 </div>
@@ -503,32 +637,52 @@ document.addEventListener('DOMContentLoaded', () => {
       if (name.startsWith('config.')) return;
 
       if (input.type === 'checkbox') {
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
         if (input.checked) {
-          preview.setAttribute(name, 'true');
-          directProps[camelCase(name)] = true;
+          preview.setAttribute(kebab, 'true');
+          directProps[camel] = true;
         } else {
+          preview.removeAttribute(kebab);
           preview.removeAttribute(name);
-          directProps[camelCase(name)] = false;
+          directProps[camel] = false;
         }
       } else if (input.tagName === 'TEXTAREA' && input.classList.contains('json-textarea')) {
         try {
           const raw = input.value.trim();
+          const camel = camelCase(name);
+          const kebab = kebabCase(name);
           if (raw) {
             const parsed = JSON.parse(raw);
             input.classList.remove('invalid');
-            // Assign as property and setAttribute
-            preview[camelCase(name)] = parsed;
-            preview.setAttribute(name, raw);
+            preview[camel] = parsed;
+            preview.setAttribute(kebab, raw);
+            directProps[camel] = parsed;
           } else {
+            preview.removeAttribute(kebab);
             preview.removeAttribute(name);
+            delete directProps[camel];
           }
         } catch (e) {
           input.classList.add('invalid');
         }
       } else {
-        preview.setAttribute(name, input.value);
+        const val = (input.type === 'range' || input.type === 'number') ? Number(input.value) : input.value;
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
+        preview.setAttribute(kebab, String(val));
+        directProps[camel] = val;
       }
     });
+
+    if (preview.props) {
+      Object.assign(preview.props, directProps);
+    }
+    if (typeof preview.forceUpdate === 'function') {
+      preview.forceUpdate(directProps);
+    } else if (typeof preview.update === 'function') {
+      preview.update();
+    }
 
     // Update code blocks
     updateCodeBlocks();
@@ -551,25 +705,55 @@ document.addEventListener('DOMContentLoaded', () => {
       attrs.push({ name: a.name, value: a.value });
     }
 
-    // React prop string generator
+    const pascalName = "RichTextEditor";
+    const wcTagName = "cv-rich-text-editor";
+    const componentSlug = "rich-text-editor";
+
+    function escapePropValue(v) {
+      return v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    // React & Solid prop string generator
     const reactProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return `${camelName}={${a.value}}`;
-      return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
     });
-
-    const pascalName = "RichTextEditor";
-    const wcTagName = "cv-rich-text-editor";
 
     const reactCode = `import ${pascalName} from '@contentveda/ui/react/${pascalName}';
 import '@contentveda/ui/theme.css';
 
-<${pascalName}
-  ${reactProps.join('\n  ')}
-/>`;
+export default function Example() {
+  return (
+    <${pascalName}
+      ${reactProps.join('\n      ')}
+    />
+  );
+}`;
+
+    // Vue prop string generator
+    const vueProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return `:${camelName}="true"`;
+      if (isJson) return `:${camelName}='${a.value}'`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
+    });
+
+    const vueCode = `<` + `script setup>
+import ${pascalName} from '@contentveda/ui/vue/${pascalName}.vue';
+import '@contentveda/ui/theme.css';
+</` + `script>
+
+<template>
+  <${pascalName}
+    ${vueProps.join('\n    ')}
+  />
+</template>`;
 
     const svelteProps = attrs.map(a => {
       const camelName = camelCase(a.name);
@@ -577,23 +761,59 @@ import '@contentveda/ui/theme.css';
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return `${camelName}={${a.value}}`;
-      return `${camelName}="${a.value.replace(/"/g, '\\"')}"`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
     });
 
-    const svelteCode = `<script lang="ts">
+    const svelteCode = `<` + `script lang="ts">
   import ${pascalName} from '@contentveda/ui/svelte/${pascalName}.svelte';
-<\/script>
+</` + `script>
 
 <${pascalName}
   ${svelteProps.join('\n  ')}
 />`;
+
+    const solidCode = `import ${pascalName} from '@contentveda/ui/solid/${pascalName}';
+import '@contentveda/ui/theme.css';
+
+export default function Example() {
+  return (
+    <${pascalName}
+      ${reactProps.join('\n      ')}
+    />
+  );
+}`;
+
+    // Angular prop string generator
+    const angularProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return `[${camelName}]="true"`;
+      if (isJson) return `[${camelName}]='${a.value}'`;
+      return `${camelName}="${escapePropValue(a.value)}"`;
+    });
+
+    const angularCode = `import { Component } from '@angular/core';
+import { ${pascalName}Module } from '@contentveda/ui/angular/${pascalName}';
+
+@Component({
+  selector: 'app-example',
+  standalone: true,
+  imports: [${pascalName}Module],
+  template: \`
+    <${componentSlug}
+      ${angularProps.join('\n      ')}
+    ></${componentSlug}>
+  \`,
+})
+export class ExampleComponent {}`;
 
     const wcAttrs = attrs.map(a => {
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       if (isJson) {
         return `${a.name}='${a.value}'`;
       }
-      return `${a.name}="${a.value.replace(/"/g, '\\"')}"`;
+      return `${a.name}="${escapePropValue(a.value)}"`;
     });
 
     const wcCode = `<` + `script type="module" src="node_modules/@contentveda/ui/webcomponents/${pascalName}.js"></` + `script>
@@ -606,8 +826,17 @@ import '@contentveda/ui/theme.css';
     const reactPanel = document.querySelector('[data-panel="react"] pre code');
     if (reactPanel) reactPanel.innerHTML = clientHighlight(reactCode, 'tsx');
 
+    const vuePanel = document.querySelector('[data-panel="vue"] pre code');
+    if (vuePanel) vuePanel.innerHTML = clientHighlight(vueCode, 'html');
+
     const sveltePanel = document.querySelector('[data-panel="svelte"] pre code');
     if (sveltePanel) sveltePanel.innerHTML = clientHighlight(svelteCode, 'svelte');
+
+    const solidPanel = document.querySelector('[data-panel="solid"] pre code');
+    if (solidPanel) solidPanel.innerHTML = clientHighlight(solidCode, 'tsx');
+
+    const angularPanel = document.querySelector('[data-panel="angular"] pre code');
+    if (angularPanel) angularPanel.innerHTML = clientHighlight(angularCode, 'ts');
 
     const wcPanel = document.querySelector('[data-panel="wc"] pre code');
     if (wcPanel) wcPanel.innerHTML = clientHighlight(wcCode, 'html');

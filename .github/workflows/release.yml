@@ -38,22 +38,20 @@ jobs:
       - name: Build library and generate docs pages
         run: npm run build
 
-      # test:bdd runs `playwright install chromium` itself, but deliberately
-      # without --with-deps: that flag apt-installs system libraries and needs
-      # root, which is right for a runner and wrong for a contributor running
-      # the suite locally. So the OS-level half is done here instead, matching
-      # playwright.yml, and the npm script's own install becomes a fast no-op.
-      #
-      # Nothing has failed on this yet -- chromium currently launches on
-      # ubuntu-latest without it. But that is a property of the runner image,
-      # not a guarantee, and it is the image that changes underneath a pinned
-      # Playwright version. Being the only workflow missing it made this a
-      # standing suspect while triaging a failure it turned out not to cause.
+      # --with-deps installs the OS-level system libraries that Chromium needs;
+      # that requires root and is correct on a runner but wrong for a contributor
+      # running the suite locally. The npm script test:bdd:install exists for
+      # the local case (no --with-deps). On CI this step already runs the
+      # browser install, so test:bdd (which now calls cucumber-js directly)
+      # finds everything it needs without doing its own playwright install.
       - name: Install Playwright browsers with system dependencies
         run: npx playwright install --with-deps chromium
 
       - name: Run BDD suite
         run: npm run test:bdd
+
+      - name: Run E2E Playwright suite
+        run: npm run test:e2e
 
       # When the gate above trips, this is the only durable record of *why*.
       # The run log itself is not enough: downloading it via the API needs
@@ -67,72 +65,42 @@ jobs:
       # were the same commit, one green and one red, which is the signature of
       # a flake rather than a regression. Diffing those two only works if the
       # passing run left its results behind too.
-      - name: Upload BDD results
+      - name: Upload BDD diagnostics
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: bdd-allure-results
-          path: tests/bdd/.allure-results
+          name: bdd-diagnostics
+          path: |
+            tests/bdd/.allure-results
+            tests/bdd/cucumber-report.json
+            test-results
+            playwright-report
+          if-no-files-found: warn
           retention-days: 30
 
-  # CodeQL runs from GitHub's default setup, not a workflow file here, so it is
-  # a separate run with no ordering relationship to this one -- the same problem
-  # verify solves for the test suite. Without this job the npm publish can beat
-  # its own security scan, and an npm version cannot be taken back.
+  # There is no CodeQL gate here, on purpose.
   #
-  # Waits on the "Analyze (...)" check runs for this commit rather than the
-  # code-scanning alerts API: those checks are what the branch ruleset itself
-  # gates on, so this gate and the ruleset agree by construction.
-  code-scanning:
-    runs-on: ubuntu-latest
-    permissions:
-      checks: read
-    steps:
-      - name: Wait for CodeQL on this commit
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for _ in $(seq 1 45); do
-            lines=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100" \
-              --jq '.check_runs[] | select(.name | startswith("Analyze")) | "\(.status) \(.conclusion)"')
-
-            # Keep waiting until at least one Analyze check exists and none is
-            # still running. An empty result means CodeQL has not been queued
-            # for this commit yet, which is a wait, not a pass.
-            if [ -z "$lines" ] || grep -qv '^completed ' <<<"$lines"; then
-              sleep 20
-              continue
-            fi
-
-            echo "$lines"
-
-            # Superseded runs report "cancelled", and that is not a verdict.
-            # GitHub cancels an in-flight CodeQL analysis when a newer one for
-            # the same commit starts, which is routine on a merge: the beta
-            # branch's analysis of a commit gets cancelled the moment main picks
-            # the same commit up. Counting those as failures blocked 0.0.2 on a
-            # commit CodeQL had in fact scanned clean -- two cancelled runs
-            # sitting beside a successful one for the same analysis.
-            verdicts=$(grep -vE ' (cancelled|skipped)$' <<<"$lines" || true)
-
-            if [ -z "$verdicts" ]; then
-              echo "Every CodeQL run for $GITHUB_SHA was cancelled, so nothing scanned it - not publishing."
-              exit 1
-            fi
-
-            if grep -qvE '^completed (success|neutral)$' <<<"$verdicts"; then
-              echo "CodeQL did not pass on $GITHUB_SHA - not publishing."
-              exit 1
-            fi
-
-            echo "CodeQL passed on $GITHUB_SHA."
-            exit 0
-          done
-          echo "Timed out waiting for CodeQL on $GITHUB_SHA - not publishing."
-          exit 1
-
+  # One used to wait for the "Analyze (...)" checks before publishing, on the
+  # reasoning that an npm version cannot be taken back so the publish must not
+  # beat its own scan. GitHub already guarantees that for main, and more firmly:
+  # the branch ruleset carries both a pull_request rule, so nothing reaches main
+  # except through a pull request, and a code_scanning rule set to CodeQL at
+  # high_or_higher / errors, which blocks the *merge*. A commit cannot arrive on
+  # main without having been scanned and cleared first, so by the time this
+  # workflow runs the answer is already in.
+  #
+  # Re-checking it cost two failed releases. Superseded analyses report
+  # "cancelled" and were read as failures, blocking 0.0.2 on a commit CodeQL had
+  # scanned clean; and beta is not scanned at all -- default setup covers the
+  # default branch and pull requests aimed at it, nothing else -- so every beta
+  # push sat out the full timeout and failed. Both were faults in the gate
+  # rather than in the code it was gating.
+  #
+  # beta publishes ahead of any analysis, which is the trade a prerelease
+  # channel makes. The same code is scanned on the pull request promoting it,
+  # before anything reaches @latest.
   release:
-    needs: [verify, code-scanning]
+    needs: verify
     runs-on: ubuntu-latest
     # Scopes the OIDC token's environment claim to "release", matching the
     # Trusted Publisher configured on npmjs.com for this package — npm checks
@@ -256,20 +224,27 @@ jobs:
           # being set, since id-token: write is granted above.
         run: npx semantic-release
 
-      # Writes the released version back into package.json/package-lock.json.
+      # Writes the released version back into package.json/package-lock.json,
+      # and the docs/ tree alongside it.
       #
-      # @semantic-release/git would normally do this as part of the release, and
-      # is deliberately not in the plugin list: it pushes straight to the
-      # release branch, and main's ruleset rejects that (see release.config.js).
-      # Doing it here instead means the push is ours, so it can take the route
-      # each branch actually allows.
+      # @semantic-release/git would normally do the package.json half as part
+      # of the release, and is deliberately not in the plugin list: it pushes
+      # straight to the release branch, and main's ruleset rejects that (see
+      # release.config.js). Doing it here instead means the push is ours, so
+      # it can take the route each branch actually allows.
       #
-      # Worth knowing this is cosmetic. The published tarball already carries
-      # the right version -- semantic-release sets it before packing -- and
-      # nothing in the build reads this field for correctness any more, since
-      # generate-docs.js resolves the version from the tag. This keeps the
-      # checked-in tree honest about what shipped; it does not make anything
-      # work that was broken.
+      # docs/ has to be included, not just package.json/package-lock.json —
+      # this used to stage only those two, and it broke the step after this
+      # one. The Release step above already ran `npm run build` (semantic-
+      # release's own `prepublishOnly` triggers it), which regenerates
+      # docs/version.json and docs/v0/** against the tag that step just
+      # created — genuinely correct, not a build artifact; see the /dist/
+      # note in .gitignore for why docs/v0/ is committed at all. Left
+      # uncommitted, that regeneration is exactly the dirty working tree that
+      # made "Bring beta level with main"'s `git checkout -B beta
+      # origin/beta` fail outright: checkout refuses to overwrite
+      # uncommitted local changes, full stop, and every release from 0.0.2
+      # through 0.2.1 hit this without once completing to a merged PR.
       #
       # The tag is the source of truth, not semantic-release's stdout: it is
       # created on this commit through the GitHub API, so it has to be fetched
@@ -278,7 +253,7 @@ jobs:
       # a commit already published -- and there is nothing to record.
       #
       # Only main records, and beta deliberately never does. If both wrote their
-      # own number, they would be editing the same package.json line from a
+      # own package.json number, they would be editing the same line from a
       # common ancestor and every back-merge would collide on it -- and the two
       # branches still could not agree, since beta is by definition ahead. Held
       # to main's stable version the field matches on both, and the prerelease
@@ -299,8 +274,8 @@ jobs:
 
           npm version "${tag#v}" --no-git-tag-version --allow-same-version
 
-          if git diff --quiet -- package.json package-lock.json; then
-            echo "::notice::package.json already records ${tag#v}."
+          if git diff --quiet -- package.json package-lock.json docs/; then
+            echo "::notice::package.json and docs/ already record ${tag#v}."
             exit 0
           fi
 
@@ -314,7 +289,7 @@ jobs:
           # [skip ci] because this commit cannot produce a release: a chore is
           # not a releasable type, so re-triggering would spend a full run --
           # including the CodeQL wait -- to publish nothing.
-          git add package.json package-lock.json
+          git add package.json package-lock.json docs/
           git commit -m "chore(release): record the published ${tag#v} [skip ci]"
 
           # A pull request rather than a push: main requires one, and requires
@@ -328,7 +303,7 @@ jobs:
             --base "$GITHUB_REF_NAME" \
             --head "$branch" \
             --title "chore(release): record the published ${tag#v}" \
-            --body "Records the version published by [run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in package.json and package-lock.json. Only the two version fields change.
+            --body "Records the version published by [run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in package.json, package-lock.json, and the generated docs tree (docs/version.json, docs/v0/**) that prepublishOnly's own build regenerated against the new tag.
 
           Merging this is what carries the version on to beta: the next push to main brings the branches level again."
 
@@ -370,7 +345,13 @@ jobs:
             exit 0
           fi
 
-          if git merge --no-edit "$GITHUB_SHA" -m "chore: merge main into beta [skip ci]"; then
+          # --no-ff is load-bearing, not tidiness. The [skip ci] that stops this
+          # push starting another release lives in the merge commit's message,
+          # and a fast-forward creates no commit to carry it -- beta's new head
+          # would just be main's commit, and its message decides whether the
+          # workflows run. Fast-forward is the common case right after a
+          # promotion, which is exactly when beta has nothing main lacks.
+          if git merge --no-ff --no-edit "$GITHUB_SHA" -m "chore: merge main into beta [skip ci]"; then
             git push origin beta
             echo "beta brought level with main at ${GITHUB_SHA:0:7}."
           else

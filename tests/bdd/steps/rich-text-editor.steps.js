@@ -1,4 +1,5 @@
-const { When } = require('@cucumber/cucumber');
+const { When, Then } = require('@cucumber/cucumber');
+const assert = require('node:assert/strict');
 
 // Regression coverage for the stale-selection-ref bug: savedRange used to live
 // in useStore state (async setState on the React target), so saveSelection()
@@ -22,3 +23,59 @@ When('I click the toolbar button titled {string}', async function (title) {
 When('I click into the editable content', async function () {
   await this.subject().locator('.wysiwyg-content').click();
 });
+
+// Drags the resize handle that appears after clicking a resizable element
+// (image/video/audio/social-embed/widget). Exercises the real mouse
+// down/move/up sequence the drag depends on, rather than calling the
+// underlying state method directly, since the bug this guards against
+// (handle positioned off-element -- see updateResizeHandlePosition) only
+// shows up when the handle's rendered screen position is used.
+When('I drag the resize handle right by {int}px and down by {int}px', async function (dx, dy) {
+  const handle = this.subject().locator('.cv-resize-handle');
+  await handle.waitFor({ state: 'visible', timeout: 5000 });
+  const box = await handle.boundingBox();
+  const startX = box.x + box.width / 2;
+  const startY = box.y + box.height / 2;
+  await this.page.mouse.move(startX, startY);
+  await this.page.mouse.down();
+  await this.page.mouse.move(startX + dx, startY + dy, { steps: 10 });
+  await this.page.mouse.up();
+});
+
+Then('the saved content should include {string}', async function (expectedSubstring) {
+  const html = await this.subject().evaluate((el) => el.state.getCanonicalHtml());
+  assert.ok(html.includes(expectedSubstring), `Expected saved content to include "${expectedSubstring}", got:\n${html}`);
+});
+
+Then('the saved content should not include {string}', async function (unexpectedSubstring) {
+  const html = await this.subject().evaluate((el) => el.state.getCanonicalHtml());
+  assert.ok(!html.includes(unexpectedSubstring), `Expected saved content NOT to include "${unexpectedSubstring}", got:\n${html}`);
+});
+
+// Regression coverage for the CSS-specificity bug where the source textarea
+// stayed visible underneath the visual editor at the same time (a base rule
+// on .editor-source forced display:flex !important at higher specificity
+// than the .cv-mode-src-visual toggle). Both panes must never be visible
+// together.
+Then('exactly one of the visual editor or the source view should be visible', async function () {
+  const visualVisible = await this.subject().locator('.editor-content .wysiwyg-content').isVisible();
+  const sourceVisible = await this.subject().locator('.editor-source textarea').isVisible();
+  assert.notEqual(visualVisible, sourceVisible, `Expected exactly one of visual/source to be visible, got visual=${visualVisible} source=${sourceVisible}`);
+});
+
+// Regression coverage for the color picker InvalidStateError / frozen update cycle bug:
+// Interacting with <input type="color"> leaves activeElement on the color input.
+// hydrateDom previously attempted el.selectionStart on the color input, throwing
+// InvalidStateError and freezing pendingUpdate=true permanently.
+When('I apply the {string} color {string}', async function (colorType, hexColor) {
+  const label = this.subject().locator(`label[title="${colorType} Color"]`);
+  await label.click();
+  const ariaLabel = colorType === 'Highlight' ? 'Background Color' : 'Text Color';
+  const input = this.subject().locator(`input[type="color"][aria-label="${ariaLabel}"]`);
+  await input.evaluate((el, val) => {
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }, hexColor);
+});
+

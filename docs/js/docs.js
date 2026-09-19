@@ -14,6 +14,18 @@
    and a theme applied at that point is a visible flash. */
 const THEME_KEY = 'contentveda-theme';
 
+// Same sun/moon line icons as the admin console's PublicNavbar and the docs
+// site's DocsNav, not the ☀/☾ glyphs this used to swap in via textContent.
+// Those render from whatever font the visitor's OS ships, so their weight and
+// baseline never quite matched the rest of this bar's icons, or the same
+// toggle on the other two sites. One vector pair, reused everywhere, sidesteps
+// that entirely — this is the one place among the three it's plain innerHTML
+// rather than framework markup, since this file has no templating of its own.
+const SUN_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>';
+const MOON_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>';
+
 function initTheme() {
   const btn = document.getElementById('theme-toggle');
   const root = document.documentElement;
@@ -21,7 +33,9 @@ function initTheme() {
   function label() {
     const dark = root.getAttribute('data-theme') === 'dark';
     if (!btn) return;
-    btn.textContent = dark ? '☀' : '☾';
+    // The icon shown is what the toggle switches *to*, same convention as
+    // the other two sites: dark mode shows the sun (click to go light).
+    btn.innerHTML = dark ? SUN_ICON : MOON_ICON;
     btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
     btn.setAttribute('aria-pressed', String(dark));
   }
@@ -89,15 +103,85 @@ function initSidebar() {
   const sidebar = document.querySelector('.docs-sidebar');
   if (!toggle || !sidebar) return;
 
-  toggle.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
+  // Dynamically add backdrop overlay if not present
+  let backdrop = document.querySelector('.sidebar-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'sidebar-backdrop';
+    document.body.appendChild(backdrop);
+  }
+
+  // Prepend main section navigation into the mobile sidebar drawer.
+  // The header's .cv-links row is hidden on mobile, so without this the
+  // cross-product links would be unreachable there. This mirrors the docs
+  // site's DocsNav, whose mobile drawer carries the same two groups.
+  //
+  // GitHub and npm are deliberately not repeated here — they're already in
+  // this same sidebar's own "Resources" section, a few groups further down,
+  // so adding them here would just be the same two links twice in one
+  // drawer. Only Content API/GraphQL/Components/Main site are added: the
+  // ones that are genuinely unreachable elsewhere once .cv-links (desktop)
+  // hides, since nothing else on the page carries them.
+  //
+  // display:none above 768px in docs.css hides this block outside the
+  // sidebar's own drawer breakpoint — without that, this injection (which
+  // always runs, on every load) would put Content API/GraphQL/Components
+  // above "Getting Started" on *desktop* too, duplicating the header's own
+  // .cv-links row, which is only ever hidden below that width.
+  const navContainer = sidebar.querySelector('.sidebar-nav');
+  if (navContainer && !navContainer.querySelector('.sidebar-mobile-main-nav')) {
+    const mainNav = document.createElement('div');
+    mainNav.className = 'sidebar-mobile-main-nav';
+    mainNav.style.borderBottom = '1px solid var(--border)';
+    mainNav.style.marginBottom = '0.5rem';
+    mainNav.style.paddingBottom = '0.5rem';
+    mainNav.innerHTML = `
+      <div class="sidebar-section-label">Documentation</div>
+      <a class="sidebar-link" href="https://docs.contentveda.com/cms/api/"><span class="sidebar-link-icon">⚡</span> Content API</a>
+      <a class="sidebar-link" href="https://docs.contentveda.com/cms/graphql/"><span class="sidebar-link-icon">◈</span> GraphQL</a>
+      <a class="sidebar-link active" href="https://docs.contentveda.com/ui/"><span class="sidebar-link-icon">❖</span> Components</a>
+      <div class="sidebar-section-label" style="margin-top:0.75rem;">Links</div>
+      <a class="sidebar-link" href="https://contentveda.com"><span class="sidebar-link-icon">↗</span> Main site</a>
+    `;
+    navContainer.insertBefore(mainNav, navContainer.firstChild);
+  }
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
   });
 
-  // Close on backdrop click
-  document.addEventListener('click', (e) => {
-    if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
-      sidebar.classList.remove('open');
+  backdrop.addEventListener('click', closeSidebar);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+      closeSidebar();
     }
+  });
+
+  // Close when clicking any link inside the sidebar on mobile
+  sidebar.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeSidebar();
+      }
+    });
   });
 }
 
@@ -129,6 +213,23 @@ function initTabs() {
         btn.classList.add('active');
         const panel = container.querySelector(`[data-panel="${tabId}"]`);
         if (panel) panel.classList.add('active');
+
+        // Update sandbox button labels to reflect selected framework.
+        // fwName comes from a tab button's own textContent -- always one of
+        // this page's own hardcoded framework names today, but CodeQL flags
+        // any DOM text re-fed into innerHTML on principle, so it is set via
+        // a separate text node rather than interpolated into an HTML string.
+        const fwName = btn.textContent.trim();
+        const fidBtn = container.querySelector('#jsfiddle-btn') || document.getElementById('jsfiddle-btn');
+        const csBtn = container.querySelector('#codesandbox-btn') || document.getElementById('codesandbox-btn');
+        if (fidBtn) {
+          fidBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg> ';
+          fidBtn.appendChild(document.createTextNode(`Play ${fwName} in JSFiddle`));
+        }
+        if (csBtn) {
+          csBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> ';
+          csBtn.appendChild(document.createTextNode(`Open ${fwName} in CodeSandbox`));
+        }
       });
     });
   });
@@ -304,9 +405,26 @@ function generateLiveDemoCode() {
 
   // The code samples use paths relative to the docs site (e.g. "../assets/img/...")
   // for its own placeholder images. Those don't resolve on a different origin
-  // (jsfiddle.net, codesandbox.io), so rewrite them to absolute URLs against
-  // the published docs site.
-  const rawCode = codeEl.innerText.replace(/(["'])(\.\.\/)?assets\//g, '$1https://contentveda.github.io/contentveda-ui/assets/');
+  // (jsfiddle.net, codesandbox.io), so rewrite them to absolute URLs.
+  //
+  // Resolved against the page docs.js is actually running on — document.baseURI,
+  // not a hardcoded domain. This used to point at a GitHub Pages mirror
+  // (contentveda.github.io/contentveda-ui), which was retired in favour of
+  // docs.contentveda.com; every exported sandbox's images broke the day that
+  // mirror went away, silently, because nothing here would ever notice a 404 on
+  // an external host. Deriving the base from the current page instead means it
+  // is correct on whatever host and whatever version tree serves this file —
+  // docs.contentveda.com/ui/v0/, a future v1, a staging mirror, or a local
+  // preview — with nothing here to go stale the next time hosting changes.
+  //
+  // Component pages reference "../assets/…" (one level up, from components/);
+  // the landing page references "assets/…" directly. Capturing the whole
+  // quoted path and resolving it via the URL constructor handles both forms
+  // uniformly, rather than special-casing the optional "../".
+  const rawCode = codeEl.innerText.replace(
+    /(["'])((?:\.\.\/)?assets\/[^"'\s]+)\1/g,
+    (match, quote, relPath) => quote + new URL(relPath, 'https://docs.contentveda.com/ui/v0/').href + quote
+  );
 
   // `theme.css` only carries shared CSS variables/resets — each component's
   // actual layout/visual styles live in their own `src/styles/components/*.css`
@@ -325,31 +443,9 @@ function generateLiveDemoCode() {
     ? `<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/components/${componentName}.css">\n`
     : '';
 
+  let sandboxFiles = null;
+
   if (framework === 'react') {
-    // Setup Babel Standalone in the HTML pane to preserve native ES Modules
-    // Note: the npm 'beta' dist-tag points to a stale pre-release (1.0.0-beta.17)
-    // whose package.json#exports has no './react/*' wildcard, so esm.sh rejects
-    // deep subpath imports like '/react/AlternatingSlider'. 'latest' has the
-    // correct wildcard exports and matches this repo's current published version.
-    // A plain `import '@contentveda/ui/theme.css'` is a *value-less* side-effect
-    // import, which the browser fetches expecting a JS/Wasm module. esm.sh (and
-    // any static host) serves that file with Content-Type: text/css, and browsers
-    // enforce strict MIME checking for module scripts — that single line throws
-    // a SyntaxError that aborts the entire module graph, so `root.render(...)`
-    // never runs and the sandbox just shows a blank page. Strip it from the JS
-    // and load it as a plain <link rel="stylesheet"> in the HTML pane instead,
-    // the same way the Web Component tab below already does it.
-    // Pin the exact React version via esm.sh's `?deps=` param on the component
-    // import. Without it, esm.sh resolves SlidingBanner's own internal
-    // `peerDependencies: { react: ">=17" }` reference independently from our
-    // own top-level `import React from '.../react@18...'` — landing on a
-    // *different* concrete React version (e.g. two copies, 19.x vs 18.x)
-    // that don't share a hook dispatcher. Calling any hook (useRef, etc.)
-    // then throws "Cannot read properties of null" because the component's
-    // React instance has no active render in progress from ITS OWN copy's
-    // point of view. `?deps=` forces the component's internal resolution to
-    // reuse the exact same pinned version as our own import, so there's
-    // only ever one React instance in the whole page.
     const REACT_VERSION = '18.3.1';
     jsCode = rawCode
       .replace(/import\s+['"]@contentveda\/ui\/theme\.css['"];?\n?/g, '')
@@ -361,7 +457,7 @@ function generateLiveDemoCode() {
 
     htmlCode = `<div id="root"></div>
 
-<!-- Load Theme (loaded as a stylesheet, not a JS import — see comment in docs.js) -->
+<!-- Load Theme -->
 <link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
 ${componentCssLink}
 <!-- Use Babel Standalone to compile JSX natively while preserving ES Modules -->
@@ -376,9 +472,206 @@ const root = createRoot(document.getElementById('root'));
 root.render(${jsxComponent || '<div />'});
 </script>`;
 
-    jsCode = ''; // Leave JS pane empty because all logic is in the module script
+    jsCode = '';
+    sandboxFiles = {
+      'sandbox.config.json': { content: { template: 'static' } },
+      'package.json': { content: { name: 'contentveda-ui-react-demo', version: '1.0.0', main: 'index.html' } },
+      'index.html': { content: htmlCode }
+    };
+  } else if (framework === 'vue') {
+    htmlCode = `<div id="app"></div>
+
+<!-- Load Theme -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue3-sfc-loader/dist/vue3-sfc-loader.js"></script>
+<script>
+const options = {
+  moduleCache: { vue: Vue },
+  async getFile(url) {
+    if (url === './App.vue') return ${JSON.stringify(rawCode)};
+    return fetch(url).then(res => res.text());
+  },
+  addStyle(textContent) {
+    const style = Object.assign(document.createElement('style'), { textContent });
+    document.head.appendChild(style);
+  }
+};
+const { loadModule } = window['vue3-sfc-loader'];
+loadModule('./App.vue', options).then(App => {
+  Vue.createApp(App).mount('#app');
+});
+</script>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'package.json': {
+        content: JSON.stringify({
+          name: 'contentveda-ui-vue-demo',
+          private: true,
+          version: '0.0.0',
+          type: 'module',
+          scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
+          dependencies: {
+            vue: '^3.4.0',
+            '@contentveda/ui': 'latest'
+          },
+          devDependencies: {
+            '@vitejs/plugin-vue': '^5.0.0',
+            vite: '^5.0.0'
+          }
+        }, null, 2)
+      },
+      'vite.config.js': {
+        content: `import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+export default defineConfig({
+  plugins: [vue()]
+});`
+      },
+      'index.html': {
+        content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ContentVeda UI - Vue Demo</title>
+  </head>
+  <body style="background: #0f172a; color: #fff; padding: 20px;">
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>`
+      },
+      'src/main.js': {
+        content: `import { createApp } from 'vue';
+import App from './App.vue';
+import '@contentveda/ui/theme.css';
+
+createApp(App).mount('#app');`
+      },
+      'src/App.vue': { content: rawCode }
+    };
   } else if (framework === 'svelte') {
-    return { framework, unsupported: true };
+    htmlCode = `<!-- Live Svelte / Universal Demo -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
+
+<div style="padding: 20px;">
+  <p style="color:#94a3b8; font-size: 13px; margin-bottom:16px;">Svelte demo rendered via ContentVeda Universal Element:</p>
+  <cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}></cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}>
+</div>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'package.json': {
+        content: JSON.stringify({
+          name: 'contentveda-ui-svelte-demo',
+          private: true,
+          version: '0.0.0',
+          type: 'module',
+          scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
+          dependencies: { svelte: '^4.2.0', '@contentveda/ui': 'latest' },
+          devDependencies: { '@sveltejs/vite-plugin-svelte': '^3.0.0', vite: '^5.0.0' }
+        }, null, 2)
+      },
+      'vite.config.js': {
+        content: `import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+export default defineConfig({ plugins: [svelte()] });`
+      },
+      'index.html': {
+        content: `<!DOCTYPE html>
+<html>
+  <body style="background: #0f172a; color: #fff; padding: 20px;">
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>`
+      },
+      'src/main.js': {
+        content: `import App from './App.svelte';
+import '@contentveda/ui/theme.css';
+const app = new App({ target: document.getElementById('app') });
+export default app;`
+      },
+      'src/App.svelte': { content: rawCode }
+    };
+  } else if (framework === 'solid') {
+    htmlCode = `<!-- Live Solid / Universal Demo -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
+
+<div style="padding: 20px;">
+  <p style="color:#94a3b8; font-size: 13px; margin-bottom:16px;">Solid demo rendered via ContentVeda Universal Element:</p>
+  <cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}></cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}>
+</div>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'package.json': {
+        content: JSON.stringify({
+          name: 'contentveda-ui-solid-demo',
+          private: true,
+          version: '0.0.0',
+          type: 'module',
+          scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
+          dependencies: { 'solid-js': '^1.8.0', '@contentveda/ui': 'latest' },
+          devDependencies: { 'vite-plugin-solid': '^2.8.0', vite: '^5.0.0' }
+        }, null, 2)
+      },
+      'vite.config.js': {
+        content: `import { defineConfig } from 'vite';
+import solidPlugin from 'vite-plugin-solid';
+export default defineConfig({ plugins: [solidPlugin()] });`
+      },
+      'index.html': {
+        content: `<!DOCTYPE html>
+<html>
+  <body style="background: #0f172a; color: #fff; padding: 20px;">
+    <div id="root"></div>
+    <script type="module" src="/src/index.jsx"></script>
+  </body>
+</html>`
+      },
+      'src/index.jsx': {
+        content: `import { render } from 'solid-js/web';
+import App from './App';
+import '@contentveda/ui/theme.css';
+render(() => <App />, document.getElementById('root'));`
+      },
+      'src/App.jsx': { content: rawCode }
+    };
+  } else if (framework === 'angular') {
+    htmlCode = `<!-- Live Angular / Universal Demo -->
+<link rel="stylesheet" href="https://unpkg.com/@contentveda/ui@latest/src/styles/theme.css">
+${componentCssLink}
+<script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
+
+<div style="padding: 20px;">
+  <p style="color:#94a3b8; font-size: 13px; margin-bottom:16px;">Angular demo rendered via ContentVeda Universal Element:</p>
+  <cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}></cv-${(componentName || 'component').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}>
+</div>`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'sandbox.config.json': { content: { template: 'static' } },
+      'package.json': {
+        content: {
+          name: 'contentveda-ui-angular-demo',
+          version: '1.0.0',
+          main: 'index.html',
+          dependencies: {
+            '@angular/core': '^16.0.0',
+            '@angular/common': '^16.0.0',
+            '@contentveda/ui': 'latest'
+          }
+        }
+      },
+      'index.html': { content: htmlCode }
+    };
   } else {
     // Web Component
     htmlCode = `<!-- Load Theme -->
@@ -387,10 +680,17 @@ ${componentCssLink}
 <!-- Load Web Component -->
 <script type="module" src="https://unpkg.com/@contentveda/ui@latest/dist/webcomponent/dist/index.js"></script>
 
-${rawCode.replace(/<link rel="stylesheet" href="node_modules[^>]*>\n?/, '').replace(/<script type="module"[\s\S]*?<\/script>\n*/, '')}`; // strip local script and css tags
+${rawCode.replace(/<link rel="stylesheet" href="node_modules[^>]*>\n?/, '').replace(/<script type="module"[\s\S]*?<\/script>\n*/, '')}`;
+    jsCode = '';
+
+    sandboxFiles = {
+      'sandbox.config.json': { content: { template: 'static' } },
+      'package.json': { content: { name: 'contentveda-ui-demo', version: '1.0.0', main: 'index.html' } },
+      'index.html': { content: htmlCode }
+    };
   }
 
-  return { framework, htmlCode, jsCode };
+  return { framework, htmlCode, jsCode, sandboxFiles };
 }
 
 /* ── JSFiddle Integration ────────────────────────────────── */
@@ -401,10 +701,6 @@ function initJsfiddle() {
   btn.addEventListener('click', () => {
     const generated = generateLiveDemoCode();
     if (!generated) return;
-    if (generated.unsupported) {
-      alert("Svelte components require a compiler/bundler environment (like Vite or Rollup) to run. They cannot be executed natively in JSFiddle.\\n\\nPlease check out the Web Component or React tabs for live JSFiddle demos!");
-      return;
-    }
     const { htmlCode, jsCode } = generated;
 
     const form = document.createElement('form');
@@ -433,14 +729,7 @@ function initJsfiddle() {
   });
 }
 
-/* ── CodeSandbox Integration ────────────────────────────────
-   CodeSandbox's "define" API accepts a JSON POST (no lz-string compression
-   needed, unlike its older query-string form) and returns a sandbox_id to
-   redirect to. For both the React and Web Component tabs the whole demo is
-   already a single self-contained HTML file (same one JSFiddle's HTML pane
-   uses) — CodeSandbox's "static" template runs that directly with no
-   bundler needed, so we hand it the same generated file rather than
-   duplicating the transform logic a third time. */
+/* ── CodeSandbox Integration ──────────────────────────────── */
 function initCodesandbox() {
   const btn = document.getElementById('codesandbox-btn');
   if (!btn) return;
@@ -448,11 +737,8 @@ function initCodesandbox() {
   btn.addEventListener('click', async () => {
     const generated = generateLiveDemoCode();
     if (!generated) return;
-    if (generated.unsupported) {
-      alert("Svelte components require a compiler/bundler environment (like Vite or Rollup) to run. They cannot be executed natively in this static CodeSandbox template.\\n\\nPlease check out the Web Component or React tabs for live demos!");
-      return;
-    }
-    const { htmlCode } = generated;
+    const { sandboxFiles } = generated;
+    if (!sandboxFiles) return;
 
     btn.disabled = true;
     const originalLabel = btn.innerHTML;
@@ -462,23 +748,7 @@ function initCodesandbox() {
       const res = await fetch('https://codesandbox.io/api/v1/sandboxes/define?json=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: {
-            // Without this, CodeSandbox's newer "Nodebox" runtime treats any
-            // package.json as an npm project and looks for a `scripts.start`
-            // (or similar) dev-server command to run — since ours has none,
-            // it just sits there with an empty preview instead of erroring.
-            // sandbox.config.json#template:"static" forces the classic
-            // static-file server instead, which serves index.html directly.
-            'sandbox.config.json': {
-              content: { template: 'static' }
-            },
-            'package.json': {
-              content: { name: 'contentveda-ui-demo', version: '1.0.0', main: 'index.html' }
-            },
-            'index.html': { content: htmlCode }
-          }
-        })
+        body: JSON.stringify({ files: sandboxFiles })
       });
       const data = await res.json();
       if (data.sandbox_id) {

@@ -22,4 +22,4 @@ Feature: AlternatingSlider
       | config | {"columns":2,"autoStart":false}                                 |
     Then it should render without any page errors
     And the component text should include "Ocean Breeze"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations

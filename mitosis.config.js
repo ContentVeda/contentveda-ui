@@ -1,6 +1,6 @@
 module.exports = {
   files: 'src/components/**',
-  targets: ['react', 'svelte', 'webcomponent'],
+  targets: ['react', 'svelte', 'webcomponent', 'vue', 'solid', 'angular'],
   dest: 'dist',
   options: {
     react: {
@@ -11,6 +11,15 @@ module.exports = {
       typescript: true
     },
     webcomponent: {
+      typescript: true
+    },
+    vue: {
+      typescript: true
+    },
+    solid: {
+      typescript: true
+    },
+    angular: {
       typescript: true
     }
   }

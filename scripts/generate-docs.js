@@ -13,10 +13,9 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { resolveVersion, ROOT } = require('./resolve-version');
 
 // ── Paths ──────────────────────────────────────────────────────────────────
-const ROOT          = path.resolve(__dirname, '..');
 const SRC_DIR       = path.join(ROOT, 'src', 'components');
 const MANIFEST      = require('./docs-manifest.json');
 const PROPS_DB      = require('./docs-props.json');   // prop descriptions live here, NOT in .lite.tsx
@@ -26,45 +25,9 @@ const PROPS_DB      = require('./docs-props.json');   // prop descriptions live 
 const GITHUB_OWNER  = 'ContentVeda';
 const REPO          = 'contentveda-ui';
 const GITHUB_URL    = `https://github.com/${GITHUB_OWNER}/${REPO}`;
-const PACKAGE_JSON  = require('../package.json');
 
-// The released version, which is deliberately NOT package.json's.
-//
-// Releases are cut by semantic-release, and this project does not run
-// @semantic-release/git -- main's ruleset rejects the commit it would push back
-// (see release.config.js). So nothing ever writes the new version into
-// package.json, and the value committed here is frozen at whatever was last
-// recorded by hand. Building the docs from it would pin them to that version
-// forever: every beta would publish claiming the old number, and the first
-// major would build into docs/v0 while step 5 below deleted the tree it had
-// just written.
-//
-// The git tag is the real record -- semantic-release creates it on the released
-// commit through the GitHub API, which is the one part of the release the
-// branch ruleset does not block. So read that, and fall back only when it is
-// unavailable.
-//
-// Order matters: an explicit override wins, so a caller building docs for a
-// specific version does not have to fake a tag. Then the tag. Then
-// package.json, which covers a plain local `npm run docs` in a tree with no
-// tags fetched -- a shallow CI checkout without tags lands here too, which is
-// why the sync workflow in contentveda-docs fetches them.
-function resolveVersion() {
-  if (process.env.CV_DOCS_VERSION) return process.env.CV_DOCS_VERSION.replace(/^v/, '');
-
-  try {
-    const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0'], {
-      cwd: ROOT,
-      stdio: ['ignore', 'pipe', 'ignore']
-    }).toString().trim();
-    if (/^v?\d+\.\d+\.\d+/.test(tag)) return tag.replace(/^v/, '');
-  } catch {
-    // No git, no tags, or a shallow clone with none reachable. Fall through.
-  }
-
-  return PACKAGE_JSON.version;
-}
-
+// See resolve-version.js for why this is deliberately not package.json's
+// version, and why generate-allure-report.js must resolve it the same way.
 const VERSION       = resolveVersion();
 const MAJOR_VERSION = `v${VERSION.split('.')[0]}`; // e.g. "v1"
 // Shown in the sidebar version picker. Before the first release package.json
@@ -120,32 +83,42 @@ function copyDir(src, dest) {
 
 // ── Default Interactive Web Component Elements ─────────────────────────────
 const DEFAULT_WC_ELEMENTS = {
-  'banner': `<cv-banner id="interactive-preview" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' hotspots='[{"id":"hs-jacket","altText":"Quilted jacket","label":"Quilted jacket · $189","shape":"rect","coords":{"x":9,"y":20,"width":16,"height":30},"action":{"type":"link","url":"/products/quilted-jacket"},"showTooltip":true,"pulse":true},{"id":"hs-tote","altText":"Leather tote","label":"Leather tote · $240","shape":"oval","coords":{"x":44,"y":28,"width":13,"height":18},"action":{"type":"link","url":"/products/leather-tote"},"showTooltip":true,"pulse":true},{"id":"hs-boots","altText":"Chelsea boots","label":"Chelsea boots · $150","shape":"polygon","coords":{"x":66,"y":55,"width":22,"height":26},"points":[{"x":66,"y":60},{"x":80,"y":55},{"x":88,"y":72},{"x":70,"y":81}],"action":{"type":"deeplink","url":"/products/chelsea-boots","deeplink":"contentveda://products/chelsea-boots"},"showTooltip":true,"pulse":true}]' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
+  'banner': `<cv-banner id="interactive-preview" lazy-load="false" title="Experience Vibrant Colors &amp; Premium Innovation" subtitle="Explore our premium collection of responsive components. Zero dependencies, ultra lightweight." cta-text="Explore Collection" media='{"type":"image","url":"../assets/img/placeholder-01.svg"}' hotspots='[{"id":"hs-jacket","altText":"Quilted jacket","label":"Quilted jacket · $189","shape":"rect","coords":{"x":9,"y":20,"width":16,"height":30},"action":{"type":"link","url":"/products/quilted-jacket"},"showTooltip":true,"pulse":true},{"id":"hs-tote","altText":"Leather tote","label":"Leather tote · $240","shape":"oval","coords":{"x":44,"y":28,"width":13,"height":18},"action":{"type":"link","url":"/products/leather-tote"},"showTooltip":true,"pulse":true},{"id":"hs-boots","altText":"Chelsea boots","label":"Chelsea boots · $150","shape":"polygon","coords":{"x":66,"y":55,"width":22,"height":26},"points":[{"x":66,"y":60},{"x":80,"y":55},{"x":88,"y":72},{"x":70,"y":81}],"action":{"type":"deeplink","url":"/products/chelsea-boots","deeplink":"contentveda://products/chelsea-boots"},"showTooltip":true,"pulse":true}]' config='{"align":"center","padding":"lg","bgPosition":"center","hotspotMinTargetSize":24,"backgroundEffect":"particles"}'></cv-banner>`,
   
   'announcement-bar': `<cv-announcement-bar id="interactive-preview" message="🚀 Free shipping on orders over $75 — Shop the sale →" background-color="#245066" text-color="#ffffff" map-links='[{"url":"#"}]'></cv-announcement-bar>`,
   
-  'grid-banner': `<cv-grid-banner id="interactive-preview" columns="3" items='[{"id":"1","title":"Women\\\'s Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Men\\\'s Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></cv-grid-banner>`,
+  'grid-banner': `<cv-grid-banner id="interactive-preview" lazy-load="false" columns="3" items='[{"id":"1","title":"Womens Collection","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Mens Essentials","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Trending Footwear","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}}]'></cv-grid-banner>`,
   
-  'media-grid': `<cv-media-grid id="interactive-preview" primary-media='{"id":"p1","media":{"type":"image","url":"../assets/img/placeholder-05.svg"},"altText":"Primary Accent Banner"}' secondary-media='[{"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]'></cv-media-grid>`,
+  'media-grid': `<cv-media-grid id="interactive-preview" lazy-load="false" primary-media='{"id":"p1","media":{"type":"image","url":"../assets/img/placeholder-05.svg"},"altText":"Primary Accent Banner"}' secondary-media='[{"id":"s1","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"s2","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]'></cv-media-grid>`,
   
-  'row-scrollable': `<cv-row-scrollable id="interactive-preview" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>`,
+  'row-scrollable': `<cv-row-scrollable id="interactive-preview" lazy-load="false" title="Vibrant Modern Accents" items='[{"id":"1","title":"Neon Abstract","subtitle":"Vibrant Colors","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"2","title":"Cyberpunk Glow","subtitle":"Tech Vibes","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}},{"id":"3","title":"Pastel Gradient","subtitle":"Soft Warmth","media":{"type":"image","url":"../assets/img/placeholder-08.svg"}},{"id":"4","title":"Ocean Waves","subtitle":"Cool Tones","media":{"type":"image","url":"../assets/img/placeholder-09.svg"}}]'></cv-row-scrollable>`,
   
-  'sliding-banner': `<cv-sliding-banner id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-13.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-14.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-01.svg"}}]' config='{"autoStart":true,"rotateAgain":true,"showDots":true,"showArrows":true,"animationEffect":"fade","backgroundEffect":"waves"}'></cv-sliding-banner>`,
+  'sliding-banner': `<cv-sliding-banner id="interactive-preview" lazy-load="false" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-10.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-11.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-12.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-13.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-14.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-01.svg"}}]' config='{"autoStart":true,"rotateAgain":true,"showDots":true,"showArrows":true,"animationEffect":"fade","backgroundEffect":"waves"}'></cv-sliding-banner>`,
   
-  'alternating-slider': `<cv-alternating-slider id="interactive-preview" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>`,
+  'alternating-slider': `<cv-alternating-slider id="interactive-preview" lazy-load="false" items='[{"id":"1","title":"Slide 1: Summer Collection","subtitle":"Refresh your look with light layers.","media":{"type":"image","url":"../assets/img/placeholder-02.svg"}},{"id":"2","title":"Slide 2: Minimalist Living","subtitle":"Design your space for peace.","media":{"type":"image","url":"../assets/img/placeholder-03.svg"}},{"id":"3","title":"Slide 3: Urban Explorer","subtitle":"Ready for any adventure.","media":{"type":"image","url":"../assets/img/placeholder-04.svg"}},{"id":"4","title":"Slide 4: Modern Workspace","subtitle":"Tools to elevate your focus.","media":{"type":"image","url":"../assets/img/placeholder-05.svg"}},{"id":"5","title":"Slide 5: Weekend Escape","subtitle":"Travel style curated for you.","media":{"type":"image","url":"../assets/img/placeholder-06.svg"}},{"id":"6","title":"Slide 6: Evening Lounge","subtitle":"Unwind in comfort.","media":{"type":"image","url":"../assets/img/placeholder-07.svg"}}]' config='{"columns":2,"autoStart":true,"showDots":true}'></cv-alternating-slider>`,
   
-  'timer-widget': `<cv-timer-widget id="interactive-preview" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></cv-timer-widget>`,
+  'timer-widget': `<cv-timer-widget id="interactive-preview" lazy-load="false" title="Special Sale Ends In:" target-date="2027-12-31T23:59:59Z" variant="dark" background-image-url="../assets/images/summer_sale.png" background-position="center" overlay="rgba(0, 0, 0, 0.45)" background-effect="rain" expired-text="This offer has expired" width="auto" height="auto"></cv-timer-widget>`,
   
-  'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" html-content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
+  'wysiwyg-renderer': `<cv-wysiwyg-renderer id="interactive-preview" lazy-load="false" content="<h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class='cv-social-embed' data-platform='youtube' data-url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'></div><h3>Social X / Twitter Post</h3><div class='cv-social-embed' data-platform='x' data-url='https://x.com/NASA/status/1684947936109961216'></div><p>All scripts and scoped layouts load dynamically and securely.</p>"></cv-wysiwyg-renderer>`,
   
-  'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
+  'rich-text-editor': `<cv-rich-text-editor id="interactive-preview" initial-content="<h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul>" config='{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}'></cv-rich-text-editor>`
 };
 
 // ── Site header (shared across every page) ─────────────────────────────────
 // A hand-written copy of the docs site's DocsNav: same 60px sticky bar, same
 // lockup (mark + live-text wordmark, never the outlined lettering from the
-// artwork), same link set, same Sign in button. Landing on /ui/ from the docs
-// site should not feel like landing on a different site.
+// artwork), same link set. Landing on /ui/ from the docs site should not feel
+// like landing on a different site.
+//
+// No Sign in button, deliberately, even though this used to have one to match
+// DocsNav. DocsNav's own has since been removed — this is a public,
+// unauthenticated component-library docs site, and "Sign in" pointed at
+// app.contentveda.com, the CMS admin console: a different, private product
+// most readers here have no account on. The admin console's own static
+// release dropped the same button for the same reason (see PublicNavbar —
+// "rendering a Sign In button that 404s [for most visitors] is worse than
+// rendering nothing"). Keeping it here after DocsNav dropped it would have
+// been the one place left where the two sites disagreed.
 //
 // Links are absolute rather than root-relative. The original reason was a
 // GitHub Pages mirror at contentveda.github.io, where /cms/api/ resolved to
@@ -158,7 +131,9 @@ const DEFAULT_WC_ELEMENTS = {
 // carry long prop tables and code samples, which is exactly the reading a
 // reader may want larger.
 const SITE_BASE = CANONICAL_BASE.replace(/\/ui\/?$/, '');
-const APP_URL   = 'https://app.contentveda.com';
+// The marketing site, which is a different host from SITE_BASE (the docs one).
+// The brand lockup targets this, matching DocsNav's own SITE_URL.
+const MAIN_SITE_URL = 'https://contentveda.com';
 
 // Theme and text size have to be on the element before the first paint, or the
 // page renders light and snaps to dark (and at the default size and jumps).
@@ -196,7 +171,15 @@ function buildHeader(prefix, actionHtml) {
   return `
     <header class="cv-nav">
       <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
-      <a class="cv-brand" href="${prefix}index.html">
+      <!--
+        Points at the marketing site, not at ${prefix}index.html. This tree is
+        served under /ui/, and the docs site's own brand link leaves for
+        contentveda.com the same way — a lockup that only ever returns you to
+        the page you are already on gives a reader no way back out of /ui/.
+        The sidebar's "Home" link is what returns you to this tree's landing
+        page.
+      -->
+      <a class="cv-brand" href="${MAIN_SITE_URL}" title="ContentVeda (contentveda.com)">
         ${BRAND_MARK}
         <span class="cv-brand-word">Content<b>Veda</b></span>
         <span class="cv-brand-sub">UI</span>
@@ -211,9 +194,15 @@ function buildHeader(prefix, actionHtml) {
           <button type="button" id="font-dec" aria-label="Decrease text size" title="Decrease text size">A−</button>
           <button type="button" id="font-inc" aria-label="Increase text size" title="Increase text size">A+</button>
         </div>
-        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+        <!--
+          Same SVG moon this repaints to on load if the resolved theme is
+          light (see docs.js's label()) — an inert starting point rather than
+          the ☀/☾ glyphs this rendered before, which came from the visitor's
+          OS font and didn't match the sun/moon icon pair every other button
+          on this bar, and the admin console's own toggle, already use.
+        -->
+        <button type="button" class="cv-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
         ${actionHtml}
-        <a class="cv-signin" href="${APP_URL}">Sign in</a>
       </div>
     </header>`;
 }
@@ -241,13 +230,44 @@ function buildSidebar(activeSlug, isLandingPage) {
         <div class="sidebar-section-label" style="margin-top:1rem">Components</div>
         ${links}
         <div class="sidebar-section-label" style="margin-top:1rem">Resources</div>
+        <!--
+          The cross-product links (Content API, GraphQL, Components, Main site)
+          are NOT repeated here. docs.js injects them at the top of this nav as
+          .sidebar-mobile-main-nav, because that row is what replaces .cv-links
+          when the header drops them on mobile. Adding them here as well would
+          list every one of them twice in the same drawer.
+        -->
         <a href="${GITHUB_URL}" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">⭐</span> GitHub</a>
         <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">📦</span> npm</a>
         <a href="${GITHUB_URL}/tree/main/examples" target="_blank" rel="noopener" class="sidebar-link"><span class="sidebar-link-icon">🧩</span> Example Apps</a>
-        <a href="${prefix}dist/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">📁</span> Compiled Dist</a>
+        <!--
+          "Compiled Dist" used to link to ${prefix}dist/ — a bare directory,
+          not a page. That depends on the host serving a directory listing for
+          it, which none of this site's hosts do (Hostinger, or any plain
+          static server, disables that by default), so the link went nowhere
+          useful. The actual compiled output people want is already reachable
+          per-component: the Web Component tab's own <script src> and the npm
+          link above both point at real, working files.
+        -->
         <a href="${prefix}allure-report/" target="_blank" class="sidebar-link"><span class="sidebar-link-icon">✅</span> Test Report</a>
       </nav>
     </aside>`;
+}
+
+// ── Footer HTML (shared across every page) ──────────────────────────────────
+function buildFooter(prefix) {
+  return `
+      <footer class="docs-footer">
+        <div class="docs-footer-copy">
+          <span>© ${new Date().getFullYear()} ContentVeda. All rights reserved.</span>
+        </div>
+        <nav class="docs-footer-links">
+          <a href="${SITE_BASE}/cms/api/">Content API</a>
+          <a href="${SITE_BASE}/cms/graphql/">GraphQL</a>
+          <a href="${GITHUB_URL}" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@contentveda/ui" target="_blank" rel="noopener">npm</a>
+        </nav>
+      </footer>`;
 }
 
 // ── Prop lookup (from docs-props.json) ────────────────────────────────────
@@ -327,34 +347,36 @@ function buildPropsTable(props) {
 
 // ── Build Interactive Controls Form ────────────────────────────────────────
 function buildControlsForm(component) {
+  if (component.slug === 'rich-text-editor') {
+    return `
+      <div class="control-group">
+        <label class="control-label">Initial HTML Content</label>
+        <textarea name="initialContent" class="control-input" style="height:100px;"><h2>Rich Text Editor Toolbar Redesign</h2><p>Modern two-row editorial layout with typography selectors, direct media inserts, table controls, dynamic CSS chips, and AI assistant.</p><p>Try testing the features in the toolbar above:</p><ul><li>Typography selectors: Inter, Roboto, Outfit &amp; font size scale</li><li>Direct media: Images, Video, Social embeds, and Buttons</li><li>Table controls: Contextual row &amp; column operations</li><li>Dynamic CSS chips and integrated AI assistant</li></ul></textarea>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Available Classes (JSON Array)</label>
+        <textarea name="availableClasses" class="control-input json-textarea" style="height:60px;">["text-pink-500", "font-bold", "tracking-wider"]</textarea>
+        <span class="json-error-msg">❌ Invalid JSON Array</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Toolbar Config (JSON Object)</label>
+        <textarea name="config" class="control-input json-textarea" style="height:120px;">{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}</textarea>
+        <span class="json-error-msg">❌ Invalid JSON Object</span>
+      </div>
+    `;
+  }
+  if (component.slug === 'wysiwyg-renderer') {
+    return `
+      <div class="control-group">
+        <label class="control-label">content <span class="control-type-badge">string</span></label>
+        <textarea name="content" class="control-input" style="height:140px;"><h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class="cv-social-embed" data-platform="youtube" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"></div><h3>Social X / Twitter Post</h3><div class="cv-social-embed" data-platform="x" data-url="https://x.com/NASA/status/1684947936109961216"></div><p>All scripts and scoped layouts load dynamically and securely.</p></textarea>
+      </div>
+    `;
+  }
+
   const api = component.api || [];
   if (api.length === 0) {
-    if (component.slug === 'rich-text-editor') {
-      return `
-        <div class="control-group">
-          <label class="control-label">Initial HTML Content</label>
-          <textarea name="initialContent" class="control-input" style="height:80px;"><p>Welcome to <strong>ContentVeda Editor Playground</strong>! Configure the toolbar options on the right in real-time to customize my controls.</p></textarea>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Available Classes (JSON Array)</label>
-          <textarea name="availableClasses" class="control-input json-textarea" style="height:60px;">["text-pink-500", "font-bold", "tracking-wider"]</textarea>
-          <span class="json-error-msg">❌ Invalid JSON Array</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Toolbar Config (JSON Object)</label>
-          <textarea name="config" class="control-input json-textarea" style="height:120px;">{"toolbar":["fullscreen","source","bold","italic","underline","strikeThrough","code","quote","clear","headings","foreColor","backColor","justifyLeft","justifyCenter","justifyRight","image","link","table","unorderedList","orderedList","horizontalRule","video","social","insertButton","addWidget","save","classInput"]}</textarea>
-          <span class="json-error-msg">❌ Invalid JSON Object</span>
-        </div>
-      `;
-    }
-    if (component.slug === 'wysiwyg-renderer') {
-      return `
-        <div class="control-group">
-          <label class="control-label">content <span class="control-type-badge">string</span></label>
-          <textarea name="content" class="control-input" style="height:140px;"><h2>Premium Editorial Layout</h2><p>This component safely renders HTML content and processes external media embeds in real-time:</p><h3>YouTube Media Integration</h3><div class="cv-social-embed" data-platform="youtube" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"></div><h3>Social X / Twitter Post</h3><div class="cv-social-embed" data-platform="x" data-url="https://x.com/NASA/status/1684947936109961216"></div><p>All scripts and scoped layouts load dynamically and securely.</p></textarea>
-        </div>
-      `;
-    }
+    return '';
   }
 
   const filteredApi = api.filter(item => {
@@ -493,7 +515,20 @@ function buildControlsForm(component) {
         <span class="json-error-msg">❌ Invalid JSON Formatting</span>
       `;
     } else {
-      const defaultText = defaultValue && defaultValue !== 'undefined' ? defaultValue.replace(/"/g, '') : '';
+      let defaultText = '';
+      if (propName === 'message' && component.slug === 'announcement-bar') {
+        defaultText = '🚀 Free shipping on orders over $75 — Shop the sale →';
+      } else if (propName === 'title' && component.slug === 'banner') {
+        defaultText = 'Experience Vibrant Colors & Premium Innovation';
+      } else if (propName === 'subtitle' && component.slug === 'banner') {
+        defaultText = 'Explore our premium collection of responsive components. Zero dependencies, ultra lightweight.';
+      } else if (propName === 'ctaText' && component.slug === 'banner') {
+        defaultText = 'Explore Collection';
+      } else if (propName === 'ctaLink' && component.slug === 'banner') {
+        defaultText = '/shop';
+      } else if (defaultValue && defaultValue !== 'undefined') {
+        defaultText = defaultValue.replace(/"/g, '');
+      }
       inputHtml = `
         <input type="text" name="${attrName}" value="${defaultText}" class="control-input">
       `;
@@ -513,7 +548,9 @@ function buildControlsForm(component) {
 function buildPage(component) {
   const { name, slug, icon, examples, notes, previewLabel, previewCss, extra } = component;
 
-  const pascalName = name.replace(/\s+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
+  const pascalName = (slug === 'wysiwyg-renderer' || name === 'WYSIWYG Renderer')
+    ? 'WysiwygRenderer'
+    : name.replace(/\s+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
   const tagName = `cv-${slug}`;
   
   const props = getProps(name);
@@ -599,9 +636,19 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
 
 
       <!-- Code Tabs -->
-      <h2 class="section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+      <h2 class="section-heading" style="margin-bottom: 1rem;">
         Usage Code Generator
-        <span style="display:flex; gap:8px;">
+      </h2>
+      <div class="tab-group">
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="react">React</button>
+          <button class="tab-btn" data-tab="vue">Vue</button>
+          <button class="tab-btn" data-tab="svelte">Svelte</button>
+          <button class="tab-btn" data-tab="solid">Solid</button>
+          <button class="tab-btn" data-tab="angular">Angular</button>
+          <button class="tab-btn" data-tab="wc">Web Component</button>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px;">
           <button class="jsfiddle-btn" id="jsfiddle-btn" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
             Play in JSFiddle
@@ -610,19 +657,21 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             Open in CodeSandbox
           </button>
-        </span>
-      </h2>
-      <div class="tab-group">
-        <div class="tabs-bar">
-          <button class="tab-btn active" data-tab="react">React</button>
-          <button class="tab-btn" data-tab="svelte">Svelte</button>
-          <button class="tab-btn" data-tab="wc">Web Component</button>
         </div>
         <div class="tab-panel active" data-panel="react">
           ${codeBlock(examples.react, 'tsx')}
         </div>
+        <div class="tab-panel" data-panel="vue">
+          ${codeBlock(examples.vue || '', 'html')}
+        </div>
         <div class="tab-panel" data-panel="svelte">
           ${codeBlock(examples.svelte, 'svelte')}
+        </div>
+        <div class="tab-panel" data-panel="solid">
+          ${codeBlock(examples.solid || '', 'tsx')}
+        </div>
+        <div class="tab-panel" data-panel="angular">
+          ${codeBlock(examples.angular || '', 'ts')}
         </div>
         <div class="tab-panel" data-panel="wc">
           ${codeBlock(examples.wc, 'html')}
@@ -635,6 +684,7 @@ ${buildHeader('../', `<a href="${GITHUB_URL}/blob/main/src/components/${pascalNa
 
       <!-- Notes -->
       ${buildNotes(notes)}
+      ${buildFooter('../')}
     </div>
   </main>
 </div>
@@ -744,32 +794,52 @@ document.addEventListener('DOMContentLoaded', () => {
       if (name.startsWith('config.')) return;
 
       if (input.type === 'checkbox') {
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
         if (input.checked) {
-          preview.setAttribute(name, 'true');
-          directProps[camelCase(name)] = true;
+          preview.setAttribute(kebab, 'true');
+          directProps[camel] = true;
         } else {
+          preview.removeAttribute(kebab);
           preview.removeAttribute(name);
-          directProps[camelCase(name)] = false;
+          directProps[camel] = false;
         }
       } else if (input.tagName === 'TEXTAREA' && input.classList.contains('json-textarea')) {
         try {
           const raw = input.value.trim();
+          const camel = camelCase(name);
+          const kebab = kebabCase(name);
           if (raw) {
             const parsed = JSON.parse(raw);
             input.classList.remove('invalid');
-            // Assign as property and setAttribute
-            preview[camelCase(name)] = parsed;
-            preview.setAttribute(name, raw);
+            preview[camel] = parsed;
+            preview.setAttribute(kebab, raw);
+            directProps[camel] = parsed;
           } else {
+            preview.removeAttribute(kebab);
             preview.removeAttribute(name);
+            delete directProps[camel];
           }
         } catch (e) {
           input.classList.add('invalid');
         }
       } else {
-        preview.setAttribute(name, input.value);
+        const val = (input.type === 'range' || input.type === 'number') ? Number(input.value) : input.value;
+        const camel = camelCase(name);
+        const kebab = kebabCase(name);
+        preview.setAttribute(kebab, String(val));
+        directProps[camel] = val;
       }
     });
+
+    if (preview.props) {
+      Object.assign(preview.props, directProps);
+    }
+    if (typeof preview.forceUpdate === 'function') {
+      preview.forceUpdate(directProps);
+    } else if (typeof preview.update === 'function') {
+      preview.update();
+    }
 
     // Update code blocks
     updateCodeBlocks();
@@ -792,25 +862,55 @@ document.addEventListener('DOMContentLoaded', () => {
       attrs.push({ name: a.name, value: a.value });
     }
 
-    // React prop string generator
+    const pascalName = "${pascalName}";
+    const wcTagName = "${tagName}";
+    const componentSlug = "${slug}";
+
+    function escapePropValue(v) {
+      return v.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
+    }
+
+    // React & Solid prop string generator
     const reactProps = attrs.map(a => {
       const camelName = camelCase(a.name);
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return \`\${camelName}={\${a.value}}\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
-
-    const pascalName = "${pascalName}";
-    const wcTagName = "${tagName}";
 
     const reactCode = \`import \${pascalName} from '@contentveda/ui/react/\${pascalName}';
 import '@contentveda/ui/theme.css';
 
-<\${pascalName}
-  \${reactProps.join('\\n  ')}
-/>\`;
+export default function Example() {
+  return (
+    <\${pascalName}
+      \${reactProps.join('\\n      ')}
+    />
+  );
+}\`;
+
+    // Vue prop string generator
+    const vueProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return \`:\${camelName}="true"\`;
+      if (isJson) return \`:\${camelName}='\${a.value}'\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
+    });
+
+    const vueCode = \`<\` + \`script setup>
+import \${pascalName} from '@contentveda/ui/vue/\${pascalName}.vue';
+import '@contentveda/ui/theme.css';
+</\` + \`script>
+
+<template>
+  <\${pascalName}
+    \${vueProps.join('\\n    ')}
+  />
+</template>\`;
 
     const svelteProps = attrs.map(a => {
       const camelName = camelCase(a.name);
@@ -818,23 +918,59 @@ import '@contentveda/ui/theme.css';
       const isBoolean = a.value === 'true';
       if (isBoolean) return camelName;
       if (isJson) return \`\${camelName}={\${a.value}}\`;
-      return \`\${camelName}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
     });
 
-    const svelteCode = \`<script lang="ts">
+    const svelteCode = \`<\` + \`script lang="ts">
   import \${pascalName} from '@contentveda/ui/svelte/\${pascalName}.svelte';
-<\\/script>
+</\` + \`script>
 
 <\${pascalName}
   \${svelteProps.join('\\n  ')}
 />\`;
+
+    const solidCode = \`import \${pascalName} from '@contentveda/ui/solid/\${pascalName}';
+import '@contentveda/ui/theme.css';
+
+export default function Example() {
+  return (
+    <\${pascalName}
+      \${reactProps.join('\\n      ')}
+    />
+  );
+}\`;
+
+    // Angular prop string generator
+    const angularProps = attrs.map(a => {
+      const camelName = camelCase(a.name);
+      const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
+      const isBoolean = a.value === 'true';
+      if (isBoolean) return \`[\${camelName}]="true"\`;
+      if (isJson) return \`[\${camelName}]='\${a.value}'\`;
+      return \`\${camelName}="\${escapePropValue(a.value)}"\`;
+    });
+
+    const angularCode = \`import { Component } from '@angular/core';
+import { \${pascalName}Module } from '@contentveda/ui/angular/\${pascalName}';
+
+@Component({
+  selector: 'app-example',
+  standalone: true,
+  imports: [\${pascalName}Module],
+  template: \\\`
+    <\${componentSlug}
+      \${angularProps.join('\\n      ')}
+    ></\${componentSlug}>
+  \\\`,
+})
+export class ExampleComponent {}\`;
 
     const wcAttrs = attrs.map(a => {
       const isJson = a.value.trim().startsWith('{') || a.value.trim().startsWith('[');
       if (isJson) {
         return \`\${a.name}='\${a.value}'\`;
       }
-      return \`\${a.name}="\${a.value.replace(/"/g, '\\\\"')}"\`;
+      return \`\${a.name}="\${escapePropValue(a.value)}"\`;
     });
 
     const wcCode = \`<\` + \`script type="module" src="node_modules/@contentveda/ui/webcomponents/\${pascalName}.js"></\` + \`script>
@@ -847,8 +983,17 @@ import '@contentveda/ui/theme.css';
     const reactPanel = document.querySelector('[data-panel="react"] pre code');
     if (reactPanel) reactPanel.innerHTML = clientHighlight(reactCode, 'tsx');
 
+    const vuePanel = document.querySelector('[data-panel="vue"] pre code');
+    if (vuePanel) vuePanel.innerHTML = clientHighlight(vueCode, 'html');
+
     const sveltePanel = document.querySelector('[data-panel="svelte"] pre code');
     if (sveltePanel) sveltePanel.innerHTML = clientHighlight(svelteCode, 'svelte');
+
+    const solidPanel = document.querySelector('[data-panel="solid"] pre code');
+    if (solidPanel) solidPanel.innerHTML = clientHighlight(solidCode, 'tsx');
+
+    const angularPanel = document.querySelector('[data-panel="angular"] pre code');
+    if (angularPanel) angularPanel.innerHTML = clientHighlight(angularCode, 'ts');
 
     const wcPanel = document.querySelector('[data-panel="wc"] pre code');
     if (wcPanel) wcPanel.innerHTML = clientHighlight(wcCode, 'html');
@@ -879,7 +1024,10 @@ function buildLandingPage() {
           </div>
           <div class="card-footer">
             <span class="card-tag tag-react">React</span>
+            <span class="card-tag tag-vue">Vue</span>
             <span class="card-tag tag-svelte">Svelte</span>
+            <span class="card-tag tag-solid">Solid</span>
+            <span class="card-tag tag-angular">Angular</span>
             <span class="card-tag tag-wc">WC</span>
           </div>
         </a>`).join('\n');
@@ -898,7 +1046,7 @@ function buildLandingPage() {
       window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
     }
   </script>
-  <meta name="description" content="A universal, framework-agnostic UI component library. Write once in Mitosis and compile to React, Svelte, and Web Components." />
+  <meta name="description" content="A universal, framework-agnostic UI component library. Write once in Mitosis and compile to React, Vue, Svelte, Solid, Angular, and Web Components." />
   ${FAVICON_TAGS('')}
   ${PREFERENCES_SCRIPT}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -947,7 +1095,7 @@ function buildLandingPage() {
         </h1>
         <p class="hero-subtitle">
           A universal, premium component library to build stunning web experiences
-          natively in React, Svelte, and Web Components.
+          natively in React, Vue, Svelte, Solid, Angular, and Web Components.
         </p>
         <div class="hero-actions">
           <a href="components/banner.html" class="btn-primary">
@@ -959,7 +1107,10 @@ function buildLandingPage() {
         </div>
         <div class="feature-pills">
           <span class="feature-pill"><span class="dot dot-react"></span> React / Next.js</span>
+          <span class="feature-pill"><span class="dot dot-vue"></span> Vue / Nuxt</span>
           <span class="feature-pill"><span class="dot dot-svelte"></span> Svelte / SvelteKit</span>
+          <span class="feature-pill"><span class="dot dot-solid"></span> SolidJS</span>
+          <span class="feature-pill"><span class="dot dot-angular"></span> Angular</span>
           <span class="feature-pill"><span class="dot dot-wc"></span> Web Components</span>
           <span class="feature-pill"><span class="dot dot-ts"></span> TypeScript</span>
           <span class="feature-pill"><span class="dot dot-css"></span> CSS Variables</span>
@@ -972,22 +1123,40 @@ function buildLandingPage() {
         </div>
 
         <!-- Runnable example apps, one per compiled target -->
-        <div class="example-apps" style="max-width:640px;margin:0 auto 3rem;">
+        <div class="example-apps" style="max-width:680px;margin:0 auto 3rem;">
           <p style="font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);margin:0 0 0.75rem;">
             Runnable example apps
           </p>
           <div style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
             <a href="${GITHUB_URL}/tree/main/examples/react-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              <span class="dot dot-react"></span> React demo
+              <span class="dot dot-react"></span> React
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/next-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-react"></span> Next.js
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/vue-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-vue"></span> Vue 3
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/nuxt-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-vue"></span> Nuxt 3
             </a>
             <a href="${GITHUB_URL}/tree/main/examples/svelte-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              <span class="dot dot-svelte"></span> Svelte demo
+              <span class="dot dot-svelte"></span> Svelte
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/sveltekit-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-svelte"></span> SvelteKit
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/solid-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-solid"></span> SolidJS
+            </a>
+            <a href="${GITHUB_URL}/tree/main/examples/angular-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
+              <span class="dot dot-angular"></span> Angular
             </a>
             <a href="${GITHUB_URL}/tree/main/examples/wc-demo" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              <span class="dot dot-wc"></span> Web Component demo
+              <span class="dot dot-wc"></span> Web Component
             </a>
             <a href="${GITHUB_URL}/tree/main/examples" target="_blank" rel="noopener" class="feature-pill" style="text-decoration:none">
-              📁 All examples
+              📁 All 9 examples
             </a>
           </div>
         </div>
@@ -1000,7 +1169,7 @@ function buildLandingPage() {
           <div class="stat-label">Components</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value">3</div>
+          <div class="stat-value">6</div>
           <div class="stat-label">Frameworks</div>
         </div>
         <div class="stat-item">
@@ -1020,6 +1189,7 @@ function buildLandingPage() {
       <div class="component-grid">
         ${cards}
       </div>
+      ${buildFooter('')}
     </main>
   </div>
 

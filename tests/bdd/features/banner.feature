@@ -13,7 +13,7 @@ Feature: Banner
     And the component text should include "Summer Collection 2026"
     And the component text should include "Discover the new season"
     And the component text should include "Shop Now"
-    And the component should have no serious accessibility violations
+    And the component should have no accessibility violations
 
   Scenario: Renders an image background
     Given I mount the "cv-banner" component as "Banner" with:

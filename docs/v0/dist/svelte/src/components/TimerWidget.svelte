@@ -20,8 +20,6 @@
 </script>
 
 <script lang="ts">
-  let animContext = { animationFrameId: null, resizeHandler: null };
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -88,7 +86,7 @@
     return !!backgroundImageUrl;
   };
   $: widthValue = () => {
-    return width || "auto";
+    return width || "100%";
   };
   $: heightMode = () => {
     return height || "auto";
@@ -120,6 +118,14 @@
   };
   let timerId = null;
   let isExpired = false;
+  let animContext = {
+    animationFrameId: null,
+    resizeHandler: null,
+    resizeObserver: null,
+  };
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
 
   onMount(() => {
     if (lazyLoad === false) {
@@ -201,7 +207,8 @@
       style={stringifyStyles({
         background: overlay || "var(--cv-color-scrim, rgba(0, 0, 0, 0.45))",
       })}
-      class="cv-timer-overlay"></div>
+      class="cv-timer-overlay"
+    />
   {/if}
   {#if backgroundEffectClass() !== "none"}
     <canvas
@@ -216,7 +223,8 @@
       })}
       class="cv-timer-bg-effect"
       aria-hidden="true"
-      bind:this={canvasRef}></canvas>
+      bind:this={canvasRef}
+    />
   {/if}
   <div
     style={stringifyStyles({

@@ -41,7 +41,8 @@ if (fs.existsSync(srcDir)) {
       observerBox: '{ disconnect: null, row: null }',
       animContext: '{ animationFrameId: null, resizeHandler: null }',
       bgEffectContext: '{ animationFrameId: null, resizeHandler: null }',
-      latestNext: '{ fn: () => {} }'
+      latestNext: '{ fn: () => {} }',
+      savedRangeRef: 'null'
     };
     for (const [refName, defaultValue] of Object.entries(genericRefDefaults)) {
       const usesRef = new RegExp(`\\b${refName}\\b`).test(content);

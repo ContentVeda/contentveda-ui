@@ -16,11 +16,18 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { resolveVersion, ROOT } = require('./resolve-version');
 
-const ROOT = path.resolve(__dirname, '..');
 const RESULTS_DIR = path.join(ROOT, 'tests', 'bdd', '.allure-results');
-const PACKAGE_JSON = require('../package.json');
-const MAJOR_VERSION = `v${PACKAGE_JSON.version.split('.')[0]}`;
+// Resolved the same way generate-docs.js resolves it (git tag, not
+// package.json — see resolve-version.js) so the report always lands in the
+// same docs/vN directory the rest of the docs build to. Reading
+// package.json's version directly here used to be able to disagree with
+// that the moment a major version shipped, since package.json's version
+// field is frozen (this project doesn't run @semantic-release/git) while
+// generate-docs.js reads the real released version from the git tag.
+const VERSION = resolveVersion();
+const MAJOR_VERSION = `v${VERSION.split('.')[0]}`;
 const REPORT_DIR = path.join(ROOT, 'docs', MAJOR_VERSION, 'allure-report');
 
 if (!fs.existsSync(RESULTS_DIR) || fs.readdirSync(RESULTS_DIR).length === 0) {

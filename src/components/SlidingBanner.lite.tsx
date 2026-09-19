@@ -57,23 +57,6 @@ export default function SlidingBanner(props: SlidingBannerProps) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const animContext = useRef({
-    intervalId: null as any,
-    dimResizeHandler: null as any
-  });
-  const bgEffectContext = useRef<BackgroundEffectContext>({ animationFrameId: null, resizeHandler: null, resizeObserver: null });
-  const observerBox = useRef<{ disconnect: (() => void) | null }>({ disconnect: null });
-  // Autoplay's setInterval is only ever created once (on mount / on becoming
-  // visible / on mouse-leave) and left running for its full delay — it is
-  // never torn down and recreated on every slide change. Compiled targets
-  // (React/Svelte) turn `state.currentIndex` into per-render local state, so
-  // a naive `setInterval(() => state.next(), ...)` set up once would call a
-  // `next` permanently frozen on the render it was created in. Instead the
-  // interval always calls through this ref, which is repointed at the
-  // latest `next` after every render — so the tick is always fresh without
-  // ever needing to reset the timer (and without the render churn that
-  // restarting on every click would add).
-  const latestNext = useRef<{ fn: () => void }>({ fn: () => {} });
 
   const state = useStore({
     currentIndex: 0,
@@ -141,33 +124,37 @@ export default function SlidingBanner(props: SlidingBannerProps) {
       }
     },
     startAutoPlay() {
-      if (animContext.intervalId) return;
+      if (state.animContext.intervalId) return;
       if (props.config?.autoStart !== false && props.items?.length > 1) {
-        animContext.intervalId = setInterval(() => {
-          latestNext.fn();
+        state.animContext.intervalId = setInterval(() => {
+          state.latestNext.fn();
         }, props.config?.delayMs || 5000);
       }
     },
     stopAutoPlay() {
-      if (animContext.intervalId) {
-        clearInterval(animContext.intervalId);
-        animContext.intervalId = null;
+      if (state.animContext.intervalId) {
+        clearInterval(state.animContext.intervalId);
+        state.animContext.intervalId = null;
       }
     },
     setupDimensions() {
       if (rootRef) {
         rootRef.style.setProperty('--slider-half-width', `${rootRef.offsetWidth / 2}px`);
       }
-    }
+    },
+    animContext: { intervalId: null as any, dimResizeHandler: null as any },
+    bgEffectContext: { animationFrameId: null, resizeHandler: null, resizeObserver: null } as BackgroundEffectContext,
+    observerBox: { disconnect: null as (() => void) | null },
+    latestNext: { fn: () => {} }
   });
 
   function mountHeavyContent() {
     state.startAutoPlay();
     state.setupDimensions();
-    animContext.dimResizeHandler = () => state.setupDimensions();
-    window.addEventListener('resize', animContext.dimResizeHandler);
+    state.animContext.dimResizeHandler = () => state.setupDimensions();
+    window.addEventListener('resize', state.animContext.dimResizeHandler);
     if (canvasRef) {
-      state.plugin.start(canvasRef, state.backgroundClass as BackgroundEffectName, bgEffectContext);
+      state.plugin.start(canvasRef, state.backgroundClass as BackgroundEffectName, state.bgEffectContext);
     }
   }
 
@@ -178,7 +165,7 @@ export default function SlidingBanner(props: SlidingBannerProps) {
       return;
     }
     if (rootRef) {
-      observerBox.disconnect = observeLazyMount(
+      state.observerBox.disconnect = observeLazyMount(
         rootRef,
         () => { state.isVisible = true; mountHeavyContent(); },
         props.lazyThreshold ?? 0.1,
@@ -190,7 +177,7 @@ export default function SlidingBanner(props: SlidingBannerProps) {
   // Keep the autoplay ref pointed at a `next` that always reads this
   // render's fresh `state.currentIndex`/props. Runs after every render.
   onUpdate(() => {
-    latestNext.fn = state.next;
+    state.latestNext.fn = state.next;
   });
 
   // After a wraparound's instant, transition-less jump has painted, hand
@@ -213,26 +200,26 @@ export default function SlidingBanner(props: SlidingBannerProps) {
   // stuttering/never settling.
   onUpdate(() => {
     if (state.isVisible && canvasRef) {
-      state.plugin.start(canvasRef, state.backgroundClass as BackgroundEffectName, bgEffectContext);
+      state.plugin.start(canvasRef, state.backgroundClass as BackgroundEffectName, state.bgEffectContext);
     }
   }, [state.backgroundClass, canvasRef]);
 
   onUnMount(() => {
     state.stopAutoPlay();
-    state.plugin.stop(bgEffectContext);
+    state.plugin.stop(state.bgEffectContext);
     // Same guard as RowScrollable: onDestroy also runs on the server. The
     // handler is only assigned in onMount so this branch is normally skipped
     // there, but the typeof check makes that safe by construction rather than
     // by coincidence.
-    if (typeof window !== 'undefined' && animContext.dimResizeHandler) {
-      window.removeEventListener('resize', animContext.dimResizeHandler);
+    if (typeof window !== 'undefined' && state.animContext.dimResizeHandler) {
+      window.removeEventListener('resize', state.animContext.dimResizeHandler);
     }
-    if (observerBox.disconnect) observerBox.disconnect();
+    if (state.observerBox.disconnect) state.observerBox.disconnect();
   });
   return (
     <div
       ref={rootRef}
-      class={`cv-sliding-banner ${state.showSkeleton ? 'cv-image-shimmer' : ''} ${props.className || ''} effect-${state.animationClass} bg-effect-${state.backgroundClass} quality-${state.qualityClass}`}
+      class={`cv-sliding-banner ${state.showSkeleton ? 'cv-image-shimmer' : ''} ${props.className || ''} effect-${state.animationClass} bg-effect-${state.backgroundClass} quality-${state.qualityClass} ${props.config?.showDots ? 'has-dots' : ''}`}
       onMouseEnter={() => state.stopAutoPlay()}
       onMouseLeave={() => state.startAutoPlay()}
       role="region"

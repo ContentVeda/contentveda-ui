@@ -6,14 +6,34 @@
           gap: var(--cv-spacing-md);
           font-family: var(--cv-font-family);
         }
+        /* Items per row on narrow screens.
+
+           The count comes from --cv-grid-cols-tablet / --cv-grid-cols-mobile,
+           which GridBanner sets inline from its `columnsTablet` /
+           `columnsMobile` props. Leave those props off and the properties are
+           unset, so the var() fallbacks below apply and the component breaks by
+           itself — two across, the automatic behaviour.
+
+           Two, not one. A grid banner that collapses to a single column stops
+           being a grid and reads as a plain stack of cards, which is not what
+           the component is for. Two columns still give roughly 150px a card at
+           320px, which the 16/9 thumbnail and its label handle.
+
+           !important because the component also writes the desktop count to
+           grid-template-columns inline, and an inline declaration would
+           otherwise win at every width. */
         @media (max-width: 768px) {
           .cv-grid-banner {
-            grid-template-columns: repeat(2, 1fr) !important;
+            grid-template-columns: repeat(var(--cv-grid-cols-tablet, 2), 1fr) !important;
           }
         }
+
+        /* Falls back to the tablet property before its own default, so setting
+           only columnsTablet carries down to the smallest screens instead of
+           snapping back to 2 here. */
         @media (max-width: 480px) {
           .cv-grid-banner {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(var(--cv-grid-cols-mobile, var(--cv-grid-cols-tablet, 2)), 1fr) !important;
           }
         }
         .cv-grid-item {
@@ -48,6 +68,22 @@
           font-weight: 600;
           color: var(--cv-color-text-main);
           text-align: center;
+          /* Titles are arbitrary content and can contain a long unbroken word;
+             in a ~150px column that would push the card past its track. */
+          overflow-wrap: anywhere;
+        }
+
+        /* Tightened so two cards still read well once each column is around
+           150px wide, rather than the label crowding its own edges. */
+        @media (max-width: 480px) {
+          .cv-grid-banner {
+            gap: var(--cv-spacing-sm);
+          }
+          .cv-grid-title {
+            padding: var(--cv-spacing-xs, 0.5rem);
+            font-size: 0.8125rem;
+            line-height: 1.35;
+          }
         }
 
 

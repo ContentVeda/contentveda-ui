@@ -29,7 +29,19 @@
 
   export interface GridBannerProps {
     items: GridBannerItem[];
+    /** Items per row on screens wider than 768px. Defaults to 3. */
     columns?: number;
+    /**
+     * Items per row at 768px and below. Omit to let the component break by
+     * itself, which is 2 across.
+     */
+    columnsTablet?: number;
+    /**
+     * Items per row at 480px and below. Omit to inherit whatever the tablet
+     * breakpoint resolved to, so setting only `columnsTablet` carries all the
+     * way down rather than snapping back to the default on the smallest screens.
+     */
+    columnsMobile?: number;
     className?: string;
     isLoading?: boolean;
     config?: GridBannerConfig;
@@ -40,7 +52,6 @@
 </script>
 
 <script lang="ts">
-  let observerBox = { disconnect: null, row: null };
   import { onDestroy, onMount } from "svelte";
 
   import { observeLazyMount } from "../utils/lazyObserver";
@@ -50,6 +61,8 @@
   export let lazyRootMargin: GridBannerProps["lazyRootMargin"];
   export let isLoading: GridBannerProps["isLoading"];
   export let columns: GridBannerProps["columns"];
+  export let columnsTablet: GridBannerProps["columnsTablet"];
+  export let columnsMobile: GridBannerProps["columnsMobile"];
   export let className: GridBannerProps["className"];
   export let config: GridBannerProps["config"];
   export let items: GridBannerProps["items"];
@@ -74,10 +87,19 @@
     const cols = columns || 3;
     return `repeat(${cols}, 1fr)`;
   };
+  $: columnsTabletVar = () => {
+    return `${columnsTablet || 2}`;
+  };
+  $: columnsMobileVar = () => {
+    return `${columnsMobile || columnsTablet || 2}`;
+  };
 
   let rootRef;
 
   let isVisible = false;
+  let observerBox = {
+    disconnect: null as (() => void) | null,
+  };
 
   onMount(() => {
     if (lazyLoad === false) {
@@ -104,6 +126,8 @@
 <div
   style={stringifyStyles({
     gridTemplateColumns: gridTemplateColumns(),
+    "--cv-grid-cols-tablet": columnsTabletVar(),
+    "--cv-grid-cols-mobile": columnsMobileVar(),
     height: config?.height || "",
     minHeight: config?.minHeight || "",
   })}
@@ -134,7 +158,8 @@
               autoPlay={true}
               loop={true}
               muted={true}
-              playsInline={true}></video>
+              playsInline={true}
+            />
           {/if}
 
           {#if item.media?.type !== "video"}
@@ -168,14 +193,16 @@
               height: "14px",
               margin: "0 0 6px 0",
             })}
-            class="cv-skeleton-text cv-image-shimmer"></div>
+            class="cv-skeleton-text cv-image-shimmer"
+          />
           <div
             style={stringifyStyles({
               width: "40%",
               height: "10px",
               margin: 0,
             })}
-            class="cv-skeleton-text cv-image-shimmer"></div>
+            class="cv-skeleton-text cv-image-shimmer"
+          />
         </div>
       {/if}
       {#if !showSkeleton()}
