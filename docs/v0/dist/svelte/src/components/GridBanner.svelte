@@ -180,28 +180,23 @@
       {#if showSkeleton()}
         <div
           style={stringifyStyles({
-            display: "flex",
-            flexDirection: "column",
-            alignItems: item.textAlignment || "center",
-            width: "100%",
-            marginTop: "12px",
+            justifyContent:
+              item.textAlignment === "left"
+                ? "flex-start"
+                : item.textAlignment === "right"
+                ? "flex-end"
+                : "center",
           })}
+          class="cv-grid-title"
         >
           <div
             style={stringifyStyles({
-              width: "70%",
-              height: "14px",
-              margin: "0 0 6px 0",
-            })}
-            class="cv-skeleton-text cv-image-shimmer"
-          />
-          <div
-            style={stringifyStyles({
-              width: "40%",
-              height: "10px",
+              width: "65%",
+              height: "1rem",
               margin: 0,
+              borderRadius: "var(--cv-border-radius-sm, 4px)",
             })}
-            class="cv-skeleton-text cv-image-shimmer"
+            class="cv-skeleton-title cv-image-shimmer"
           />
         </div>
       {/if}
@@ -209,6 +204,12 @@
         <div
           style={stringifyStyles({
             textAlign: item.textAlignment || "center",
+            justifyContent:
+              item.textAlignment === "left"
+                ? "flex-start"
+                : item.textAlignment === "right"
+                ? "flex-end"
+                : "center",
           })}
           class="cv-grid-title"
         >

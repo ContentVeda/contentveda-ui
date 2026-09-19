@@ -12,7 +12,7 @@ test.describe('Interactive Component Playgrounds & Demos', () => {
     await expect(items).toHaveCount(3);
 
     // Initial render should have zero shimmer skeletons
-    const skeletons = preview.locator('.cv-skeleton-text');
+    const skeletons = preview.locator('.cv-image-shimmer');
     await expect(skeletons).toHaveCount(0);
 
     // Toggle isLoading checkbox to enable loading skeleton

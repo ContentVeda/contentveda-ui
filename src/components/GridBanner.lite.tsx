@@ -167,13 +167,33 @@ export default function GridBanner(props: GridBannerProps) {
             </Show>
           </div>
           <Show when={state.showSkeleton}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: item.textAlignment || 'center', width: '100%', marginTop: '12px' }}>
-              <div class="cv-skeleton-text cv-image-shimmer" style={{ width: '70%', height: '14px', margin: '0 0 6px 0' }} />
-              <div class="cv-skeleton-text cv-image-shimmer" style={{ width: '40%', height: '10px', margin: 0 }} />
+            <div
+              class="cv-grid-title"
+              style={{
+                justifyContent: item.textAlignment === 'left' ? 'flex-start' : item.textAlignment === 'right' ? 'flex-end' : 'center'
+              }}
+            >
+              <div
+                class="cv-skeleton-title cv-image-shimmer"
+                style={{
+                  width: '65%',
+                  height: '1rem',
+                  margin: 0,
+                  borderRadius: 'var(--cv-border-radius-sm, 4px)'
+                }}
+              />
             </div>
           </Show>
           <Show when={!state.showSkeleton}>
-            <div class="cv-grid-title" style={{ textAlign: item.textAlignment || 'center' }}>{item.title}</div>
+            <div
+              class="cv-grid-title"
+              style={{
+                textAlign: item.textAlignment || 'center',
+                justifyContent: item.textAlignment === 'left' ? 'flex-start' : item.textAlignment === 'right' ? 'flex-end' : 'center'
+              }}
+            >
+              {item.title}
+            </div>
           </Show>
         </a>
       ))}

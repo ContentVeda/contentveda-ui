@@ -255,17 +255,24 @@
         </template>
 
         <template v-if="!showSkeleton">
-          <template v-if="title">
-            <h2 class="cv-banner-title">{{ title }}</h2>
-          </template>
+          <div
+            class="cv-banner-content-inner"
+            :style="{
+              display: 'contents',
+            }"
+          >
+            <template v-if="title">
+              <h2 class="cv-banner-title">{{ title }}</h2>
+            </template>
 
-          <template v-if="subtitle">
-            <p class="cv-banner-subtitle">{{ subtitle }}</p>
-          </template>
+            <template v-if="subtitle">
+              <p class="cv-banner-subtitle">{{ subtitle }}</p>
+            </template>
 
-          <template v-if="ctaText">
-            <a class="cv-banner-cta" :href="linkUrl">{{ ctaText }}</a>
-          </template>
+            <template v-if="ctaText">
+              <a class="cv-banner-cta" :href="linkUrl">{{ ctaText }}</a>
+            </template>
+          </div>
         </template>
       </div>
     </div>

@@ -1,17 +1,19 @@
 import { useStore, Show } from '@builder.io/mitosis';
 
-// Mirrors the resolved block shape PageService.resolvePage (contentveda-public-api)
-// produces for a PageFloorEntry.kind === "custom" block — see
-// docs/adr-025-custom-content-types.md. Renders site-owner-defined content types
-// (Strapi-style), additive/parallel to the built-in Widget types every other
-// component here renders one of.
-//
-// Deliberately self-contained rather than composing Banner.lite.tsx for the
-// base-widget-type case: this repo's Mitosis -> webcomponent pipeline (build-wc.js)
-// does not support one .lite.tsx component rendering another as a JSX tag — the nested
-// component reference is silently dropped from the compiled output, verified while
-// building this component. So the base-widget-typed background+overlay rendering is
-// duplicated here in simplified form (no hotspot SVG layer) rather than delegated.
+/*
+  Mirrors the resolved block shape PageService.resolvePage (contentveda-public-api)
+  produces for a PageFloorEntry.kind === "custom" block — see
+  docs/adr-025-custom-content-types.md. Renders site-owner-defined content types
+  (Strapi-style), additive/parallel to the built-in Widget types every other
+  component here renders one of.
+
+  Deliberately self-contained rather than composing Banner.lite.tsx for the
+  base-widget-type case: this repo's Mitosis -> webcomponent pipeline (build-wc.js)
+  does not support one .lite.tsx component rendering another as a JSX tag — the nested
+  component reference is silently dropped from the compiled output, verified while
+  building this component. So the base-widget-typed background+overlay rendering is
+  duplicated here in simplified form (no hotspot SVG layer) rather than delegated.
+*/
 
 export interface CustomContentMedia {
   type?: 'image' | 'video' | 'gif' | string;
@@ -26,10 +28,12 @@ export interface CustomContentTextOverlay {
   type?: 'title' | 'subtitle' | 'cta-button' | string;
 }
 
-// One ContentEntry as the public API shapes it: raw field data keyed by the
-// ContentTypeDefinition's field schema (not included in this payload — see the
-// "generic by runtime shape" rendering below), plus the base-widget-type-inherited
-// shape when the owning type has one.
+/*
+  One ContentEntry as the public API shapes it: raw field data keyed by the
+  ContentTypeDefinition's field schema (not included in this payload — see the
+  "generic by runtime shape" rendering below), plus the base-widget-type-inherited
+  shape when the owning type has one.
+*/
 export interface CustomContentEntry {
   id: string;
   name?: string;
@@ -42,9 +46,9 @@ export interface CustomContentBlockProps {
   contentType?: string;
   contentTypeKind?: 'single' | 'collection' | string;
   entries?: CustomContentEntry[];
-  // Hoisted base-widget-type shape — present on the block itself (not nested under an
-  // entry) only for the common case PageService.resolvePage documents: a "single"-kind
-  // type, or a "collection" pick showing exactly one item. See state.isBaseWidgetShaped.
+  /* Hoisted base-widget-type shape — present on the block itself (not nested under an
+     entry) only for the common case PageService.resolvePage documents: a "single"-kind
+     type, or a "collection" pick showing exactly one item. See state.isBaseWidgetShaped. */
   media?: CustomContentMedia;
   textOverlays?: CustomContentTextOverlay[];
   className?: string;

@@ -55,39 +55,43 @@ export default function MediaGrid(props: MediaGridProps) {
   return (
     <div ref={rootRef} class={`cv-media-grid ${props.className || ''}`}>
       <Show when={state.showSkeleton}>
-        <div class="cv-media-primary cv-image-shimmer" />
-        <div class="cv-media-secondary-col">
-          <div class="cv-media-secondary-item cv-image-shimmer" />
-          <div class="cv-media-secondary-item cv-image-shimmer" />
+        <div style={{ display: 'contents' }}>
+          <div class="cv-media-primary cv-image-shimmer" />
+          <div class="cv-media-secondary-col">
+            <div class="cv-media-secondary-item cv-image-shimmer" />
+            <div class="cv-media-secondary-item cv-image-shimmer" />
+          </div>
         </div>
       </Show>
 
       <Show when={!state.showSkeleton}>
-        {props.primaryMedia && (
-          <a href={props.primaryMedia.mapLinks?.[0]?.url || undefined} class="cv-media-primary" aria-label={props.primaryMedia.mapLinks?.[0]?.url ? (props.primaryMedia.altText || props.primaryMedia.title || "Media content") : undefined}>
-            <Show when={props.primaryMedia.media?.type === 'video'}>
-              <video src={props.primaryMedia.media?.url} autoPlay loop muted playsInline class="cv-media-asset" />
-            </Show>
-            <Show when={props.primaryMedia.media?.type !== 'video'}>
-              <img src={props.primaryMedia.media?.url} alt={props.primaryMedia.altText || props.primaryMedia.title || ''} class="cv-media-asset" />
-            </Show>
-          </a>
-        )}
+        <div style={{ display: 'contents' }}>
+          {props.primaryMedia && (
+            <a href={props.primaryMedia.mapLinks?.[0]?.url || undefined} class="cv-media-primary" aria-label={props.primaryMedia.mapLinks?.[0]?.url ? (props.primaryMedia.altText || props.primaryMedia.title || "Media content") : undefined}>
+              <Show when={props.primaryMedia.media?.type === 'video'}>
+                <video src={props.primaryMedia.media?.url} autoPlay loop muted playsInline class="cv-media-asset" />
+              </Show>
+              <Show when={props.primaryMedia.media?.type !== 'video'}>
+                <img src={props.primaryMedia.media?.url} alt={props.primaryMedia.altText || props.primaryMedia.title || ''} class="cv-media-asset" />
+              </Show>
+            </a>
+          )}
 
-        {props.secondaryMedia && props.secondaryMedia.length > 0 && (
-          <div class="cv-media-secondary-col">
-            {props.secondaryMedia.map((item) => (
-              <a href={item.mapLinks?.[0]?.url || undefined} class="cv-media-secondary-item" key={item.id} aria-label={item.mapLinks?.[0]?.url ? (item.altText || item.title || "Media content") : undefined}>
-                <Show when={item.media?.type === 'video'}>
-                  <video src={item.media?.url} autoPlay loop muted playsInline class="cv-media-asset" />
-                </Show>
-                <Show when={item.media?.type !== 'video'}>
-                  <img src={item.media?.url} alt={item.altText || item.title || ''} class="cv-media-asset" />
-                </Show>
-              </a>
-            ))}
-          </div>
-        )}
+          {props.secondaryMedia && props.secondaryMedia.length > 0 && (
+            <div class="cv-media-secondary-col">
+              {props.secondaryMedia.map((item) => (
+                <a href={item.mapLinks?.[0]?.url || undefined} class="cv-media-secondary-item" key={item.id} aria-label={item.mapLinks?.[0]?.url ? (item.altText || item.title || "Media content") : undefined}>
+                  <Show when={item.media?.type === 'video'}>
+                    <video src={item.media?.url} autoPlay loop muted playsInline class="cv-media-asset" />
+                  </Show>
+                  <Show when={item.media?.type !== 'video'}>
+                    <img src={item.media?.url} alt={item.altText || item.title || ''} class="cv-media-asset" />
+                  </Show>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </Show>
     </div>
   );

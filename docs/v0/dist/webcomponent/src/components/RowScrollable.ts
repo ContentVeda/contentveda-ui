@@ -54,6 +54,7 @@ class RowScrollable extends HTMLElement {
     this.state = {
       canScrollLeft: false,
       canScrollRight: false,
+      hasOverflow: false,
       isVisible: false,
       get shouldMount() {
         return self.props.lazyLoad === false || self.state.isVisible;
@@ -61,9 +62,20 @@ class RowScrollable extends HTMLElement {
       get showSkeleton() {
         return !!self.props.isLoading || !self.state.shouldMount;
       },
+      get showArrows() {
+        if (self.props.config?.showArrows === false) return false;
+        if (
+          self.props.config?.hideArrowsIfNoScroll !== false &&
+          !self.state.hasOverflow
+        )
+          return false;
+        return true;
+      },
       checkScroll() {
         const el = self._rowRef;
         if (el) {
+          self.state.hasOverflow = el.scrollWidth > el.clientWidth + 5;
+          self.update();
           self.state.canScrollLeft = el.scrollLeft > 5;
           self.update();
           self.state.canScrollRight =
@@ -95,9 +107,9 @@ class RowScrollable extends HTMLElement {
       "lazyThreshold",
       "lazyRootMargin",
       "isLoading",
+      "config",
       "className",
       "title",
-      "config",
       "items",
     ];
 
@@ -216,7 +228,7 @@ class RowScrollable extends HTMLElement {
             </template>
           </div>
           <template data-el="show-row-scrollable-8">
-            <template data-el="show-row-scrollable-9">
+            <div data-el="div-row-scrollable-7">
               <button
                 type="button"
                 class="cv-scrollable-arrow prev"
@@ -232,8 +244,6 @@ class RowScrollable extends HTMLElement {
                   <path d="M15 19l-7-7 7-7"></path>
                 </svg>
               </button>
-            </template>
-            <template data-el="show-row-scrollable-10">
               <button
                 type="button"
                 class="cv-scrollable-arrow next"
@@ -249,7 +259,7 @@ class RowScrollable extends HTMLElement {
                   <path d="M9 5l7 7-7 7"></path>
                 </svg>
               </button>
-            </template>
+            </div>
           </template>
         </div>
       </div>`;
@@ -286,6 +296,7 @@ class RowScrollable extends HTMLElement {
     const el = self._rowRef;
     if (el) {
       el.addEventListener("scroll", this.state.checkScroll);
+      this.state.checkScroll();
       // Allow DOM to render then check
       setTimeout(() => {
         this.state.checkScroll();
@@ -485,21 +496,18 @@ class RowScrollable extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-row-scrollable-8']")
       .forEach((el) => {
-        const whenCondition = this.props.config?.showArrows !== false;
+        const whenCondition = this.state.showArrows;
         if (whenCondition) {
           this.showContent(el);
         }
       });
 
     this._root
-      .querySelectorAll("[data-el='show-row-scrollable-9']")
+      .querySelectorAll("[data-el='div-row-scrollable-7']")
       .forEach((el) => {
-        const whenCondition =
-          this.props.config?.hideArrowsIfNoScroll === false ||
-          this.state.canScrollLeft;
-        if (whenCondition) {
-          this.showContent(el);
-        }
+        __cvAssignStyle(el.style, {
+          display: "contents",
+        });
       });
 
     this._root
@@ -511,17 +519,6 @@ class RowScrollable extends HTMLElement {
           opacity: !this.state.canScrollLeft ? "0.35" : "1",
           pointerEvents: !this.state.canScrollLeft ? "none" : "auto",
         });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='show-row-scrollable-10']")
-      .forEach((el) => {
-        const whenCondition =
-          this.props.config?.hideArrowsIfNoScroll === false ||
-          this.state.canScrollRight;
-        if (whenCondition) {
-          this.showContent(el);
-        }
       });
 
     this._root
