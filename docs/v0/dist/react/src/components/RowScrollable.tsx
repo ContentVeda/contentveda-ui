@@ -39,6 +39,8 @@ function RowScrollable(props: RowScrollableProps) {
 
   const [canScrollRight, setCanScrollRight] = useState(() => false);
 
+  const [hasOverflow, setHasOverflow] = useState(() => false);
+
   const [isVisible, setIsVisible] = useState(() => false);
 
   function shouldMount() {
@@ -49,9 +51,17 @@ function RowScrollable(props: RowScrollableProps) {
     return !!props.isLoading || !shouldMount();
   }
 
+  function showArrows() {
+    if (props.config?.showArrows === false) return false;
+    if (props.config?.hideArrowsIfNoScroll !== false && !hasOverflow)
+      return false;
+    return true;
+  }
+
   function checkScroll() {
     const el = rowRef.current;
     if (el) {
+      setHasOverflow(el.scrollWidth > el.clientWidth + 5);
       setCanScrollLeft(el.scrollLeft > 5);
       setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 5);
     }
@@ -77,6 +87,7 @@ function RowScrollable(props: RowScrollableProps) {
     const el = rowRef.current;
     if (el) {
       el.addEventListener("scroll", checkScroll);
+      checkScroll();
       // Allow DOM to render then check
       setTimeout(() => {
         checkScroll();
@@ -192,51 +203,51 @@ function RowScrollable(props: RowScrollableProps) {
             </a>
           ))}
         </div>
-        {props.config?.showArrows !== false ? (
-          <>
-            {props.config?.hideArrowsIfNoScroll === false || canScrollLeft ? (
-              <button
-                type="button"
-                className="cv-scrollable-arrow prev"
-                aria-label="Previous"
-                onClick={(event) => scroll("left")}
-                style={{
-                  opacity: !canScrollLeft ? "0.35" : "1",
-                  pointerEvents: !canScrollLeft ? "none" : "auto",
-                }}
+        {showArrows() ? (
+          <div
+            style={{
+              display: "contents",
+            }}
+          >
+            <button
+              type="button"
+              className="cv-scrollable-arrow prev"
+              aria-label="Previous"
+              onClick={(event) => scroll("left")}
+              style={{
+                opacity: !canScrollLeft ? "0.35" : "1",
+                pointerEvents: !canScrollLeft ? "none" : "auto",
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            ) : null}
-            {props.config?.hideArrowsIfNoScroll === false || canScrollRight ? (
-              <button
-                type="button"
-                className="cv-scrollable-arrow next"
-                aria-label="Next"
-                onClick={(event) => scroll("right")}
-                style={{
-                  opacity: !canScrollRight ? "0.35" : "1",
-                  pointerEvents: !canScrollRight ? "none" : "auto",
-                }}
+                <path d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="cv-scrollable-arrow next"
+              aria-label="Next"
+              onClick={(event) => scroll("right")}
+              style={{
+                opacity: !canScrollRight ? "0.35" : "1",
+                pointerEvents: !canScrollRight ? "none" : "auto",
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            ) : null}
-          </>
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         ) : null}
       </div>
     </div>

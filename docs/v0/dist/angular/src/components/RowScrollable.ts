@@ -93,49 +93,50 @@ import { observeLazyMount } from "../utils/lazyObserver";
             ></ng-container
           >
         </div>
-        <ng-container *ngIf="config?.showArrows !== false"
-          ><ng-container
-            ><ng-container
-              *ngIf="config?.hideArrowsIfNoScroll === false || canScrollLeft"
-              ><button
-                type="button"
-                class="cv-scrollable-arrow prev"
-                aria-label="Previous"
-                (click)="scroll('left')"
-                [ngStyle]="{
+        <ng-container *ngIf="showArrows"
+          ><div
+            [ngStyle]="{
+          display: 'contents'
+        }"
+          >
+            <button
+              type="button"
+              class="cv-scrollable-arrow prev"
+              aria-label="Previous"
+              (click)="scroll('left')"
+              [ngStyle]="{
           opacity: !canScrollLeft ? '0.35' : '1',
           pointerEvents: !canScrollLeft ? 'none' : 'auto'
         }"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M15 19l-7-7 7-7"></path>
-                </svg></button
-            ></ng-container>
-            <ng-container
-              *ngIf="config?.hideArrowsIfNoScroll === false || canScrollRight"
-              ><button
-                type="button"
-                class="cv-scrollable-arrow next"
-                aria-label="Next"
-                (click)="scroll('right')"
-                [ngStyle]="{
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="cv-scrollable-arrow next"
+              aria-label="Next"
+              (click)="scroll('right')"
+              [ngStyle]="{
           opacity: !canScrollRight ? '0.35' : '1',
           pointerEvents: !canScrollRight ? 'none' : 'auto'
         }"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M9 5l7 7-7 7"></path>
-                </svg></button></ng-container></ng-container
+                <path d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button></div
         ></ng-container>
       </div>
     </div>
@@ -153,9 +154,9 @@ export default class RowScrollable {
   @Input() lazyThreshold!: RowScrollableProps["lazyThreshold"];
   @Input() lazyRootMargin!: RowScrollableProps["lazyRootMargin"];
   @Input() isLoading!: RowScrollableProps["isLoading"];
+  @Input() config!: RowScrollableProps["config"];
   @Input() className!: RowScrollableProps["className"];
   @Input() title!: RowScrollableProps["title"];
-  @Input() config!: RowScrollableProps["config"];
   @Input() items!: RowScrollableProps["items"];
 
   @ViewChild("containerRef") containerRef!: ElementRef;
@@ -163,6 +164,7 @@ export default class RowScrollable {
 
   canScrollLeft = false;
   canScrollRight = false;
+  hasOverflow = false;
   isVisible = false;
   get shouldMount() {
     return this.lazyLoad === false || this.isVisible;
@@ -170,9 +172,16 @@ export default class RowScrollable {
   get showSkeleton() {
     return !!this.isLoading || !this.shouldMount;
   }
+  get showArrows() {
+    if (this.config?.showArrows === false) return false;
+    if (this.config?.hideArrowsIfNoScroll !== false && !this.hasOverflow)
+      return false;
+    return true;
+  }
   checkScroll() {
     const el = this.rowRef?.nativeElement;
     if (el) {
+      this.hasOverflow = el.scrollWidth > el.clientWidth + 5;
       this.canScrollLeft = el.scrollLeft > 5;
       this.canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 5;
     }
@@ -204,6 +213,7 @@ export default class RowScrollable {
       const el = this.rowRef?.nativeElement;
       if (el) {
         el.addEventListener("scroll", this.checkScroll);
+        this.checkScroll();
         // Allow DOM to render then check
         setTimeout(() => {
           this.checkScroll();
