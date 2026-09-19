@@ -13,17 +13,17 @@ import '@contentveda/ui/styles/components/SlidingBanner.css';
 import '@contentveda/ui/styles/components/AlternatingSlider.css';
 import '@contentveda/ui/styles/components/CustomContentBlock.css';
 
-import Banner from '@contentveda/ui/vue/Banner.vue';
-import AnnouncementBar from '@contentveda/ui/vue/AnnouncementBar.vue';
-import GridBanner from '@contentveda/ui/vue/GridBanner.vue';
-import MediaGrid from '@contentveda/ui/vue/MediaGrid.vue';
-import RowScrollable from '@contentveda/ui/vue/RowScrollable.vue';
-import TimerWidget from '@contentveda/ui/vue/TimerWidget.vue';
-import WysiwygRenderer from '@contentveda/ui/vue/WysiwygRenderer.vue';
-import RichTextEditor from '@contentveda/ui/vue/RichTextEditor.vue';
-import SlidingBanner from '@contentveda/ui/vue/SlidingBanner.vue';
-import AlternatingSlider from '@contentveda/ui/vue/AlternatingSlider.vue';
-import CustomContentBlock from '@contentveda/ui/vue/CustomContentBlock.vue';
+import Banner from '@contentveda/ui/vue/Banner';
+import AnnouncementBar from '@contentveda/ui/vue/AnnouncementBar';
+import GridBanner from '@contentveda/ui/vue/GridBanner';
+import MediaGrid from '@contentveda/ui/vue/MediaGrid';
+import RowScrollable from '@contentveda/ui/vue/RowScrollable';
+import TimerWidget from '@contentveda/ui/vue/TimerWidget';
+import WysiwygRenderer from '@contentveda/ui/vue/WysiwygRenderer';
+import RichTextEditor from '@contentveda/ui/vue/RichTextEditor';
+import SlidingBanner from '@contentveda/ui/vue/SlidingBanner';
+import AlternatingSlider from '@contentveda/ui/vue/AlternatingSlider';
+import CustomContentBlock from '@contentveda/ui/vue/CustomContentBlock';
 
 const editorContent = ref(
   '<h2>🌐 Rich Text Editor in Nuxt</h2><p>Integrated natively into Nuxt with full SSR and CSR compatibility.</p><ul><li>Server-side and client-side rendering</li><li>Seamless styling with ContentVeda UI design system</li><li>Cross-framework feature fidelity</li></ul>'

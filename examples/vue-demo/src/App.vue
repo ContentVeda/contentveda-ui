@@ -13,17 +13,17 @@ import '@contentveda/ui/styles/components/SlidingBanner.css';
 import '@contentveda/ui/styles/components/AlternatingSlider.css';
 import '@contentveda/ui/styles/components/CustomContentBlock.css';
 
-import Banner from '@contentveda/ui/vue/Banner.vue';
-import AnnouncementBar from '@contentveda/ui/vue/AnnouncementBar.vue';
-import GridBanner from '@contentveda/ui/vue/GridBanner.vue';
-import MediaGrid from '@contentveda/ui/vue/MediaGrid.vue';
-import RowScrollable from '@contentveda/ui/vue/RowScrollable.vue';
-import TimerWidget from '@contentveda/ui/vue/TimerWidget.vue';
-import WysiwygRenderer from '@contentveda/ui/vue/WysiwygRenderer.vue';
-import RichTextEditor from '@contentveda/ui/vue/RichTextEditor.vue';
-import SlidingBanner from '@contentveda/ui/vue/SlidingBanner.vue';
-import AlternatingSlider from '@contentveda/ui/vue/AlternatingSlider.vue';
-import CustomContentBlock from '@contentveda/ui/vue/CustomContentBlock.vue';
+import Banner from '@contentveda/ui/vue/Banner';
+import AnnouncementBar from '@contentveda/ui/vue/AnnouncementBar';
+import GridBanner from '@contentveda/ui/vue/GridBanner';
+import MediaGrid from '@contentveda/ui/vue/MediaGrid';
+import RowScrollable from '@contentveda/ui/vue/RowScrollable';
+import TimerWidget from '@contentveda/ui/vue/TimerWidget';
+import WysiwygRenderer from '@contentveda/ui/vue/WysiwygRenderer';
+import RichTextEditor from '@contentveda/ui/vue/RichTextEditor';
+import SlidingBanner from '@contentveda/ui/vue/SlidingBanner';
+import AlternatingSlider from '@contentveda/ui/vue/AlternatingSlider';
+import CustomContentBlock from '@contentveda/ui/vue/CustomContentBlock';
 
 const editorContent = ref(
   '<h2>🌟 Rich Text Editor in Vue 3</h2><p>Integrated natively into Vue with <code>v-model</code> / reactive event handling.</p><ul><li>Single-file component ergonomics</li><li>Zero visual or functional compromise</li><li>Cross-framework design system parity</li></ul>'

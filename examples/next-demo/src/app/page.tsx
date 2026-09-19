@@ -34,8 +34,9 @@ import RichTextEditor from '@contentveda/ui/react/RichTextEditor';
 import SlidingBanner from '@contentveda/ui/react/SlidingBanner';
 // @ts-ignore
 import AlternatingSlider from '@contentveda/ui/react/AlternatingSlider';
-// @ts-ignore
-import CustomContentBlock from '@contentveda/ui/react/CustomContentBlock';
+// Note: CustomContentBlock in published @contentveda/ui@0.3.0 for React had an empty compiled JS artifact;
+// full React CustomContentBlock will be published in the next release.
+// import CustomContentBlock from '@contentveda/ui/react/CustomContentBlock';
 
 export default function NextDemoPage() {
   const [editorContent, setEditorContent] = useState(
@@ -183,30 +184,9 @@ export default function NextDemoPage() {
       {/* 9. Custom Content Block */}
       <section style={{ marginBottom: '3.5rem' }}>
         <h2 style={{ color: '#7dd3fc', fontSize: '1.5rem', marginBottom: '1rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.5rem' }}>9. Custom Content Block</h2>
-        <CustomContentBlock
-          contentType="brand-features"
-          contentTypeKind="collection"
-          entries={[
-            {
-              id: 'c1',
-              name: 'Eco Materials',
-              media: { type: 'image', url: '/img/placeholder-06.svg', altText: 'Eco materials' },
-              textOverlays: [
-                { id: 't1', type: 'title', text: '100% Sustainable' },
-                { id: 't2', type: 'subtitle', text: 'Zero virgin plastic across the entire supply chain.' }
-              ]
-            },
-            {
-              id: 'c2',
-              name: 'Global Warranty',
-              media: { type: 'image', url: '/img/placeholder-07.svg', altText: 'Warranty' },
-              textOverlays: [
-                { id: 't3', type: 'title', text: 'Lifetime Guarantee' },
-                { id: 't4', type: 'subtitle', text: 'We stand by craftsmanship on every stitch and seam.' }
-              ]
-            }
-          ]}
-        />
+        <div style={{ padding: '1.25rem', border: '1px dashed #334155', borderRadius: '8px', background: '#090d16', color: '#94a3b8' }}>
+          <p>📦 <em>CustomContentBlock for React will be available in the next release (v0.3.1). Available and demonstrated in Solid, Vue, and Nuxt demos.</em></p>
+        </div>
       </section>
 
       {/* 10. Rich Text Editor & 11. WYSIWYG Renderer */}

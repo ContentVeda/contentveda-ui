@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "vue": "^3.5.42",
-    "@contentveda/ui": "file:../../"
+    "@contentveda/ui": "^0.3.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
