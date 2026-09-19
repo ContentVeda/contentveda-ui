@@ -395,21 +395,27 @@ class Banner extends HTMLElement {
               ></div>
             </template>
             <template data-el="show-banner-16">
-              <template data-el="show-banner-17">
-                <h2 class="cv-banner-title">
-                  <template data-el="div-banner-12"><!-- props.title --></template>
-                </h2>
-              </template>
-              <template data-el="show-banner-18">
-                <p class="cv-banner-subtitle">
-                  <template data-el="div-banner-13"><!-- props.subtitle --></template>
-                </p>
-              </template>
-              <template data-el="show-banner-19">
-                <a class="cv-banner-cta" data-el="a-banner-2">
-                  <template data-el="div-banner-14"><!-- props.ctaText --></template>
-                </a>
-              </template>
+              <div class="cv-banner-content-inner" data-el="div-banner-12">
+                <template data-el="show-banner-17">
+                  <h2 class="cv-banner-title">
+                    <template data-el="div-banner-13"><!-- props.title --></template>
+                  </h2>
+                </template>
+                <template data-el="show-banner-18">
+                  <p class="cv-banner-subtitle">
+                    <template data-el="div-banner-14">
+                      <!-- props.subtitle -->
+                    </template>
+                  </p>
+                </template>
+                <template data-el="show-banner-19">
+                  <a class="cv-banner-cta" data-el="a-banner-2">
+                    <template data-el="div-banner-15">
+                      <!-- props.ctaText -->
+                    </template>
+                  </a>
+                </template>
+              </div>
             </template>
           </div>
         </div>
@@ -869,6 +875,12 @@ class Banner extends HTMLElement {
       }
     });
 
+    this._root.querySelectorAll("[data-el='div-banner-12']").forEach((el) => {
+      __cvAssignStyle(el.style, {
+        display: "contents",
+      });
+    });
+
     this._root.querySelectorAll("[data-el='show-banner-17']").forEach((el) => {
       const whenCondition = this.props.title;
       if (whenCondition) {
@@ -876,7 +888,7 @@ class Banner extends HTMLElement {
       }
     });
 
-    this._root.querySelectorAll("[data-el='div-banner-12']").forEach((el) => {
+    this._root.querySelectorAll("[data-el='div-banner-13']").forEach((el) => {
       this.renderTextNode(el, this.props.title);
     });
 
@@ -887,7 +899,7 @@ class Banner extends HTMLElement {
       }
     });
 
-    this._root.querySelectorAll("[data-el='div-banner-13']").forEach((el) => {
+    this._root.querySelectorAll("[data-el='div-banner-14']").forEach((el) => {
       this.renderTextNode(el, this.props.subtitle);
     });
 
@@ -902,7 +914,7 @@ class Banner extends HTMLElement {
       el.setAttribute("href", this.state.linkUrl);
     });
 
-    this._root.querySelectorAll("[data-el='div-banner-14']").forEach((el) => {
+    this._root.querySelectorAll("[data-el='div-banner-15']").forEach((el) => {
       this.renderTextNode(el, this.props.ctaText);
     });
   }

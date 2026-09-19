@@ -501,7 +501,12 @@ function Banner(props: BannerProps) {
             </>
           ) : null}
           {!showSkeleton() ? (
-            <>
+            <div
+              className="cv-banner-content-inner"
+              style={{
+                display: "contents",
+              }}
+            >
               {props.title ? (
                 <h2 className="cv-banner-title">{props.title}</h2>
               ) : null}
@@ -513,7 +518,7 @@ function Banner(props: BannerProps) {
                   {props.ctaText}
                 </a>
               ) : null}
-            </>
+            </div>
           ) : null}
         </div>
       </div>

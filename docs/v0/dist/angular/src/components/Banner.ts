@@ -313,19 +313,26 @@ import type {
             ></div
           ></ng-container>
           <ng-container *ngIf="!showSkeleton"
-            ><ng-container *ngIf="title"
-              ><h2 class="cv-banner-title">{{title}}</h2></ng-container
+            ><div
+              class="cv-banner-content-inner"
+              [ngStyle]="{
+          display: 'contents'
+        }"
             >
-            <ng-container *ngIf="subtitle"
-              ><p class="cv-banner-subtitle">{{subtitle}}</p></ng-container
-            >
-            <ng-container *ngIf="ctaText"
-              ><a
-                class="cv-banner-cta"
-                [attr.href]="linkUrl"
-                >{{ctaText}}</a
-              ></ng-container
-            ></ng-container
+              <ng-container *ngIf="title"
+                ><h2 class="cv-banner-title">{{title}}</h2></ng-container
+              >
+              <ng-container *ngIf="subtitle"
+                ><p class="cv-banner-subtitle">{{subtitle}}</p></ng-container
+              >
+              <ng-container *ngIf="ctaText"
+                ><a
+                  class="cv-banner-cta"
+                  [attr.href]="linkUrl"
+                  >{{ctaText}}</a
+                ></ng-container
+              >
+            </div></ng-container
           >
         </div>
       </div>
