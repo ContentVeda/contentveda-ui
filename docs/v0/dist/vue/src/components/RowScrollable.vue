@@ -60,9 +60,11 @@
           </a>
         </template>
       </div>
-      <template v-if="config?.showArrows !== false">
-        <template
-          v-if="config?.hideArrowsIfNoScroll === false || canScrollLeft"
+      <template v-if="showArrows">
+        <div
+          :style="{
+            display: 'contents',
+          }"
         >
           <button
             type="button"
@@ -81,14 +83,8 @@
               stroke-width="2"
             >
               <path d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-        </template>
-
-        <template
-          v-if="config?.hideArrowsIfNoScroll === false || canScrollRight"
-        >
-          <button
+            </svg></button
+          ><button
             type="button"
             class="cv-scrollable-arrow next"
             aria-label="Next"
@@ -107,7 +103,7 @@
               <path d="M9 5l7 7-7 7"></path>
             </svg>
           </button>
-        </template>
+        </div>
       </template>
     </div>
   </div>
@@ -154,9 +150,9 @@ export default defineComponent({
     "lazyThreshold",
     "lazyRootMargin",
     "isLoading",
+    "config",
     "className",
     "title",
-    "config",
     "items",
   ],
 
@@ -164,6 +160,7 @@ export default defineComponent({
     return {
       canScrollLeft: false,
       canScrollRight: false,
+      hasOverflow: false,
       isVisible: false,
       observerBox: {
         disconnect: null as (() => void) | null,
@@ -176,6 +173,7 @@ export default defineComponent({
     const el = this.$refs.rowRef;
     if (el) {
       el.addEventListener("scroll", this.checkScroll);
+      this.checkScroll();
       // Allow DOM to render then check
       setTimeout(() => {
         this.checkScroll();
@@ -228,12 +226,19 @@ export default defineComponent({
     showSkeleton() {
       return !!this.isLoading || !this.shouldMount;
     },
+    showArrows() {
+      if (this.config?.showArrows === false) return false;
+      if (this.config?.hideArrowsIfNoScroll !== false && !this.hasOverflow)
+        return false;
+      return true;
+    },
   },
 
   methods: {
     checkScroll() {
       const el = this.$refs.rowRef;
       if (el) {
+        this.hasOverflow = el.scrollWidth > el.clientWidth + 5;
         this.canScrollLeft = el.scrollLeft > 5;
         this.canScrollRight =
           el.scrollLeft + el.clientWidth < el.scrollWidth - 5;
