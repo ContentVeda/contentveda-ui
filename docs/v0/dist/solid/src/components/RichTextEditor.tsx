@@ -3878,8 +3878,7 @@ function RichTextEditor(props: RichTextEditorProps) {
               <div class="cv-toolbar-classes-group">
                 <span class="cv-class-badge">CLASS</span>
                 <For each={appliedClasses()}>
-                  {(cls, _index) => {
-                    const index = _index();
+                  {(cls) => {
                     return (
                       <span class="cv-class-chip" key={cls}>
                         <span>{cls}</span>
@@ -3933,8 +3932,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                 >
                   <datalist id="editor-class-list">
                     <For each={props.availableClasses}>
-                      {(cls, _index) => {
-                        const index = _index();
+                      {(cls) => {
                         return <option value={cls}>{cls}</option>;
                       }}
                     </For>

@@ -135,8 +135,7 @@ function RowScrollable(props: RowScrollableProps) {
             ref={rowRef!}
           >
             <For each={props.items}>
-              {(item, _index) => {
-                const index = _index();
+              {(item) => {
                 return (
                   <a
                     class={`cv-scrollable-card ${

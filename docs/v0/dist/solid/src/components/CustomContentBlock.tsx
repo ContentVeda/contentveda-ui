@@ -216,8 +216,7 @@ function CustomContentBlock(props: CustomContentBlockProps) {
         <Show when={hasEntries()}>
           <div class={`cv-custom-entries ${entriesLayoutClass()}`}>
             <For each={props.entries}>
-              {(entry, _index) => {
-                const index = _index();
+              {(entry) => {
                 return (
                   <div class="cv-custom-entry" key={entry.id}>
                     <Show when={isBaseWidgetShaped(entry)}>

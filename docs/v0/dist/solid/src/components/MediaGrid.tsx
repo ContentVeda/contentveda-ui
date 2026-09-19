@@ -120,8 +120,7 @@ function MediaGrid(props: MediaGridProps) {
             >
               <div class="cv-media-secondary-col">
                 <For each={props.secondaryMedia}>
-                  {(item, _index) => {
-                    const index = _index();
+                  {(item) => {
                     return (
                       <a
                         class="cv-media-secondary-item"

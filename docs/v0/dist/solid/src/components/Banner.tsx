@@ -364,8 +364,7 @@ function Banner(props: BannerProps) {
               focusable="false"
             >
               <For each={props.hotspots}>
-                {(h, _index) => {
-                  const index = _index();
+                {(h) => {
                   return (
                     <g key={`${h.id}-visual`}>
                       <g
@@ -435,8 +434,7 @@ function Banner(props: BannerProps) {
               </For>
             </svg>
             <For each={props.hotspots}>
-              {(h, _index) => {
-                const index = _index();
+              {(h) => {
                 return (
                   <div key={h.id}>
                     <div class="cv-hotspot-hit" style={hotspotHitStyle(h)}>
