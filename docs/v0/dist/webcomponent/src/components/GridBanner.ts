@@ -160,20 +160,16 @@ class GridBanner extends HTMLElement {
               </template>
             </div>
             <template data-el="show-grid-banner-4">
-              <div data-el="div-grid-banner-3">
+              <div class="cv-grid-title" data-el="div-grid-banner-3">
                 <div
-                  class="cv-skeleton-text cv-image-shimmer"
+                  class="cv-skeleton-title cv-image-shimmer"
                   data-el="div-grid-banner-4"
-                ></div>
-                <div
-                  class="cv-skeleton-text cv-image-shimmer"
-                  data-el="div-grid-banner-5"
                 ></div>
               </div>
             </template>
             <template data-el="show-grid-banner-5">
-              <div class="cv-grid-title" data-el="div-grid-banner-6">
-                <template data-el="div-grid-banner-7"><!-- item.title --></template>
+              <div class="cv-grid-title" data-el="div-grid-banner-5">
+                <template data-el="div-grid-banner-6"><!-- item.title --></template>
               </div>
             </template>
           </a>
@@ -358,11 +354,12 @@ class GridBanner extends HTMLElement {
       .forEach((el) => {
         const item = this.getScope(el, "item");
         __cvAssignStyle(el.style, {
-          display: "flex",
-          flexDirection: "column",
-          alignItems: item.textAlignment || "center",
-          width: "100%",
-          marginTop: "12px",
+          justifyContent:
+            item.textAlignment === "left"
+              ? "flex-start"
+              : item.textAlignment === "right"
+              ? "flex-end"
+              : "center",
         });
       });
 
@@ -370,19 +367,10 @@ class GridBanner extends HTMLElement {
       .querySelectorAll("[data-el='div-grid-banner-4']")
       .forEach((el) => {
         __cvAssignStyle(el.style, {
-          width: "70%",
-          height: "14px",
-          margin: "0 0 6px 0",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='div-grid-banner-5']")
-      .forEach((el) => {
-        __cvAssignStyle(el.style, {
-          width: "40%",
-          height: "10px",
+          width: "65%",
+          height: "1rem",
           margin: 0,
+          borderRadius: "var(--cv-border-radius-sm, 4px)",
         });
       });
 
@@ -396,16 +384,22 @@ class GridBanner extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='div-grid-banner-6']")
+      .querySelectorAll("[data-el='div-grid-banner-5']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
         __cvAssignStyle(el.style, {
           textAlign: item.textAlignment || "center",
+          justifyContent:
+            item.textAlignment === "left"
+              ? "flex-start"
+              : item.textAlignment === "right"
+              ? "flex-end"
+              : "center",
         });
       });
 
     this._root
-      .querySelectorAll("[data-el='div-grid-banner-7']")
+      .querySelectorAll("[data-el='div-grid-banner-6']")
       .forEach((el) => {
         const item = this.getScope(el, "item");
         this.renderTextNode(el, item.title);
