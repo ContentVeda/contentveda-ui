@@ -3438,7 +3438,7 @@
               }}
               on:click={(event) => {
                 showInsertMenu = false;
-                openFormulaModal();
+                insertFormula();
               }}
               ><span
                 style={stringifyStyles({
@@ -3702,22 +3702,18 @@
               /></svg
             ></button
           >
-        {/if}
-        {#if showToolbarOption("formula")}
-          <button
-            type="button"
-            class="cv-toolbar-btn"
-            title="Formula"
-            on:mousedown={(e) => {
-              e.preventDefault();
-              saveSelection();
-            }}
-            on:click={(event) => {
-              openFormulaModal();
-            }}
-            ><span class="font-serif italic font-bold text-xs">Fx</span></button
-          >
-        {/if}
+        {/if}<button
+          type="button"
+          class="cv-toolbar-btn"
+          title="Formula"
+          on:mousedown={(e) => {
+            e.preventDefault();
+            saveSelection();
+          }}
+          on:click={(event) => {
+            insertFormula();
+          }}><span class="font-serif italic font-bold text-xs">Fx</span></button
+        >
         {#if showToolbarOption("social")}
           <button
             type="button"

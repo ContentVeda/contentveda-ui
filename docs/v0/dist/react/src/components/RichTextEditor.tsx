@@ -3518,7 +3518,7 @@ function RichTextEditor(props: RichTextEditorProps) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => {
                     setShowInsertMenu(false);
-                    openFormulaModal();
+                    insertFormula();
                   }}
                 >
                   <span
@@ -3770,20 +3770,18 @@ function RichTextEditor(props: RichTextEditorProps) {
                 </svg>
               </button>
             ) : null}
-            {showToolbarOption("formula") ? (
-              <button
-                type="button"
-                className="cv-toolbar-btn"
-                title="Formula"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  saveSelection();
-                }}
-                onClick={(event) => openFormulaModal()}
-              >
-                <span className="font-serif italic font-bold text-xs">Fx</span>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="cv-toolbar-btn"
+              title="Formula"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                saveSelection();
+              }}
+              onClick={(event) => insertFormula()}
+            >
+              <span className="font-serif italic font-bold text-xs">Fx</span>
+            </button>
             {showToolbarOption("social") ? (
               <button
                 type="button"
