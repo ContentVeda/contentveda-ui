@@ -163,28 +163,23 @@ function GridBanner(props: GridBannerProps) {
                 </div>
                 <Show when={showSkeleton()}>
                   <div
+                    class="cv-grid-title"
                     style={{
-                      display: "flex",
-                      "flex-direction": "column",
-                      "align-items": item.textAlignment || "center",
-                      width: "100%",
-                      "margin-top": "12px",
+                      "justify-content":
+                        item.textAlignment === "left"
+                          ? "flex-start"
+                          : item.textAlignment === "right"
+                          ? "flex-end"
+                          : "center",
                     }}
                   >
                     <div
-                      class="cv-skeleton-text cv-image-shimmer"
+                      class="cv-skeleton-title cv-image-shimmer"
                       style={{
-                        width: "70%",
-                        height: "14px",
-                        margin: "0 0 6px 0",
-                      }}
-                    ></div>
-                    <div
-                      class="cv-skeleton-text cv-image-shimmer"
-                      style={{
-                        width: "40%",
-                        height: "10px",
+                        width: "65%",
+                        height: "1rem",
                         margin: 0,
+                        "border-radius": "var(--cv-border-radius-sm, 4px)",
                       }}
                     ></div>
                   </div>
@@ -194,6 +189,12 @@ function GridBanner(props: GridBannerProps) {
                     class="cv-grid-title"
                     style={{
                       "text-align": item.textAlignment || "center",
+                      "justify-content":
+                        item.textAlignment === "left"
+                          ? "flex-start"
+                          : item.textAlignment === "right"
+                          ? "flex-end"
+                          : "center",
                     }}
                   >
                     {item.title}
