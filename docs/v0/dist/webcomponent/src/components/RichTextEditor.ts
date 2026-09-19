@@ -3041,7 +3041,7 @@ class RichTextEditor extends HTMLElement {
     this.onButtonRichTextEditor22Click = (event) => {
       this.state.showInsertMenu = false;
       this.update();
-      this.state.openFormulaModal();
+      this.state.insertFormula();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-23
@@ -3159,7 +3159,7 @@ class RichTextEditor extends HTMLElement {
 
     // Event handler for 'click' event on button-rich-text-editor-33
     this.onButtonRichTextEditor33Click = (event) => {
-      this.state.openFormulaModal();
+      this.state.insertFormula();
     };
 
     // Event handler for 'mousedown' event on button-rich-text-editor-34
@@ -4590,17 +4590,15 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                 </button>
               </template>
+              <button
+                type="button"
+                class="cv-toolbar-btn"
+                title="Formula"
+                data-el="button-rich-text-editor-33"
+              >
+                <span class="font-serif italic font-bold text-xs">Fx</span>
+              </button>
               <template data-el="show-rich-text-editor-21">
-                <button
-                  type="button"
-                  class="cv-toolbar-btn"
-                  title="Formula"
-                  data-el="button-rich-text-editor-33"
-                >
-                  <span class="font-serif italic font-bold text-xs">Fx</span>
-                </button>
-              </template>
-              <template data-el="show-rich-text-editor-22">
                 <button
                   type="button"
                   class="cv-toolbar-btn"
@@ -4626,7 +4624,7 @@ class RichTextEditor extends HTMLElement {
               </template>
             </div>
             <div class="cv-toolbar-divider"></div>
-            <template data-el="show-rich-text-editor-23">
+            <template data-el="show-rich-text-editor-22">
               <button
                 type="button"
                 class="cv-toolbar-widget-btn"
@@ -4665,7 +4663,7 @@ class RichTextEditor extends HTMLElement {
                 <span>Add UI Widget</span>
               </button>
             </template>
-            <template data-el="show-rich-text-editor-24">
+            <template data-el="show-rich-text-editor-23">
               <div class="cv-toolbar-classes-group">
                 <span class="cv-class-badge">CLASS</span>
       
@@ -4702,7 +4700,7 @@ class RichTextEditor extends HTMLElement {
                 >
                   Apply
                 </button>
-                <template data-el="show-rich-text-editor-25">
+                <template data-el="show-rich-text-editor-24">
                   <datalist id="editor-class-list">
                     <template data-el="for-rich-text-editor-2">
                       <option data-el="option-rich-text-editor-1">
@@ -4716,7 +4714,7 @@ class RichTextEditor extends HTMLElement {
               </div>
             </template>
             <div class="ml-auto flex items-center gap-1.5 flex-shrink-0">
-              <template data-el="show-rich-text-editor-26">
+              <template data-el="show-rich-text-editor-25">
                 <button
                   type="button"
                   title="View HTML Source Code"
@@ -4738,7 +4736,7 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                 </button>
               </template>
-              <template data-el="show-rich-text-editor-27">
+              <template data-el="show-rich-text-editor-26">
                 <button
                   type="button"
                   class="cv-toolbar-btn"
@@ -4762,7 +4760,7 @@ class RichTextEditor extends HTMLElement {
                   </svg>
                 </button>
               </template>
-              <template data-el="show-rich-text-editor-28">
+              <template data-el="show-rich-text-editor-27">
                 <button
                   type="button"
                   class="cv-toolbar-btn"
@@ -4796,7 +4794,7 @@ class RichTextEditor extends HTMLElement {
             data-el="div-rich-text-editor-8"
             data-ref="RichTextEditor-editorRef"
           ></div>
-          <template data-el="show-rich-text-editor-29">
+          <template data-el="show-rich-text-editor-28">
             <div
               class="cv-resize-handle"
               title="Drag to resize"
@@ -4924,12 +4922,12 @@ class RichTextEditor extends HTMLElement {
               </button>
             </div>
           </template>
-          <template data-el="show-rich-text-editor-30">
+          <template data-el="show-rich-text-editor-29">
             <div
               class="fixed inset-0 flex items-center justify-center z-[100] backdrop-blur-md"
               data-el="div-rich-text-editor-13"
             >
-              <template data-el="show-rich-text-editor-31">
+              <template data-el="show-rich-text-editor-30">
                 <div class="cv-ai-modal shadow-2xl">
                   <div class="cv-ai-modal-header">
                     <div
@@ -4995,7 +4993,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-32">
+              <template data-el="show-rich-text-editor-31">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-16">
                   <h3
                     class="flex items-center text-white"
@@ -5054,7 +5052,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-33">
+              <template data-el="show-rich-text-editor-32">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-21">
                   <h3
                     class="flex items-center text-white"
@@ -5110,7 +5108,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-34">
+              <template data-el="show-rich-text-editor-33">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-25">
                   <h3
                     class="flex items-center text-white"
@@ -5184,7 +5182,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-35">
+              <template data-el="show-rich-text-editor-34">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-31">
                   <h3
                     class="flex items-center text-white"
@@ -5256,7 +5254,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-36">
+              <template data-el="show-rich-text-editor-35">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-37">
                   <h3
                     class="flex items-center text-white"
@@ -5304,7 +5302,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-37">
+              <template data-el="show-rich-text-editor-36">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-40">
                   <h3
                     class="flex items-center text-white"
@@ -5362,7 +5360,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-38">
+              <template data-el="show-rich-text-editor-37">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-43">
                   <h3
                     class="flex items-center text-white"
@@ -5438,7 +5436,7 @@ class RichTextEditor extends HTMLElement {
                   </div>
                 </div>
               </template>
-              <template data-el="show-rich-text-editor-39">
+              <template data-el="show-rich-text-editor-38">
                 <div class="shadow-2xl" data-el="div-rich-text-editor-48">
                   <h3
                     class="flex items-center text-white"
@@ -6483,15 +6481,6 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-21']")
-      .forEach((el) => {
-        const whenCondition = this.state.showToolbarOption("formula");
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
       .querySelectorAll("[data-el='button-rich-text-editor-33']")
       .forEach((el) => {
         el.removeEventListener(
@@ -6507,7 +6496,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-22']")
+      .querySelectorAll("[data-el='show-rich-text-editor-21']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("social");
         if (whenCondition) {
@@ -6531,7 +6520,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-23']")
+      .querySelectorAll("[data-el='show-rich-text-editor-22']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("addWidget");
         if (whenCondition) {
@@ -6555,7 +6544,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-24']")
+      .querySelectorAll("[data-el='show-rich-text-editor-23']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("classInput");
         if (whenCondition) {
@@ -6630,7 +6619,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-25']")
+      .querySelectorAll("[data-el='show-rich-text-editor-24']")
       .forEach((el) => {
         const whenCondition =
           this.props.availableClasses && this.props.availableClasses.length > 0;
@@ -6661,7 +6650,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-26']")
+      .querySelectorAll("[data-el='show-rich-text-editor-25']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("source");
         if (whenCondition) {
@@ -6688,7 +6677,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-27']")
+      .querySelectorAll("[data-el='show-rich-text-editor-26']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("fullscreen");
         if (whenCondition) {
@@ -6712,7 +6701,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-28']")
+      .querySelectorAll("[data-el='show-rich-text-editor-27']")
       .forEach((el) => {
         const whenCondition = this.state.showToolbarOption("save");
         if (whenCondition) {
@@ -6784,7 +6773,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-29']")
+      .querySelectorAll("[data-el='show-rich-text-editor-28']")
       .forEach((el) => {
         const whenCondition =
           this.state.selectedMediaEl && !this.state.isReadOnly();
@@ -6963,7 +6952,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-30']")
+      .querySelectorAll("[data-el='show-rich-text-editor-29']")
       .forEach((el) => {
         const whenCondition =
           this.state.showTableModal ||
@@ -6991,7 +6980,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-31']")
+      .querySelectorAll("[data-el='show-rich-text-editor-30']")
       .forEach((el) => {
         const whenCondition = this.state.showAiModal;
         if (whenCondition) {
@@ -7072,7 +7061,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-32']")
+      .querySelectorAll("[data-el='show-rich-text-editor-31']")
       .forEach((el) => {
         const whenCondition = this.state.showImageModal;
         if (whenCondition) {
@@ -7256,7 +7245,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-33']")
+      .querySelectorAll("[data-el='show-rich-text-editor-32']")
       .forEach((el) => {
         const whenCondition = this.state.showVideoModal;
         if (whenCondition) {
@@ -7396,7 +7385,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-34']")
+      .querySelectorAll("[data-el='show-rich-text-editor-33']")
       .forEach((el) => {
         const whenCondition = this.state.showButtonModal;
         if (whenCondition) {
@@ -7644,7 +7633,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-35']")
+      .querySelectorAll("[data-el='show-rich-text-editor-34']")
       .forEach((el) => {
         const whenCondition = this.state.showTableModal;
         if (whenCondition) {
@@ -7867,7 +7856,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-36']")
+      .querySelectorAll("[data-el='show-rich-text-editor-35']")
       .forEach((el) => {
         const whenCondition = this.state.showLinkModal;
         if (whenCondition) {
@@ -7997,7 +7986,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-37']")
+      .querySelectorAll("[data-el='show-rich-text-editor-36']")
       .forEach((el) => {
         const whenCondition = this.state.showWidgetModal;
         if (whenCondition) {
@@ -8158,7 +8147,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-38']")
+      .querySelectorAll("[data-el='show-rich-text-editor-37']")
       .forEach((el) => {
         const whenCondition = this.state.showSocialModal;
         if (whenCondition) {
@@ -8387,7 +8376,7 @@ class RichTextEditor extends HTMLElement {
       });
 
     this._root
-      .querySelectorAll("[data-el='show-rich-text-editor-39']")
+      .querySelectorAll("[data-el='show-rich-text-editor-38']")
       .forEach((el) => {
         const whenCondition = this.state.showFormulaModal;
         if (whenCondition) {

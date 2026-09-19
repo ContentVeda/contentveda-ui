@@ -22,24 +22,26 @@ Feature: RichTextEditor
     Then it should render without any page errors
     And the component should contain a visible "button.cv-insert-item:has-text('Video')" element
 
-  Scenario: Inserting an image via the prompt fallback lands in the content
+  Scenario: Inserting an image via the custom modal lands in the content
     Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p>                       |
       | config          | {"toolbar":["image"]}                          |
-    And I will answer any prompt dialog with "https://example.com/photo.jpg"
     When I click into the editable content
     And I click the toolbar button titled "Image"
+    And I fill the "Image URL" field with "https://example.com/photo.jpg"
+    And I click the button labeled "Insert Image"
     Then it should render without any page errors
     And it should contain 1 elements matching "img[src='https://example.com/photo.jpg']"
 
-  Scenario: Inserting a video via the prompt fallback lands in the content
+  Scenario: Inserting a video via the custom modal lands in the content
     Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p> |
       | config          | {"toolbar":[]}            |
-    And I will answer any prompt dialog with "https://example.com/clip.mp4"
     When I click into the editable content
     And I click the toolbar button titled "Insert Options"
     And I click the button labeled "Video"
+    And I fill the "Video URL" field with "https://example.com/clip.mp4"
+    And I click the button labeled "Insert Video"
     Then it should render without any page errors
     And it should contain 1 elements matching "video[src='https://example.com/clip.mp4']"
 
@@ -47,10 +49,11 @@ Feature: RichTextEditor
     Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p> |
       | config          | {"toolbar":[]}            |
-    And I will answer any prompt dialog with "https://youtu.be/dQw4w9WgXcQ"
     When I click into the editable content
     And I click the toolbar button titled "Insert Options"
     And I click the button labeled "Video"
+    And I fill the "Video URL" field with "https://youtu.be/dQw4w9WgXcQ"
+    And I click the button labeled "Insert Video"
     Then it should render without any page errors
     And it should contain 1 elements matching "div.cv-social-embed[data-platform='youtube']"
     And attribute "data-url" on "div.cv-social-embed" should contain "dQw4w9WgXcQ"
@@ -60,10 +63,11 @@ Feature: RichTextEditor
     Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p> |
       | config          | {"toolbar":[]}            |
-    And I will answer any prompt dialog with "https://vimeo.com/76979871"
     When I click into the editable content
     And I click the toolbar button titled "Insert Options"
     And I click the button labeled "Video"
+    And I fill the "Video URL" field with "https://vimeo.com/76979871"
+    And I click the button labeled "Insert Video"
     Then it should render without any page errors
     And it should contain 1 elements matching "div.cv-social-embed[data-platform='vimeo']"
 
@@ -93,9 +97,10 @@ Feature: RichTextEditor
     Given I mount the "cv-rich-text-editor" component as "RichTextEditor" with:
       | initial-content | <p>Start typing here</p> |
       | config          | {"toolbar":[]}            |
-    And I will answer any prompt dialog with "E = mc^2 & <b>bold</b>"
     When I click into the editable content
     And I click the toolbar button titled "Formula"
+    And I fill the "Formula Expression" field with "E = mc^2 & <b>bold</b>"
+    And I click the button labeled "Insert Formula"
     Then it should render without any page errors
     And it should contain 1 elements matching "code.cv-math-formula"
     And attribute "data-formula" on "code.cv-math-formula" should contain "E = mc^2"

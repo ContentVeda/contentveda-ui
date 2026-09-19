@@ -775,7 +775,7 @@ let activeSavedRange: any = null;
                   (mousedown)="$event.preventDefault()"
                   (click)="
           showInsertMenu = false;
-          openFormulaModal();
+          insertFormula();
         "
                 >
                   <span
@@ -1037,20 +1037,18 @@ let activeSavedRange: any = null;
                   ></path>
                 </svg></button
             ></ng-container>
-            <ng-container *ngIf="showToolbarOption('formula')"
-              ><button
-                type="button"
-                class="cv-toolbar-btn"
-                title="Formula"
-                (mousedown)="
+            <button
+              type="button"
+              class="cv-toolbar-btn"
+              title="Formula"
+              (mousedown)="
           $event.preventDefault();
           saveSelection();
         "
-                (click)="openFormulaModal()"
-              >
-                <span class="font-serif italic font-bold text-xs">Fx</span>
-              </button></ng-container
+              (click)="insertFormula()"
             >
+              <span class="font-serif italic font-bold text-xs">Fx</span>
+            </button>
             <ng-container *ngIf="showToolbarOption('social')"
               ><button
                 type="button"

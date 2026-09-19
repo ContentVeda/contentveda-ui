@@ -785,7 +785,7 @@
                 @click="
                   async (event) => {
                     showInsertMenu = false;
-                    openFormulaModal();
+                    insertFormula();
                   }
                 "
               >
@@ -1047,23 +1047,20 @@
             </button>
           </template>
 
-          <template v-if="showToolbarOption('formula')">
-            <button
-              type="button"
-              class="cv-toolbar-btn"
-              title="Formula"
-              @mousedown="
-                async (e) => {
-                  e.preventDefault();
-                  saveSelection();
-                }
-              "
-              @click="async (event) => openFormulaModal()"
-            >
-              <span class="font-serif italic font-bold text-xs">Fx</span>
-            </button>
-          </template>
-
+          <button
+            type="button"
+            class="cv-toolbar-btn"
+            title="Formula"
+            @mousedown="
+              async (e) => {
+                e.preventDefault();
+                saveSelection();
+              }
+            "
+            @click="async (event) => insertFormula()"
+          >
+            <span class="font-serif italic font-bold text-xs">Fx</span>
+          </button>
           <template v-if="showToolbarOption('social')">
             <button
               type="button"
