@@ -44,9 +44,13 @@
     "./svelte/utils/*": "./dist/svelte/src/utils/*",
     "./webcomponent/*": "./dist/webcomponent/dist/*",
     "./webcomponent/utils/*": "./dist/webcomponent/dist/utils/*.js",
+    "./vue/*.vue": "./dist/vue/src/components/*.vue",
     "./vue/*": "./dist/vue/src/components/*.vue",
+    "./vue/utils/*": "./dist/vue/src/utils/*.js",
     "./solid/*": "./dist/solid/src/components/*.jsx",
-    "./angular/*": "./dist/angular/src/components/*"
+    "./solid/utils/*": "./dist/solid/src/utils/*.js",
+    "./angular/*": "./dist/angular/src/components/*",
+    "./angular/utils/*": "./dist/angular/src/utils/*.js"
   },
   "main": "./dist/react/src/components/index.js",
   "scripts": {
