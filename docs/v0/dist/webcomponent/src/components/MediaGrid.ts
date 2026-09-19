@@ -111,40 +111,44 @@ class MediaGrid extends HTMLElement {
     this._root.innerHTML = `
       <div data-el="div-media-grid-1" data-ref="MediaGrid-rootRef">
         <template data-el="show-media-grid">
-          <div class="cv-media-primary cv-image-shimmer"></div>
-          <div class="cv-media-secondary-col">
-            <div class="cv-media-secondary-item cv-image-shimmer"></div>
-            <div class="cv-media-secondary-item cv-image-shimmer"></div>
+          <div data-el="div-media-grid-2">
+            <div class="cv-media-primary cv-image-shimmer"></div>
+            <div class="cv-media-secondary-col">
+              <div class="cv-media-secondary-item cv-image-shimmer"></div>
+              <div class="cv-media-secondary-item cv-image-shimmer"></div>
+            </div>
           </div>
         </template>
         <template data-el="show-media-grid-2">
-          <template data-el="show-media-grid-3">
-            <a class="cv-media-primary" data-el="a-media-grid-1">
-              <template data-el="show-media-grid-4">
-                <video class="cv-media-asset" data-el="video-media-grid-1"></video>
-              </template>
-              <template data-el="show-media-grid-5">
-                <img class="cv-media-asset" data-el="img-media-grid-1" />
-              </template>
-            </a>
-          </template>
-          <template data-el="show-media-grid-6">
-            <div class="cv-media-secondary-col">
-              <template data-el="for-media-grid">
-                <a class="cv-media-secondary-item" data-el="a-media-grid-2">
-                  <template data-el="show-media-grid-7">
-                    <video
-                      class="cv-media-asset"
-                      data-el="video-media-grid-2"
-                    ></video>
-                  </template>
-                  <template data-el="show-media-grid-8">
-                    <img class="cv-media-asset" data-el="img-media-grid-2" />
-                  </template>
-                </a>
-              </template>
-            </div>
-          </template>
+          <div data-el="div-media-grid-3">
+            <template data-el="show-media-grid-3">
+              <a class="cv-media-primary" data-el="a-media-grid-1">
+                <template data-el="show-media-grid-4">
+                  <video class="cv-media-asset" data-el="video-media-grid-1"></video>
+                </template>
+                <template data-el="show-media-grid-5">
+                  <img class="cv-media-asset" data-el="img-media-grid-1" />
+                </template>
+              </a>
+            </template>
+            <template data-el="show-media-grid-6">
+              <div class="cv-media-secondary-col">
+                <template data-el="for-media-grid">
+                  <a class="cv-media-secondary-item" data-el="a-media-grid-2">
+                    <template data-el="show-media-grid-7">
+                      <video
+                        class="cv-media-asset"
+                        data-el="video-media-grid-2"
+                      ></video>
+                    </template>
+                    <template data-el="show-media-grid-8">
+                      <img class="cv-media-asset" data-el="img-media-grid-2" />
+                    </template>
+                  </a>
+                </template>
+              </div>
+            </template>
+          </div>
         </template>
       </div>`;
     this.pendingUpdate = true;
@@ -228,12 +232,28 @@ class MediaGrid extends HTMLElement {
     });
 
     this._root
+      .querySelectorAll("[data-el='div-media-grid-2']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "contents",
+        });
+      });
+
+    this._root
       .querySelectorAll("[data-el='show-media-grid-2']")
       .forEach((el) => {
         const whenCondition = !this.state.showSkeleton;
         if (whenCondition) {
           this.showContent(el);
         }
+      });
+
+    this._root
+      .querySelectorAll("[data-el='div-media-grid-3']")
+      .forEach((el) => {
+        __cvAssignStyle(el.style, {
+          display: "contents",
+        });
       });
 
     this._root
@@ -433,3 +453,28 @@ class MediaGrid extends HTMLElement {
 }
 
 customElements.define("media-grid", MediaGrid);
+
+
+/**
+ * Object.assign for inline styles that also handles CSS custom properties.
+ * Injected by fix-wc-props.js — see the note there.
+ */
+function __cvAssignStyle(style: any, obj: any) {
+  if (!style || !obj) return style;
+  for (const key in obj) {
+    const value = obj[key];
+    if (key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45) {
+      // Custom property. Removing on empty keeps var() fallbacks working,
+      // since a property set to the empty value substitutes nothing rather
+      // than falling back.
+      if (value === '' || value === null || value === undefined) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, String(value));
+      }
+    } else {
+      style[key] = value;
+    }
+  }
+  return style;
+}

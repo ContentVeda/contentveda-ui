@@ -1,6 +1,6 @@
 {
   "name": "@contentveda/ui",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "A universal, framework-agnostic UI component library built with Mitosis. Write once, compile to React, Svelte, and Web Components.",
   "author": "Koushik Manna",
   "license": "MIT",
@@ -44,9 +44,13 @@
     "./svelte/utils/*": "./dist/svelte/src/utils/*",
     "./webcomponent/*": "./dist/webcomponent/dist/*",
     "./webcomponent/utils/*": "./dist/webcomponent/dist/utils/*.js",
+    "./vue/*.vue": "./dist/vue/src/components/*.vue",
     "./vue/*": "./dist/vue/src/components/*.vue",
+    "./vue/utils/*": "./dist/vue/src/utils/*.js",
     "./solid/*": "./dist/solid/src/components/*.jsx",
-    "./angular/*": "./dist/angular/src/components/*"
+    "./solid/utils/*": "./dist/solid/src/utils/*.js",
+    "./angular/*": "./dist/angular/src/components/*",
+    "./angular/utils/*": "./dist/angular/src/utils/*.js"
   },
   "main": "./dist/react/src/components/index.js",
   "scripts": {

@@ -68,16 +68,24 @@ function MediaGrid(props: MediaGridProps) {
   return (
     <div ref={rootRef} className={`cv-media-grid ${props.className || ""}`}>
       {showSkeleton() ? (
-        <>
+        <div
+          style={{
+            display: "contents",
+          }}
+        >
           <div className="cv-media-primary cv-image-shimmer" />
           <div className="cv-media-secondary-col">
             <div className="cv-media-secondary-item cv-image-shimmer" />
             <div className="cv-media-secondary-item cv-image-shimmer" />
           </div>
-        </>
+        </div>
       ) : null}
       {!showSkeleton() ? (
-        <>
+        <div
+          style={{
+            display: "contents",
+          }}
+        >
           {props.primaryMedia ? (
             <a
               className="cv-media-primary"
@@ -145,7 +153,7 @@ function MediaGrid(props: MediaGridProps) {
               ))}
             </div>
           ) : null}
-        </>
+        </div>
       ) : null}
     </div>
   );

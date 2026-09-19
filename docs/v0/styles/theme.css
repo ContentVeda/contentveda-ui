@@ -206,8 +206,9 @@
 .cv-image-shimmer {
   position: relative;
   overflow: hidden;
-  background-color: var(--cv-color-surface) !important;
+  background-color: var(--cv-color-surface-sunken, #f1f5f9) !important;
   background-image: none !important;
+  box-shadow: inset 0 0 0 1px var(--cv-color-border, #e2e8f0);
 }
 .cv-image-shimmer::after {
   content: "";
@@ -220,11 +221,15 @@
   background-image: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.08) 20%,
-    rgba(255, 255, 255, 0.2) 60%,
+    rgba(255, 255, 255, 0.35) 20%,
+    rgba(255, 255, 255, 0.7) 60%,
     rgba(255, 255, 255, 0) 100%
   );
   animation: cv-shimmer-sweep 1.6s infinite;
+}
+[data-theme="dark"] .cv-image-shimmer {
+  background-color: var(--cv-color-surface, #111a2e) !important;
+  box-shadow: inset 0 0 0 1px var(--cv-color-border, #1e293b);
 }
 [data-theme="dark"] .cv-image-shimmer::after {
   background-image: linear-gradient(

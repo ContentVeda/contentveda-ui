@@ -364,8 +364,7 @@ function Banner(props: BannerProps) {
               focusable="false"
             >
               <For each={props.hotspots}>
-                {(h, _index) => {
-                  const index = _index();
+                {(h) => {
                   return (
                     <g key={`${h.id}-visual`}>
                       <g
@@ -435,8 +434,7 @@ function Banner(props: BannerProps) {
               </For>
             </svg>
             <For each={props.hotspots}>
-              {(h, _index) => {
-                const index = _index();
+              {(h) => {
                 return (
                   <div key={h.id}>
                     <div class="cv-hotspot-hit" style={hotspotHitStyle(h)}>
@@ -526,17 +524,24 @@ function Banner(props: BannerProps) {
               ></div>
             </Show>
             <Show when={!showSkeleton()}>
-              <Show when={props.title}>
-                <h2 class="cv-banner-title">{props.title}</h2>
-              </Show>
-              <Show when={props.subtitle}>
-                <p class="cv-banner-subtitle">{props.subtitle}</p>
-              </Show>
-              <Show when={props.ctaText}>
-                <a class="cv-banner-cta" href={linkUrl()}>
-                  {props.ctaText}
-                </a>
-              </Show>
+              <div
+                class="cv-banner-content-inner"
+                style={{
+                  display: "contents",
+                }}
+              >
+                <Show when={props.title}>
+                  <h2 class="cv-banner-title">{props.title}</h2>
+                </Show>
+                <Show when={props.subtitle}>
+                  <p class="cv-banner-subtitle">{props.subtitle}</p>
+                </Show>
+                <Show when={props.ctaText}>
+                  <a class="cv-banner-cta" href={linkUrl()}>
+                    {props.ctaText}
+                  </a>
+                </Show>
+              </div>
             </Show>
           </div>
         </div>

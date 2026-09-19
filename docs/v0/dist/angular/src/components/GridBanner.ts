@@ -110,28 +110,18 @@ import { observeLazyMount } from "../utils/lazyObserver";
           </div>
           <ng-container *ngIf="showSkeleton"
             ><div
+              class="cv-grid-title"
               [ngStyle]="{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: item.textAlignment || 'center',
-          width: '100%',
-          marginTop: '12px'
+          justifyContent: item.textAlignment === 'left' ? 'flex-start' : item.textAlignment === 'right' ? 'flex-end' : 'center'
         }"
             >
               <div
-                class="cv-skeleton-text cv-image-shimmer"
+                class="cv-skeleton-title cv-image-shimmer"
                 [ngStyle]="{
-          width: '70%',
-          height: '14px',
-          margin: '0 0 6px 0'
-        }"
-              ></div>
-              <div
-                class="cv-skeleton-text cv-image-shimmer"
-                [ngStyle]="{
-          width: '40%',
-          height: '10px',
-          margin: 0
+          width: '65%',
+          height: '1rem',
+          margin: 0,
+          borderRadius: 'var(--cv-border-radius-sm, 4px)'
         }"
               ></div></div
           ></ng-container>
@@ -139,7 +129,8 @@ import { observeLazyMount } from "../utils/lazyObserver";
             ><div
               class="cv-grid-title"
               [ngStyle]="{
-          textAlign: item.textAlignment || 'center'
+          textAlign: item.textAlignment || 'center',
+          justifyContent: item.textAlignment === 'left' ? 'flex-start' : item.textAlignment === 'right' ? 'flex-end' : 'center'
         }"
             >
               {{item.title}}

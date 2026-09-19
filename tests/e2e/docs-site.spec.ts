@@ -56,7 +56,11 @@ test.describe('Documentation Site Health & Navigation', () => {
 
       page.on('console', msg => {
         if (msg.type() === 'error') {
-          consoleErrors.push(msg.text());
+          const text = msg.text();
+          // Filter out benign browser engine warnings (e.g. compute-pressure permissions policy)
+          if (!text.includes('Permissions policy violation: compute-pressure')) {
+            consoleErrors.push(text);
+          }
         }
       });
 

@@ -35,6 +35,8 @@ function RowScrollable(props: RowScrollableProps) {
 
   const [canScrollRight, setCanScrollRight] = createSignal(false);
 
+  const [hasOverflow, setHasOverflow] = createSignal(false);
+
   const [isVisible, setIsVisible] = createSignal(false);
 
   const [observerBox, setObserverBox] = createSignal({
@@ -50,9 +52,17 @@ function RowScrollable(props: RowScrollableProps) {
     return !!props.isLoading || !shouldMount();
   });
 
+  const showArrows = createMemo(() => {
+    if (props.config?.showArrows === false) return false;
+    if (props.config?.hideArrowsIfNoScroll !== false && !hasOverflow())
+      return false;
+    return true;
+  });
+
   function checkScroll() {
     const el = rowRef;
     if (el) {
+      setHasOverflow(el.scrollWidth > el.clientWidth + 5);
       setCanScrollLeft(el.scrollLeft > 5);
       setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 5);
     }
@@ -76,6 +86,7 @@ function RowScrollable(props: RowScrollableProps) {
     const el = rowRef;
     if (el) {
       el.addEventListener("scroll", checkScroll);
+      checkScroll();
       // Allow DOM to render then check
       setTimeout(() => {
         checkScroll();
@@ -124,8 +135,7 @@ function RowScrollable(props: RowScrollableProps) {
             ref={rowRef!}
           >
             <For each={props.items}>
-              {(item, _index) => {
-                const index = _index();
+              {(item) => {
                 return (
                   <a
                     class={`cv-scrollable-card ${
@@ -174,61 +184,51 @@ function RowScrollable(props: RowScrollableProps) {
               }}
             </For>
           </div>
-          <Show when={props.config?.showArrows !== false}>
-            <>
-              <Show
-                when={
-                  props.config?.hideArrowsIfNoScroll === false ||
-                  canScrollLeft()
-                }
+          <Show when={showArrows()}>
+            <div
+              style={{
+                display: "contents",
+              }}
+            >
+              <button
+                class="cv-scrollable-arrow prev"
+                type="button"
+                aria-label="Previous"
+                onClick={(event) => scroll("left")}
+                style={{
+                  opacity: !canScrollLeft() ? "0.35" : "1",
+                  "pointer-events": !canScrollLeft() ? "none" : "auto",
+                }}
               >
-                <button
-                  class="cv-scrollable-arrow prev"
-                  type="button"
-                  aria-label="Previous"
-                  onClick={(event) => scroll("left")}
-                  style={{
-                    opacity: !canScrollLeft() ? "0.35" : "1",
-                    "pointer-events": !canScrollLeft() ? "none" : "auto",
-                  }}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M15 19l-7-7 7-7"></path>
-                  </svg>
-                </button>
-              </Show>
-              <Show
-                when={
-                  props.config?.hideArrowsIfNoScroll === false ||
-                  canScrollRight()
-                }
+                  <path d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+              <button
+                class="cv-scrollable-arrow next"
+                type="button"
+                aria-label="Next"
+                onClick={(event) => scroll("right")}
+                style={{
+                  opacity: !canScrollRight() ? "0.35" : "1",
+                  "pointer-events": !canScrollRight() ? "none" : "auto",
+                }}
               >
-                <button
-                  class="cv-scrollable-arrow next"
-                  type="button"
-                  aria-label="Next"
-                  onClick={(event) => scroll("right")}
-                  style={{
-                    opacity: !canScrollRight() ? "0.35" : "1",
-                    "pointer-events": !canScrollRight() ? "none" : "auto",
-                  }}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M9 5l7 7-7 7"></path>
-                  </svg>
-                </button>
-              </Show>
-            </>
+                  <path d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
           </Show>
         </div>
       </div>

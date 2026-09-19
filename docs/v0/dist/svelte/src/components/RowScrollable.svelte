@@ -40,9 +40,9 @@
   export let lazyThreshold: RowScrollableProps["lazyThreshold"];
   export let lazyRootMargin: RowScrollableProps["lazyRootMargin"];
   export let isLoading: RowScrollableProps["isLoading"];
+  export let config: RowScrollableProps["config"];
   export let className: RowScrollableProps["className"];
   export let title: RowScrollableProps["title"];
-  export let config: RowScrollableProps["config"];
   export let items: RowScrollableProps["items"];
   function stringifyStyles(stylesObj) {
     let styles = "";
@@ -58,6 +58,7 @@
   function checkScroll() {
     const el = rowRef;
     if (el) {
+      hasOverflow = el.scrollWidth > el.clientWidth + 5;
       canScrollLeft = el.scrollLeft > 5;
       canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 5;
     }
@@ -78,12 +79,18 @@
   $: showSkeleton = () => {
     return !!isLoading || !shouldMount();
   };
+  $: showArrows = () => {
+    if (config?.showArrows === false) return false;
+    if (config?.hideArrowsIfNoScroll !== false && !hasOverflow) return false;
+    return true;
+  };
 
   let containerRef;
   let rowRef;
 
   let canScrollLeft = false;
   let canScrollRight = false;
+  let hasOverflow = false;
   let isVisible = false;
   let observerBox = {
     disconnect: null as (() => void) | null,
@@ -94,6 +101,7 @@
     const el = rowRef;
     if (el) {
       el.addEventListener("scroll", checkScroll);
+      checkScroll();
       // Allow DOM to render then check
       setTimeout(() => {
         checkScroll();
@@ -200,8 +208,12 @@
         >
       {/each}
     </div>
-    {#if config?.showArrows !== false}
-      {#if config?.hideArrowsIfNoScroll === false || canScrollLeft}
+    {#if showArrows()}
+      <div
+        style={stringifyStyles({
+          display: "contents",
+        })}
+      >
         <button
           style={stringifyStyles({
             opacity: !canScrollLeft ? "0.35" : "1",
@@ -219,11 +231,7 @@
             stroke="currentColor"
             stroke-width="2"><path d="M15 19l-7-7 7-7" /></svg
           ></button
-        >
-      {/if}
-
-      {#if config?.hideArrowsIfNoScroll === false || canScrollRight}
-        <button
+        ><button
           style={stringifyStyles({
             opacity: !canScrollRight ? "0.35" : "1",
             pointerEvents: !canScrollRight ? "none" : "auto",
@@ -241,7 +249,7 @@
             stroke-width="2"><path d="M9 5l7 7-7 7" /></svg
           ></button
         >
-      {/if}
+      </div>
     {/if}
   </div>
 </div>
