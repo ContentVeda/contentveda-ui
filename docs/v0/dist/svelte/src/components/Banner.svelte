@@ -508,17 +508,22 @@
         />
       {/if}
       {#if !showSkeleton()}
-        {#if title}
-          <h2 class="cv-banner-title">{title}</h2>
-        {/if}
-
-        {#if subtitle}
-          <p class="cv-banner-subtitle">{subtitle}</p>
-        {/if}
-
-        {#if ctaText}
-          <a class="cv-banner-cta" href={linkUrl()}>{ctaText}</a>
-        {/if}
+        <div
+          style={stringifyStyles({
+            display: "contents",
+          })}
+          class="cv-banner-content-inner"
+        >
+          {#if title}
+            <h2 class="cv-banner-title">{title}</h2>
+          {/if}
+          {#if subtitle}
+            <p class="cv-banner-subtitle">{subtitle}</p>
+          {/if}
+          {#if ctaText}
+            <a class="cv-banner-cta" href={linkUrl()}>{ctaText}</a>
+          {/if}
+        </div>
       {/if}
     </div>
   </div>

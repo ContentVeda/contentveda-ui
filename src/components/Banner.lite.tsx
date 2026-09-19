@@ -338,13 +338,15 @@ export default function Banner(props: BannerProps) {
             <div class="cv-skeleton-button cv-image-shimmer" style={{ width: '140px', height: '42px' }} />
           </Show>
           <Show when={!state.showSkeleton}>
-            {props.title && <h2 class="cv-banner-title">{props.title}</h2>}
-            {props.subtitle && <p class="cv-banner-subtitle">{props.subtitle}</p>}
-            {props.ctaText && (
-              <a href={state.linkUrl} class="cv-banner-cta">
-                {props.ctaText}
-              </a>
-            )}
+            <div class="cv-banner-content-inner" style={{ display: 'contents' }}>
+              {props.title && <h2 class="cv-banner-title">{props.title}</h2>}
+              {props.subtitle && <p class="cv-banner-subtitle">{props.subtitle}</p>}
+              {props.ctaText && (
+                <a href={state.linkUrl} class="cv-banner-cta">
+                  {props.ctaText}
+                </a>
+              )}
+            </div>
           </Show>
         </div>
       </div>

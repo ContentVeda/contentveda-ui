@@ -266,9 +266,33 @@ for (const file of allFiles) {
         this.nodesToDestroy = this.nodesToDestroy.filter(el => el.__persistent);
     }`);
 
-  // Rewrite showContent to support toggle/conditional updates in-place
+  // Rewrite showContent to support toggle/conditional updates in-place and recursive cleanup of nested templates
   const showContentRegex = /showContent\(el\)\s*\{[\s\S]*?el\.after\(elementFragment\);\s*\}/g;
-  finalCode = finalCode.replace(showContentRegex, `showContent(el, condition) {
+  finalCode = finalCode.replace(showContentRegex, `cleanUpTemplate(templateEl) {
+        if (templateEl.__renderedNodes) {
+            templateEl.__renderedNodes.forEach((child) => {
+                if (child.tagName === 'TEMPLATE') {
+                    this.cleanUpTemplate(child);
+                } else if (child.querySelectorAll) {
+                    child.querySelectorAll('template').forEach((nestedTpl) => {
+                        this.cleanUpTemplate(nestedTpl);
+                    });
+                }
+                if (typeof child.remove === 'function') {
+                    child.remove();
+                }
+                const idx = this.nodesToDestroy.indexOf(child);
+                if (idx !== -1) {
+                    this.nodesToDestroy.splice(idx, 1);
+                }
+            });
+            templateEl.__renderedNodes = null;
+        }
+        if (templateEl.__renderedArray) {
+            templateEl.__renderedArray = null;
+        }
+    }
+    showContent(el, condition) {
         if (condition) {
             if (el.__renderedNodes) {
                 return;
@@ -288,16 +312,7 @@ for (const file of allFiles) {
             });
             el.after(elementFragment);
         } else {
-            if (el.__renderedNodes) {
-                el.__renderedNodes.forEach((child) => {
-                    child.remove();
-                    const idx = this.nodesToDestroy.indexOf(child);
-                    if (idx !== -1) {
-                        this.nodesToDestroy.splice(idx, 1);
-                    }
-                });
-                el.__renderedNodes = null;
-            }
+            this.cleanUpTemplate(el);
         }
     }`);
 
@@ -311,15 +326,7 @@ for (const file of allFiles) {
         if (isSameArray) {
             return;
         }
-        if (template.__renderedNodes) {
-            template.__renderedNodes.forEach((child) => {
-                child.remove();
-                const idx = this.nodesToDestroy.indexOf(child);
-                if (idx !== -1) {
-                    this.nodesToDestroy.splice(idx, 1);
-                }
-            });
-        }
+        this.cleanUpTemplate(template);
         const collection = [];
         const renderedNodes = [];
         for (let [index, value] of array.entries()) {
