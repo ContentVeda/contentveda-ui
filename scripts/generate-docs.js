@@ -55,6 +55,18 @@ const COMPONENTS_DIR = path.join(VERSION_DIR, 'components');
 // ranking, so every page declares the docs-site copy as canonical.
 const CANONICAL_BASE = process.env.DOCS_CANONICAL_BASE ?? 'https://docs.contentveda.com/ui';
 
+// ── Google Analytics ───────────────────────────────────────────────────────
+const GA_MEASUREMENT_ID = process.env.PUBLIC_GA_MEASUREMENT_ID || process.env.GA_MEASUREMENT_ID || 'G-S7ERRJFFTB';
+const GA_TAGS = GA_MEASUREMENT_ID ? `<!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    window.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', '${GA_MEASUREMENT_ID}');
+  </script>` : '';
+
 // ── Favicon ────────────────────────────────────────────────────────────────
 // The ContentVeda mark, shared with the docs site. The SVG is listed first so
 // modern browsers take it; the .ico and 32px PNG are there for the ones that
@@ -573,6 +585,7 @@ function buildPage(component) {
   <link rel="canonical" href="${CANONICAL_BASE}/${MAJOR_VERSION}/components/${slug}.html" />
   ${FAVICON_TAGS('../')}
   ${PREFERENCES_SCRIPT}
+  ${GA_TAGS}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="../css/docs.css" />
   <link rel="stylesheet" href="../styles/theme.css" />
@@ -1049,6 +1062,7 @@ function buildLandingPage() {
   <meta name="description" content="A universal, framework-agnostic UI component library. Write once in Mitosis and compile to React, Vue, Svelte, Solid, Angular, and Web Components." />
   ${FAVICON_TAGS('')}
   ${PREFERENCES_SCRIPT}
+  ${GA_TAGS}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="css/docs.css" />
   <style>
@@ -1238,6 +1252,7 @@ function main() {
   <title>Redirecting to latest docs...</title>
   <link rel="canonical" href="${CANONICAL_BASE}/${MAJOR_VERSION}/">
   <meta http-equiv="refresh" content="0; url=${MAJOR_VERSION}/index.html">
+  ${GA_TAGS}
   <script>
     window.location.replace("${MAJOR_VERSION}/index.html");
   </script>
