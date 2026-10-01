@@ -318,6 +318,9 @@ function WysiwygRenderer(props: WysiwygRendererProps) {
         // Render Web Component
         const tagName = `cv-${widgetType}`;
         const wc = document.createElement(tagName);
+        // Carry the CMS widget id through so the component can resolve its own data.
+        const widgetId = el.getAttribute("data-widget-id");
+        if (widgetId) wc.setAttribute("widget-id", widgetId);
 
         // Apply provided widgetData if available
         if (props.widgetData && props.widgetData[widgetType]) {
