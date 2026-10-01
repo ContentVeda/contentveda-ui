@@ -1,0 +1,115 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.cv-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.cv-floor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+.cv-floor-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.cv-floor-header p {
+  margin: 0.25rem 0 0;
+  opacity: 0.7;
+}
+
+.cv-unknown-block {
+  padding: 1rem;
+  border: 1px dashed currentColor;
+  border-radius: 8px;
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+
+/* Navigation menus */
+.cv-site-header,
+.cv-site-footer {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.cv-site-footer {
+  border-bottom: none;
+  border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  margin-top: 2rem;
+}
+
+.cv-menu {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.cv-menu a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+  padding: 0.35rem 0;
+}
+
+.cv-menu a:hover {
+  text-decoration: underline;
+}
+
+.cv-menu li {
+  position: relative;
+}
+
+.cv-submenu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 180px;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.5rem 0.75rem;
+  background: Canvas;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 6px;
+}
+
+.cv-submenu .cv-submenu {
+  top: 0;
+  left: 100%;
+}
+
+.cv-menu li:hover > .cv-submenu,
+.cv-menu li:focus-within > .cv-submenu {
+  display: flex;
+}
+
+/* Footer menus show every level inline */
+.cv-site-footer .cv-submenu {
+  display: flex;
+  position: static;
+  border: none;
+  background: none;
+  padding: 0 0 0 0.75rem;
+  opacity: 0.8;
+}
