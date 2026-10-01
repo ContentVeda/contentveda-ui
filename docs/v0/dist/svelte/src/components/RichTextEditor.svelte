@@ -11,6 +11,14 @@
     className?: string;
     availableClasses?: string[];
     onMediaRequest?: (type: "image" | "video" | "audio") => Promise<string>;
+    // Called when the author clicks "Insert Widget". The host creates the widget and
+    // resolves with its id (and optional display name), which is embedded as
+    // data-widget-id so the rendered page can resolve the real widget. Resolve with
+    // null to cancel. Without this prop the widget is inserted as a bare type reference.
+    onWidgetRequest?: (type: string) => Promise<{
+      id: string;
+      name?: string;
+    } | null>;
     config?: RichTextEditorConfig;
     readOnly?: boolean;
     disabled?: boolean;
@@ -27,6 +35,7 @@
   export let initialContent: RichTextEditorProps["initialContent"];
   export let onMediaRequest: RichTextEditorProps["onMediaRequest"];
   export let onChange: RichTextEditorProps["onChange"];
+  export let onWidgetRequest: RichTextEditorProps["onWidgetRequest"];
   export let config: RichTextEditorProps["config"];
   export let readOnly: RichTextEditorProps["readOnly"];
   export let disabled: RichTextEditorProps["disabled"];
@@ -128,6 +137,7 @@
         "data-platform",
         "data-url",
         "data-widget",
+        "data-widget-id",
         "data-formula",
         "controls",
         "playsinline",
@@ -1173,11 +1183,32 @@
   }
   function confirmWidget() {
     showWidgetModal = false;
-    const escapedWidget = escapeHtml(selectedWidget);
-    let html = `<div class="cv-widget" data-widget="${escapedWidget}" contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${escapeHtml(
-      selectedWidget.toUpperCase()
-    )}]</div><p><br></p>`;
-    insertHtmlAtCursor(html);
+    const widgetType = selectedWidget;
+    const insert = (widgetId?: string, widgetName?: string) => {
+      const idAttr = widgetId
+        ? ` data-widget-id="${escapeHtml(widgetId)}"`
+        : "";
+      const label = widgetId
+        ? `${escapeHtml(
+            widgetName || widgetType.toUpperCase()
+          )} &middot; ID: ${escapeHtml(widgetId)}`
+        : escapeHtml(widgetType.toUpperCase());
+      const html = `<div class="cv-widget" data-widget="${escapeHtml(
+        widgetType
+      )}"${idAttr} contenteditable="false" style="padding: 24px; border: 2px dashed var(--cv-color-primary, #7fc4de); background: var(--cv-color-accent-tint, rgba(127,196,222,0.05)); text-align: center; border-radius: 12px; margin: 16px 0; color: var(--cv-color-link, #7fc4de); font-weight: 600;">[ContentVeda Widget: ${label}]</div><p><br></p>`;
+      insertHtmlAtCursor(html);
+    };
+    if (onWidgetRequest) {
+      onWidgetRequest(widgetType)
+        .then((created) => {
+          if (created && created.id) insert(created.id, created.name);
+        })
+        .catch((err) => {
+          console.error("Widget request failed", err);
+        });
+    } else {
+      insert();
+    }
   }
   function closeWidgetModal() {
     showWidgetModal = false;
