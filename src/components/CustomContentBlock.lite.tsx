@@ -103,8 +103,7 @@ export default function CustomContentBlock(props: CustomContentBlockProps) {
     },
 
     get isBlockBaseWidgetShaped() {
-      // Pass the field, not `props` itself — Mitosis's Svelte output has no `props` object.
-      return state.isBaseWidgetShaped({ media: props.media });
+      return state.isBaseWidgetShaped(props);
     },
     get hasEntries() {
       return !state.isBlockBaseWidgetShaped && !!props.entries?.length;
