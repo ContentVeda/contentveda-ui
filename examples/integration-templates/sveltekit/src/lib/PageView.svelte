@@ -23,15 +23,15 @@
 <main class="cv-page" data-cv-slug={page.slug} data-cv-api={mode}>
   {#each page.content as block (block.id)}
     <section class="cv-floor" data-cv-type={block.type}>
-      {#if block.rowConfig?.title}
+      {#if block.properties.header.title}
         <div class="cv-floor-header">
           <div>
-            <h2>{block.rowConfig.title}</h2>
-            {#if block.rowConfig.subtitle}<p>{block.rowConfig.subtitle}</p>{/if}
+            <h2>{block.properties.header.title}</h2>
+            {#if block.properties.header.subtitle}<p>{block.properties.header.subtitle}</p>{/if}
           </div>
-          {#if block.rowConfig.rightLinkLabel && block.rowConfig.rightLinkUrl}
-            <a href={block.rowConfig.rightLinkUrl}>
-              {block.rowConfig.rightLinkLabel} {block.rowConfig.rightLinkIcon || '→'}
+          {#if block.properties.header.moreLink}
+            <a href={block.properties.header.moreLink.url}>
+              {block.properties.header.moreLink.label} {block.properties.header.moreLink.icon || '→'}
             </a>
           {/if}
         </div>

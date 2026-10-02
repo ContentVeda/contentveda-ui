@@ -19,15 +19,15 @@ export default function PageView({ page }: { page: ContentVedaPage }) {
       <main className="cv-page" data-cv-slug={page.slug} data-cv-api={config.mode}>
         {page.content.map((block) => (
           <section key={block.id} className="cv-floor" data-cv-type={block.type}>
-            {block.rowConfig?.title ? (
+            {block.properties.header.title ? (
               <div className="cv-floor-header">
                 <div>
-                  <h2>{block.rowConfig.title}</h2>
-                  {block.rowConfig.subtitle ? <p>{block.rowConfig.subtitle}</p> : null}
+                  <h2>{block.properties.header.title}</h2>
+                  {block.properties.header.subtitle ? <p>{block.properties.header.subtitle}</p> : null}
                 </div>
-                {block.rowConfig.rightLinkLabel && block.rowConfig.rightLinkUrl ? (
-                  <a href={block.rowConfig.rightLinkUrl}>
-                    {block.rowConfig.rightLinkLabel} {block.rowConfig.rightLinkIcon || '→'}
+                {block.properties.header.moreLink ? (
+                  <a href={block.properties.header.moreLink.url}>
+                    {block.properties.header.moreLink.label} {block.properties.header.moreLink.icon || '→'}
                   </a>
                 ) : null}
               </div>

@@ -6,7 +6,7 @@ export const config: ContentVedaConfig = {
   graphqlUrl: env.CV_GRAPHQL_URL || '__CV_GRAPHQL_URL__',
   tenantKey: env.CV_TENANT_KEY || '__CV_TENANT_KEY__',
   apiKey: env.CV_API_KEY || '',
-  platform: env.CV_PLATFORM || '__CV_PLATFORM__',
+  platform: env.CV_PLATFORM ?? '__CV_PLATFORM__',
   mode: (env.CV_API_MODE as ApiMode) || '__CV_API_MODE__'
 };
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   // Generic renderer for a custom content type's entries: every field of entry.data,
   // with media fields as images/videos and HTML strings as rich text. Copy this per
-  // content type (branch on block.contentType in BlockRenderer) for a bespoke design.
+  // content type (branch on block.contentType.name in BlockRenderer) for a bespoke design.
   //
   // (@contentveda/ui's CustomContentBlock does the same; its Svelte build in 0.3.1 throws
   // during SSR, so this starter ships its own until a fixed version is published.)
@@ -11,10 +11,7 @@
 
   let { block }: { block: ContentBlock } = $props();
 
-  // A single base-widget-typed entry has its media hoisted onto the block.
-  const entries = $derived(
-    (block.entries || []).map((e) => (e.media || block.entries?.length !== 1 ? e : { ...e, media: block.media }))
-  );
+  const entries = $derived(block.contentType?.entries || []);
   const isMedia = (v: unknown): v is { url: string; type?: string; altText?: string } =>
     !!v && typeof v === 'object' && typeof (v as any).url === 'string';
   const isHtml = (v: unknown) => typeof v === 'string' && /<[a-z][\s\S]*>/i.test(v);
@@ -23,8 +20,8 @@
 
 <div
   class="cv-custom-entries"
-  class:cv-custom-entries-row={block.contentTypeKind === 'collection'}
-  data-cv-content-type={block.contentType}
+  class:cv-custom-entries-row={block.contentType?.kind === 'collection'}
+  data-cv-content-type={block.contentType?.name}
 >
   {#each entries as entry (entry.id)}
     <article class="cv-custom-entry">

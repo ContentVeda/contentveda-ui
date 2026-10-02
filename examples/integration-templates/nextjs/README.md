@@ -29,10 +29,13 @@ Open http://localhost:3000 — `/` shows `/__CV_SLUG__`, and any other page slug
 
 ## What gets rendered
 
+Every floor (slot) has the same shape: `properties` for what was authored on the slot (heading, title, media, styling, classes…), plus `widget` or `contentType` when one was placed in it. A widget has its own config `properties` and its `banners`, and each banner has its own `properties`. Nothing is repeated between them; `src/lib/blocks.ts` is the one place they're combined.
+
 - **Blocks**: hero, announcement, sliders, grids, scrollers, timers and rich text map to the matching `@contentveda/ui` component.
-- **Widgets**: a floor that points at a widget gets the live widget inlined as `block.widget`. Its type, banners, slider/layout config, header text and countdown are used when the block itself doesn't set them (see `src/lib/blocks.ts`).
-- **Custom content types**: floors with `contentType` + `entries` render through `CustomContentBlock`. Branch on `block.contentType` in the block renderer to give a type its own component.
+- **Widgets**: `floor.widget` carries the widget's type, config `properties` and banners. Slot values win over the widget's where both are set.
+- **Custom content types**: floors with `contentType` (`name`, `kind`, `entries`) render generically. Branch on `block.contentType.name` in the block renderer to give a type its own component.
 - **Menus**: the page's `navigation` slots render as a header (`header`, falling back to `mobile`) and a footer (`footer`). Items that link to CMS pages go to `/<pageSlug>`, which the catch-all route serves.
+- **Platform**: `CV_PLATFORM` is optional. Leave it empty for the universal page, which is identical for every platform.
 
 ## Fetching from the browser
 

@@ -1,6 +1,7 @@
-// Normalises the three ways a floor can be filled in the CMS — a built-in block, a widget,
-// or a custom content type — into one shape the renderer can switch on.
-import type { ContentBlock } from './contentveda';
+// Turns a floor (slot) into what the renderer needs. A floor's own `properties` and the
+// widget placed in it (`widget.properties`, `widget.banners`) are separate in the API;
+// this is the one place they are combined, slot values winning over the widget's config.
+import type { Banner, ContentBlock, Media } from './contentveda';
 
 export type RenderKind =
   | 'paragraph'
@@ -15,6 +16,7 @@ export type RenderKind =
   | 'custom'
   | 'unknown';
 
+// Floor `type` values from the page editor.
 const BLOCK_TYPES: Record<string, RenderKind> = {
   paragraph: 'paragraph',
   hero: 'hero',
@@ -27,7 +29,7 @@ const BLOCK_TYPES: Record<string, RenderKind> = {
   timer: 'timer'
 };
 
-// Widget.type values from the CMS widget library.
+// `widget.type` values from the widget library.
 const WIDGET_TYPES: Record<string, RenderKind> = {
   hero: 'hero',
   promo: 'hero',
@@ -43,45 +45,44 @@ const WIDGET_TYPES: Record<string, RenderKind> = {
 export interface NormalizedBlock {
   kind: RenderKind;
   block: ContentBlock;
-  /** Block styling layered over the widget's own slider/layout config. */
+  // undefined (not null) when absent, which is what the @contentveda/ui props expect
+  title: string | undefined;
+  subtitle: string | undefined;
+  ctaLabel: string | undefined;
+  ctaUrl: string | undefined;
+  media: Media | null;
+  html: string | undefined;
+  targetDate: string | undefined;
   styling: Record<string, any>;
-  banners: any[];
-  /** Hero/announcement media: block media first, then the widget's. */
-  media?: { url: string; type?: string; altText?: string; posterUrl?: string };
-  html?: string;
+  classes: string[];
+  banners: Banner[];
 }
 
 export function normalizeBlock(block: ContentBlock): NormalizedBlock {
-  const widget = block.widget;
-  let kind: RenderKind = BLOCK_TYPES[block.type] ?? 'unknown';
+  const p = block.properties;
+  const w = block.widget;
+  const wp = w?.properties;
 
-  if (block.contentType && Array.isArray(block.entries)) kind = 'custom';
-  else if (kind === 'unknown' && widget) kind = WIDGET_TYPES[widget.type] ?? 'unknown';
+  const html = p.html ?? wp?.html ?? undefined;
+  const targetDate = p.targetDate ?? wp?.targetDate ?? undefined;
 
-  // A widget with a running countdown renders as a timer whatever its type.
-  if (kind === 'hero' && widget?.timerConfig?.enabled && !block.targetDate) kind = 'timer';
+  let kind: RenderKind = BLOCK_TYPES[block.type] ?? (w ? WIDGET_TYPES[w.type] : undefined) ?? 'unknown';
+  if (block.contentType) kind = 'custom';
+  else if (kind === 'hero' && w && targetDate) kind = 'timer'; // a widget with a countdown
+  else if (kind === 'unknown' && html) kind = 'html';
 
-  const html = block.htmlContent || widget?.htmlContent;
-  if (kind === 'unknown' && html) kind = 'html';
-
-  const styling = { ...(widget?.layoutConfig || {}), ...(widget?.sliderConfig || {}), ...(block.styling || {}) };
-  const banners = Array.isArray(block.banners) ? block.banners : Array.isArray(widget?.banners) ? widget.banners : [];
-  const media = block.media?.url ? block.media : widget?.media?.url ? widget.media : undefined;
-
-  return { kind, block, styling, banners, media, html };
-}
-
-/** Countdown target for a timer floor (block field first, then the widget's timer config). */
-export function timerTarget(block: ContentBlock): string | undefined {
-  const t = block.widget?.timerConfig;
-  return block.targetDate || t?.countdownTo || block.widget?.endDate;
-}
-
-/** Title/subtitle from a widget's header data when the block doesn't carry its own. */
-export function headline(block: ContentBlock): { title?: string; subtitle?: string } {
-  const h = block.widget?.headerData || {};
   return {
-    title: block.title || h.title,
-    subtitle: block.subtitle || h.subtitle
+    kind,
+    block,
+    title: p.title ?? wp?.title ?? undefined,
+    subtitle: p.subtitle ?? wp?.subtitle ?? undefined,
+    ctaLabel: p.cta?.label ?? undefined,
+    ctaUrl: p.cta?.url ?? undefined,
+    media: p.media ?? wp?.media ?? null,
+    html,
+    targetDate,
+    styling: { ...(wp?.styling || {}), ...p.styling },
+    classes: p.classes,
+    banners: w ? w.banners : p.banners
   };
 }
