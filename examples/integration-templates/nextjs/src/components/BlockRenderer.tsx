@@ -19,8 +19,7 @@ import RowScrollable from '@contentveda/ui/react/RowScrollable';
 import TimerWidget from '@contentveda/ui/react/TimerWidget';
 // @ts-ignore
 import WysiwygRenderer from '@contentveda/ui/react/WysiwygRenderer';
-// @ts-ignore
-import CustomContentBlock from '@contentveda/ui/react/CustomContentBlock';
+import CustomEntries from './CustomEntries';
 import type { ContentBlock } from '@/lib/contentveda';
 import { normalizeBlock } from '@/lib/blocks';
 import { uiMedia } from '@/lib/media';
@@ -143,18 +142,10 @@ function Floor({ block }: { block: ContentBlock }) {
       return <WysiwygRenderer content={n.html} htmlContent={n.html} />;
 
     case 'custom':
-      // Custom content type. CustomContentBlock renders entries generically (fields, media,
+      // Custom content type. CustomEntries renders entries generically (fields, media,
       // rich text); to give a type its own design, branch on block.contentType.name first, e.g.
       //   if (block.contentType?.name === 'testimonial') return <Testimonials entries={block.contentType.entries} />;
-      return (
-        <CustomContentBlock
-          contentType={block.contentType?.name}
-          contentTypeKind={block.contentType?.kind}
-          entries={block.contentType?.entries.map((e) => ({ ...e, media: uiMedia(e.media) }))}
-          media={media}
-          textOverlays={block.properties.textOverlays}
-        />
-      );
+      return <CustomEntries block={block} />;
 
     default:
       return (

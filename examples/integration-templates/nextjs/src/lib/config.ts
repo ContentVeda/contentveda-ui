@@ -7,7 +7,8 @@ export const config: ContentVedaConfig = {
   tenantKey: process.env.CV_TENANT_KEY || '__CV_TENANT_KEY__',
   apiKey: process.env.CV_API_KEY || '',
   platform: process.env.CV_PLATFORM ?? '__CV_PLATFORM__',
-  mode: (process.env.CV_API_MODE as ApiMode) || '__CV_API_MODE__'
+  mode: (process.env.CV_API_MODE as ApiMode) || '__CV_API_MODE__',
+  populate: process.env.CV_POPULATE ?? '*'
 };
 
 export const defaultSlug = process.env.CV_PAGE_SLUG || '__CV_SLUG__';

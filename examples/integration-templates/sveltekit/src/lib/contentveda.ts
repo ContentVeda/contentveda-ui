@@ -10,6 +10,9 @@ export interface ContentVedaConfig {
   apiKey: string;      // sent as X-Api-Key (the key also selects the environment)
   platform: string;    // desktop | mweb | app, or '' for the universal page
   mode: ApiMode;
+  // Relation fields of custom-content entries to resolve into the referenced entries, e.g.
+  // 'brand.owner,categories' or '*' (REST and GraphQL). Empty leaves relations as entry ids.
+  populate?: string;
 }
 
 export interface Media {
@@ -122,8 +125,8 @@ export interface ContentVedaPage {
   };
 }
 
-const PAGE_QUERY = `query GetPage($slug: String!, $platform: String) {
-  page(slug: $slug, platform: $platform) {
+const PAGE_QUERY = `query GetPage($slug: String!, $platform: String, $populate: String) {
+  page(slug: $slug, platform: $platform, populate: $populate) {
     slug
     title
     status
@@ -158,7 +161,7 @@ export async function fetchPage(
     const res = await fetchFn(cfg.graphqlUrl, {
       method: 'POST',
       headers: { ...headers(cfg), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: PAGE_QUERY, variables: { slug: cleanSlug, platform: cfg.platform || null } })
+      body: JSON.stringify({ query: PAGE_QUERY, variables: { slug: cleanSlug, platform: cfg.platform || null, populate: cfg.populate || null } })
     });
     if (!res.ok) throw new Error(`ContentVeda GraphQL request failed: ${res.status}`);
     const { data, errors } = await res.json();
@@ -177,7 +180,10 @@ export async function fetchPage(
   }
 
   // platform is optional: without it the API returns the universal page.
-  const qs = cfg.platform ? `?platform=${encodeURIComponent(cfg.platform)}` : '';
+  const query = new URLSearchParams();
+  if (cfg.platform) query.set('platform', cfg.platform);
+  if (cfg.populate) query.set('populate', cfg.populate);
+  const qs = query.size ? `?${query}` : '';
   const url = `${cfg.apiUrl}/pages/${encodeURIComponent(cleanSlug)}${qs}`;
   const res = await fetchFn(url, { headers: headers(cfg) });
   if (res.status === 404) return null;

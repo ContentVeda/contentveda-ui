@@ -34,6 +34,8 @@ Every floor (slot) has the same shape: `properties` for what was authored on the
 - **Blocks**: hero, announcement, sliders, grids, scrollers, timers and rich text map to the matching `@contentveda/ui` component.
 - **Widgets**: `floor.widget` carries the widget's type, config `properties` and banners. Slot values win over the widget's where both are set.
 - **Custom content types**: floors with `contentType` (`name`, `kind`, `entries`) render generically. Branch on `block.contentType.name` in the block renderer to give a type its own component.
+  Relations between entries (a product's brand, a brand's owner…) arrive as ids; set `CV_POPULATE` to resolve them
+  (`*` = one level, `brand.owner,categories` = named paths, empty = ids only). Works in REST and GraphQL mode.
 - **Menus**: the page's `navigation` slots render as a header (`header`, falling back to `mobile`) and a footer (`footer`). Items that link to CMS pages go to `/<pageSlug>`, which the catch-all route serves.
 - **Platform**: `CV_PLATFORM` is optional. Leave it empty for the universal page, which is identical for every platform.
 
